@@ -2,11 +2,18 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { calcularPreco, type ParametrosComerciais } from "@/lib/engine/pricing";
-import { COMERCIAL_PADRAO } from "@/lib/engine/defaults";
+import {
+  COMERCIAL_PADRAO,
+  MATERIAIS_PADRAO,
+  PARAMETROS_FABRICA_PADRAO,
+} from "@/lib/engine/defaults";
 import type {
   ConfiguracaoMaterialModulo,
   EngineOutput,
 } from "@/lib/engine/types";
+import type { BoxModule } from "@/lib/engine/box/types";
+import { calcularOrcamentoMisto } from "@/lib/orcamento";
+import { listarPresets, type BoxPreset } from "@/lib/boxPresets";
 import {
   carregarCatalogo,
   catalogoParaPrecos,
@@ -35,6 +42,13 @@ interface ModuloUI {
   profundidade_mm: number;
   config: Record<string, number>;
   configMaterial?: ConfiguracaoMaterialModulo; // V2-1
+}
+
+// Módulo-caixa instanciado no orçamento (V3), vindo de um preset do editor.
+interface BoxItem {
+  id: string;
+  parede: string;
+  box: BoxModule;
 }
 
 const PAREDES_PADRAO: Record<string, number> = { A: 3200, B: 2100 };
@@ -74,6 +88,8 @@ const pct = (n: number) => `${(n * 100).toFixed(1)}%`;
 export default function Home() {
   const [templates, setTemplates] = useState<TemplateMeta[]>([]);
   const [modulos, setModulos] = useState<ModuloUI[]>(PRESET_COZINHA);
+  const [boxItens, setBoxItens] = useState<BoxItem[]>([]);
+  const [presets, setPresets] = useState<BoxPreset[]>([]);
   const [paredes, setParedes] = useState<Record<string, number>>(PAREDES_PADRAO);
   const [engine, setEngine] = useState<EngineOutput | null>(null);
   const [tempoMs, setTempoMs] = useState<number | null>(null);
@@ -89,6 +105,7 @@ export default function Home() {
       .then((d) => setTemplates(d.templates))
       .catch(() => {});
     setCatalogo(carregarCatalogo());
+    setPresets(listarPresets());
   }, []);
 
   const templateMeta = (codigo: string) => templates.find((t) => t.codigo === codigo);
@@ -97,40 +114,35 @@ export default function Home() {
     [catalogo]
   );
 
-  async function calcular() {
+  // Cálculo no cliente: combina módulos de template e módulos-caixa (V3) numa
+  // única saída consolidada.
+  function calcular() {
     setCarregando(true);
     setErro(null);
     try {
       const overrides = carregarOverrides();
-      const res = await fetch("/api/calcular", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ambiente: { tipo: "Cozinha" },
-          modulos: modulos.map((m) => ({
-            id: m.id,
-            templateCodigo: m.templateCodigo,
-            parede: m.parede,
-            largura_mm: m.largura_mm,
-            altura_mm: m.altura_mm,
-            profundidade_mm: m.profundidade_mm,
-            config: m.config,
-            configMaterial: m.configMaterial,
-          })),
-          comercial,
-          templates: Object.keys(overrides).length ? overrides : undefined,
-        }),
+      const t0 = performance.now();
+      const result = calcularOrcamentoMisto({
+        ambiente: { tipo: "Cozinha", materiais: MATERIAIS_PADRAO },
+        parametros: PARAMETROS_FABRICA_PADRAO,
+        templateModulos: modulos.map((m) => ({
+          id: m.id,
+          templateCodigo: m.templateCodigo,
+          parede: m.parede,
+          largura_mm: m.largura_mm,
+          altura_mm: m.altura_mm,
+          profundidade_mm: m.profundidade_mm,
+          config: m.config,
+          configMaterial: m.configMaterial,
+        })),
+        boxes: boxItens.map((b) => ({ ...b.box, parede: b.parede })),
+        templates: Object.keys(overrides).length ? overrides : undefined,
       });
-      const data = await res.json();
-      if (!res.ok) {
-        setErro(data.erro ?? "Erro no cálculo.");
-        setEngine(null);
-        return;
-      }
-      setEngine(data.engine);
-      setTempoMs(data.tempoMs);
-    } catch {
-      setErro("Falha de conexão com a API.");
+      setEngine(result);
+      setTempoMs(Math.round(performance.now() - t0));
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : "Erro no cálculo.");
+      setEngine(null);
     } finally {
       setCarregando(false);
     }
@@ -201,39 +213,65 @@ export default function Home() {
     ]);
   }
 
+  // Módulos-caixa (V3): instancia um preset como cópia editável no orçamento.
+  function adicionarBox(p: BoxPreset) {
+    const clone: BoxModule = JSON.parse(JSON.stringify(p.box));
+    clone.id = novoId();
+    setBoxItens((its) => [...its, { id: novoId(), parede: "A", box: clone }]);
+  }
+  function atualizarBox(id: string, patch: Partial<BoxModule>) {
+    setBoxItens((its) =>
+      its.map((b) => (b.id === id ? { ...b, box: { ...b.box, ...patch } } : b))
+    );
+  }
+  function atualizarBoxParede(id: string, parede: string) {
+    setBoxItens((its) => its.map((b) => (b.id === id ? { ...b, parede } : b)));
+  }
+  function excluirBox(id: string) {
+    setBoxItens((its) => its.filter((b) => b.id !== id));
+  }
+
+  // Lista unificada (template + caixa) para barra de ocupação e layout 2D.
+  const unificados: LayoutModulo[] = useMemo(() => {
+    const t: LayoutModulo[] = modulos.map((m) => ({
+      id: m.id,
+      parede: m.parede,
+      largura_mm: m.largura_mm,
+      altura_mm: m.altura_mm,
+      profundidade_mm: m.profundidade_mm,
+      categoria: templateMeta(m.templateCodigo)?.categoria ?? "inferior",
+      cor: m.configMaterial?.externo.acabamento,
+    }));
+    const b: LayoutModulo[] = boxItens.map((bi) => ({
+      id: bi.id,
+      parede: bi.parede,
+      largura_mm: bi.box.largura,
+      altura_mm: bi.box.altura,
+      profundidade_mm: bi.box.profundidade,
+      categoria: bi.box.tipo === "aereo" ? "superior" : "inferior",
+      cor: bi.box.caixa.cor,
+    }));
+    return [...t, ...b];
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [modulos, boxItens, templates]);
+
   // Barras de ocupação por parede e por tipologia (piso x aéreo).
   const barras = useMemo(() => {
-    const grupos: { parede: string; tipo: "Piso" | "Aéreo"; largura: number; itens: ModuloUI[] }[] = [];
+    const grupos: { parede: string; tipo: "Piso" | "Aéreo"; largura: number; itens: LayoutModulo[] }[] = [];
     for (const parede of Object.keys(paredes)) {
       for (const tipo of ["Piso", "Aéreo"] as const) {
-        const itens = modulos.filter((m) => {
+        const itens = unificados.filter((m) => {
           if (m.parede !== parede) return false;
-          const cat = templateMeta(m.templateCodigo)?.categoria;
-          const ehAereo = cat === "superior";
+          const ehAereo = m.categoria === "superior";
           return tipo === "Aéreo" ? ehAereo : !ehAereo;
         });
         if (itens.length) grupos.push({ parede, tipo, largura: paredes[parede], itens });
       }
     }
     return grupos;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [modulos, paredes, templates]);
+  }, [unificados, paredes]);
 
-  // Módulos para o visualizador de layout (V2-3).
-  const layoutModulos: LayoutModulo[] = useMemo(
-    () =>
-      modulos.map((m) => ({
-        id: m.id,
-        parede: m.parede,
-        largura_mm: m.largura_mm,
-        altura_mm: m.altura_mm,
-        profundidade_mm: m.profundidade_mm,
-        categoria: templateMeta(m.templateCodigo)?.categoria ?? "inferior",
-        cor: m.configMaterial?.externo.acabamento,
-      })),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [modulos, templates]
-  );
+  const layoutModulos = unificados;
 
   return (
     <div className="wrap">
@@ -251,7 +289,26 @@ export default function Home() {
         <button className="primary" onClick={calcular} disabled={carregando}>
           {carregando ? "Calculando…" : "Criar orçamento"}
         </button>
-        <button onClick={adicionar}>+ Adicionar módulo</button>
+        <button onClick={adicionar}>+ Adicionar módulo (template)</button>
+        {presets.length > 0 && (
+          <select
+            defaultValue=""
+            onChange={(e) => {
+              const p = presets.find((x) => x.id === e.target.value);
+              if (p) adicionarBox(p);
+              e.target.value = "";
+            }}
+          >
+            <option value="" disabled>
+              + Adicionar caixa (preset)…
+            </option>
+            {presets.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.nome}
+              </option>
+            ))}
+          </select>
+        )}
         <button
           className="ghost"
           onClick={() =>
@@ -263,6 +320,13 @@ export default function Home() {
           Recarregar preset "Cozinha em L"
         </button>
       </div>
+      {presets.length === 0 && (
+        <div className="muted" style={{ fontSize: 13, marginBottom: 12 }}>
+          Dica: monte módulos no{" "}
+          <a href="/modulo">editor de caixa (V3)</a>, salve como preset e eles
+          aparecerão aqui para adicionar ao orçamento.
+        </div>
+      )}
 
       {erro && <div className="aviso erro">{erro}</div>}
 
@@ -312,7 +376,7 @@ export default function Home() {
                         key={m.id}
                         className="seg"
                         style={{ width: `${(m.largura_mm / b.largura) * 100}%` }}
-                        title={`${m.templateCodigo} ${m.largura_mm}mm`}
+                        title={`${m.categoria} ${m.largura_mm}mm`}
                       >
                         {m.largura_mm}
                       </div>
@@ -426,6 +490,102 @@ export default function Home() {
               );
             })}
           </div>
+
+          {boxItens.length > 0 && (
+            <div className="card">
+              <h2>Módulos-caixa ({boxItens.length})</h2>
+              {boxItens.map((b) => (
+                <div className="modulo" key={b.id}>
+                  <div className="linha">
+                    <span className="nome">
+                      {b.box.nome}{" "}
+                      <span className="muted" style={{ fontSize: 12 }}>
+                        ({b.box.tipo})
+                      </span>
+                    </span>
+                    <select
+                      value={b.parede}
+                      onChange={(e) => atualizarBoxParede(b.id, e.target.value)}
+                      style={{ width: 60 }}
+                    >
+                      {Object.keys(paredes).map((p) => (
+                        <option key={p} value={p}>
+                          {p}
+                        </option>
+                      ))}
+                    </select>
+                    <div className="acoes">
+                      <button className="danger" onClick={() => excluirBox(b.id)}>
+                        Excluir
+                      </button>
+                    </div>
+                  </div>
+                  <div className="campos" style={{ marginTop: 8 }}>
+                    <div>
+                      <label>Largura</label>
+                      <input
+                        type="number"
+                        value={b.box.largura}
+                        onChange={(e) => atualizarBox(b.id, { largura: Number(e.target.value) })}
+                      />
+                    </div>
+                    <div>
+                      <label>Altura</label>
+                      <input
+                        type="number"
+                        value={b.box.altura}
+                        onChange={(e) => atualizarBox(b.id, { altura: Number(e.target.value) })}
+                      />
+                    </div>
+                    <div>
+                      <label>Prof.</label>
+                      <input
+                        type="number"
+                        value={b.box.profundidade}
+                        onChange={(e) => atualizarBox(b.id, { profundidade: Number(e.target.value) })}
+                      />
+                    </div>
+                    <div>
+                      <label>Cor caixa</label>
+                      <select
+                        value={b.box.caixa.cor}
+                        onChange={(e) =>
+                          atualizarBox(b.id, { caixa: { ...b.box.caixa, cor: e.target.value } })
+                        }
+                      >
+                        {(catalogo ? coresDisponiveis(catalogo) : [b.box.caixa.cor]).map((c) => (
+                          <option key={c} value={c}>
+                            {c}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label>Esp. caixa</label>
+                      <select
+                        value={b.box.caixa.espessura}
+                        onChange={(e) =>
+                          atualizarBox(b.id, {
+                            caixa: { ...b.box.caixa, espessura: Number(e.target.value) },
+                          })
+                        }
+                      >
+                        {[15, 18].map((esp) => (
+                          <option key={esp} value={esp}>
+                            {esp} mm
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                  <div className="muted" style={{ fontSize: 12, marginTop: 6 }}>
+                    Engenharia definida no editor. Edite a estrutura em{" "}
+                    <a href="/modulo">/modulo</a>.
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Coluna direita: resultado */}
