@@ -137,12 +137,31 @@ function desenharElevacao(
     xa += w;
   }
 
-  // Aviso de estouro (piso).
+  // Sobra/estouro (piso): desenhado direto no Canvas — a barra HTML de
+  // ocupação foi removida, este é o único ponto de verdade visual.
   const totalPiso = piso.reduce((s, m) => s + m.largura_mm, 0);
-  if (totalPiso > larguraParede && larguraParede > 0) {
-    ctx.fillStyle = "#ef4d5a";
-    ctx.textAlign = "right";
-    ctx.fillText(`estouro ${totalPiso - larguraParede}mm`, L - margem, offsetY + 20);
+  if (larguraParede > 0) {
+    const sobra = larguraParede - totalPiso;
+    if (sobra > 0) {
+      const alturaRef =
+        piso.length > 0 ? Math.max(...piso.map((m) => m.altura_mm)) : 720;
+      const hRef = alturaRef * escala;
+      const wSobra = sobra * escala;
+      ctx.save();
+      ctx.setLineDash([4, 3]);
+      ctx.strokeStyle = "#94a3b8";
+      ctx.lineWidth = 1.2;
+      ctx.strokeRect(x, yChao - hRef, wSobra, hRef);
+      ctx.restore();
+      ctx.fillStyle = "#64748b";
+      ctx.font = "10px sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText(`sobra ${sobra}mm`, x + wSobra / 2, yChao - hRef / 2, Math.max(wSobra - 4, 20));
+    } else if (sobra < 0) {
+      ctx.fillStyle = "#ef4d5a";
+      ctx.textAlign = "right";
+      ctx.fillText(`estouro ${-sobra}mm`, L - margem, offsetY + 20);
+    }
   }
 }
 
