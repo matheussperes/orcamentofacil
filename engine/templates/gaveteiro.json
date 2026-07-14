@@ -1,0 +1,103 @@
+{
+  "codigo": "GAVETEIRO",
+  "versao": 1,
+  "nome": "Gaveteiro",
+  "categoria": "inferior",
+  "limites": {
+    "largura": { "min": 300, "max": 900 },
+    "altura": { "min": 600, "max": 900 },
+    "profundidade": { "min": 400, "max": 700 }
+  },
+  "config_padrao": {
+    "CONFIG_QTD_GAVETAS": 4
+  },
+  "componentes": [
+    {
+      "nome": "Lateral",
+      "quantidade": "2",
+      "material_tipo": "caixa",
+      "dimensoes": {
+        "altura": "MEDIDA_ALTURA",
+        "largura": "MEDIDA_PROFUNDIDADE"
+      },
+      "fita_borda": { "lados_altura": 1, "lados_largura": 1 }
+    },
+    {
+      "nome": "Base",
+      "quantidade": "1",
+      "material_tipo": "caixa",
+      "dimensoes": {
+        "altura": "MEDIDA_PROFUNDIDADE",
+        "largura": "MEDIDA_LARGURA - 2 * PARAM_ESPESSURA_CAIXA"
+      },
+      "fita_borda": { "lados_altura": 0, "lados_largura": 1 }
+    },
+    {
+      "nome": "Travessa Superior",
+      "quantidade": "2",
+      "material_tipo": "caixa",
+      "dimensoes": {
+        "altura": "100",
+        "largura": "MEDIDA_LARGURA - 2 * PARAM_ESPESSURA_CAIXA"
+      },
+      "fita_borda": { "lados_altura": 0, "lados_largura": 1 }
+    },
+    {
+      "nome": "Fundo",
+      "quantidade": "1",
+      "material_tipo": "fundo",
+      "dimensoes": {
+        "altura": "MEDIDA_ALTURA",
+        "largura": "MEDIDA_LARGURA"
+      },
+      "fita_borda": { "lados_altura": 0, "lados_largura": 0 }
+    },
+    {
+      "nome": "Frente de Gaveta",
+      "quantidade": "CONFIG_QTD_GAVETAS",
+      "material_tipo": "frente",
+      "dimensoes": {
+        "altura": "((MEDIDA_ALTURA - PARAM_FOLGA_SUPERIOR - PARAM_FOLGA_INFERIOR) / CONFIG_QTD_GAVETAS) - PARAM_FOLGA_PORTA",
+        "largura": "MEDIDA_LARGURA - PARAM_FOLGA_PORTA"
+      },
+      "fita_borda": { "lados_altura": 2, "lados_largura": 2 }
+    },
+    {
+      "nome": "Lateral de Gaveta (caixote)",
+      "quantidade": "CONFIG_QTD_GAVETAS * 2",
+      "material_tipo": "caixa",
+      "dimensoes": {
+        "altura": "150",
+        "largura": "MEDIDA_PROFUNDIDADE - PARAM_DESCONTO_CORREDICA"
+      },
+      "fita_borda": { "lados_altura": 0, "lados_largura": 1 }
+    },
+    {
+      "nome": "Frente/Traseira de Gaveta (caixote)",
+      "quantidade": "CONFIG_QTD_GAVETAS * 2",
+      "material_tipo": "caixa",
+      "dimensoes": {
+        "altura": "150",
+        "largura": "MEDIDA_LARGURA - 2 * PARAM_ESPESSURA_CAIXA - 2 * PARAM_VAO_CORREDICA"
+      },
+      "fita_borda": { "lados_altura": 0, "lados_largura": 1 }
+    },
+    {
+      "nome": "Fundo de Gaveta",
+      "quantidade": "CONFIG_QTD_GAVETAS",
+      "material_tipo": "fundo",
+      "dimensoes": {
+        "altura": "MEDIDA_PROFUNDIDADE - PARAM_DESCONTO_CORREDICA",
+        "largura": "MEDIDA_LARGURA - 2 * PARAM_ESPESSURA_CAIXA - 2 * PARAM_VAO_CORREDICA"
+      },
+      "fita_borda": { "lados_altura": 0, "lados_largura": 0 }
+    }
+  ],
+  "ferragens": [
+    { "item": "corredica_par", "quantidade": "CONFIG_QTD_GAVETAS" },
+    { "item": "puxador", "quantidade": "CONFIG_QTD_GAVETAS" },
+    { "item": "pe_nivelador", "quantidade": "4" },
+    { "item": "parafuso_kit_modulo", "quantidade": "1" }
+  ],
+  "participa_elementos_continuos": { "tampo": true, "rodape": true }
+}

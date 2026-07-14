@@ -1,0 +1,73 @@
+{
+  "codigo": "NICHO",
+  "versao": 1,
+  "nome": "Nicho Aberto",
+  "categoria": "complemento",
+  "limites": {
+    "largura": { "min": 200, "max": 1200 },
+    "altura": { "min": 200, "max": 1000 },
+    "profundidade": { "min": 200, "max": 450 }
+  },
+  "config_padrao": {
+    "CONFIG_QTD_PRATELEIRAS": 0,
+    "CONFIG_ILUMINACAO": 0
+  },
+  "componentes": [
+    {
+      "nome": "Lateral",
+      "quantidade": "2",
+      "material_tipo": "caixa",
+      "dimensoes": {
+        "altura": "MEDIDA_ALTURA",
+        "largura": "MEDIDA_PROFUNDIDADE"
+      },
+      "fita_borda": { "lados_altura": 1, "lados_largura": 2 }
+    },
+    {
+      "nome": "Base",
+      "quantidade": "1",
+      "material_tipo": "caixa",
+      "dimensoes": {
+        "altura": "MEDIDA_PROFUNDIDADE",
+        "largura": "MEDIDA_LARGURA - 2 * PARAM_ESPESSURA_CAIXA"
+      },
+      "fita_borda": { "lados_altura": 0, "lados_largura": 1 }
+    },
+    {
+      "nome": "Tampo",
+      "quantidade": "1",
+      "material_tipo": "caixa",
+      "dimensoes": {
+        "altura": "MEDIDA_PROFUNDIDADE",
+        "largura": "MEDIDA_LARGURA - 2 * PARAM_ESPESSURA_CAIXA"
+      },
+      "fita_borda": { "lados_altura": 0, "lados_largura": 1 }
+    },
+    {
+      "nome": "Fundo",
+      "quantidade": "1",
+      "material_tipo": "fundo",
+      "dimensoes": {
+        "altura": "MEDIDA_ALTURA",
+        "largura": "MEDIDA_LARGURA"
+      },
+      "fita_borda": { "lados_altura": 0, "lados_largura": 0 }
+    },
+    {
+      "nome": "Prateleira",
+      "quantidade": "CONFIG_QTD_PRATELEIRAS",
+      "material_tipo": "prateleira",
+      "dimensoes": {
+        "altura": "MEDIDA_PROFUNDIDADE",
+        "largura": "MEDIDA_LARGURA - 2 * PARAM_ESPESSURA_CAIXA"
+      },
+      "fita_borda": { "lados_altura": 0, "lados_largura": 1 }
+    }
+  ],
+  "ferragens": [
+    { "item": "suporte_fixacao_aereo", "quantidade": "2" },
+    { "item": "fita_led_m", "quantidade": "CONFIG_ILUMINACAO * (MEDIDA_LARGURA / 1000)" },
+    { "item": "parafuso_kit_modulo", "quantidade": "1" }
+  ],
+  "participa_elementos_continuos": { "tampo": false, "rodape": false }
+}

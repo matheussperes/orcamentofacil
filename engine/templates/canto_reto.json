@@ -1,0 +1,97 @@
+{
+  "codigo": "CANTO_RETO",
+  "versao": 1,
+  "nome": "Módulo de Canto Reto (cozinha em L)",
+  "categoria": "inferior",
+  "limites": {
+    "largura": { "min": 600, "max": 1000 },
+    "altura": { "min": 600, "max": 900 },
+    "profundidade": { "min": 500, "max": 700 }
+  },
+  "config_padrao": {
+    "CONFIG_QTD_PORTAS": 1,
+    "CONFIG_QTD_PRATELEIRAS": 1
+  },
+  "componentes": [
+    {
+      "nome": "Lateral",
+      "quantidade": "2",
+      "material_tipo": "caixa",
+      "dimensoes": {
+        "altura": "MEDIDA_ALTURA",
+        "largura": "MEDIDA_PROFUNDIDADE"
+      },
+      "fita_borda": { "lados_altura": 1, "lados_largura": 1 }
+    },
+    {
+      "nome": "Base",
+      "quantidade": "1",
+      "material_tipo": "caixa",
+      "dimensoes": {
+        "altura": "MEDIDA_PROFUNDIDADE",
+        "largura": "MEDIDA_LARGURA - 2 * PARAM_ESPESSURA_CAIXA"
+      },
+      "fita_borda": { "lados_altura": 0, "lados_largura": 1 }
+    },
+    {
+      "nome": "Travessa Superior",
+      "quantidade": "2",
+      "material_tipo": "caixa",
+      "dimensoes": {
+        "altura": "100",
+        "largura": "MEDIDA_LARGURA - 2 * PARAM_ESPESSURA_CAIXA"
+      },
+      "fita_borda": { "lados_altura": 0, "lados_largura": 1 }
+    },
+    {
+      "nome": "Fundo",
+      "quantidade": "1",
+      "material_tipo": "fundo",
+      "dimensoes": {
+        "altura": "MEDIDA_ALTURA",
+        "largura": "MEDIDA_LARGURA"
+      },
+      "fita_borda": { "lados_altura": 0, "lados_largura": 0 }
+    },
+    {
+      "nome": "Prateleira",
+      "quantidade": "CONFIG_QTD_PRATELEIRAS",
+      "material_tipo": "prateleira",
+      "dimensoes": {
+        "altura": "MEDIDA_PROFUNDIDADE - PARAM_RECUO_PRATELEIRA",
+        "largura": "MEDIDA_LARGURA - 2 * PARAM_ESPESSURA_CAIXA"
+      },
+      "fita_borda": { "lados_altura": 0, "lados_largura": 1 }
+    },
+    {
+      "nome": "Painel Cego (encosto do canto)",
+      "quantidade": "1",
+      "material_tipo": "frente",
+      "dimensoes": {
+        "altura": "MEDIDA_ALTURA - PARAM_FOLGA_SUPERIOR - PARAM_FOLGA_INFERIOR",
+        "largura": "MEDIDA_LARGURA - PARAM_LARGURA_PORTA_CANTO"
+      },
+      "fita_borda": { "lados_altura": 2, "lados_largura": 1 }
+    },
+    {
+      "nome": "Porta",
+      "quantidade": "CONFIG_QTD_PORTAS",
+      "material_tipo": "frente",
+      "dimensoes": {
+        "altura": "MEDIDA_ALTURA - PARAM_FOLGA_SUPERIOR - PARAM_FOLGA_INFERIOR",
+        "largura": "PARAM_LARGURA_PORTA_CANTO - PARAM_FOLGA_PORTA"
+      },
+      "fita_borda": { "lados_altura": 2, "lados_largura": 2 }
+    }
+  ],
+  "ferragens": [
+    {
+      "item": "dobradica_35",
+      "quantidade": "CONFIG_QTD_PORTAS * max(2, ceil((MEDIDA_ALTURA - PARAM_FOLGA_SUPERIOR - PARAM_FOLGA_INFERIOR) / 450))"
+    },
+    { "item": "puxador", "quantidade": "CONFIG_QTD_PORTAS" },
+    { "item": "pe_nivelador", "quantidade": "4" },
+    { "item": "parafuso_kit_modulo", "quantidade": "1" }
+  ],
+  "participa_elementos_continuos": { "tampo": true, "rodape": true }
+}
