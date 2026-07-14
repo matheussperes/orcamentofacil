@@ -1,4 +1,4 @@
-import { PRECOS_REFERENCIA, type PrecosReferencia } from "./prices";
+import { PRECOS_REFERENCIA, precoChapa, type PrecosReferencia } from "./prices";
 import type { EngineOutput } from "./types";
 
 // Pipeline financeiro (doc 05): consolidado da engine → custo direto →
@@ -44,13 +44,13 @@ export function calcularPreco(
   let custoMdf = 0;
   let areaMdfTotal = 0;
   for (const g of engine.consolidado.mdf) {
-    const precoChapa = precos.chapaPorEspessura[g.espessura_mm] ?? 0;
-    if (precoChapa === 0) {
+    const unit = precoChapa(precos, g.cor, g.espessura_mm);
+    if (unit === 0) {
       avisos.push(
-        `Sem preço de referência para chapa de ${g.espessura_mm}mm (${g.cor}).`
+        `Sem preço cadastrado para chapa ${g.cor} ${g.espessura_mm}mm.`
       );
     }
-    custoMdf += g.chapas * precoChapa;
+    custoMdf += g.chapas * unit;
     areaMdfTotal += g.area_m2;
   }
   detalhes.push({ descricao: "MDF (chapas)", valor: round2(custoMdf) });

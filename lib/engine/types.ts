@@ -69,6 +69,20 @@ export interface MateriaisAmbiente {
   cor_fundo: string;
 }
 
+// V2-1: configuração de cor/espessura por módulo, por parte construtiva.
+// Cada componente do template é mapeado a um "slot": externo (caixa aparente),
+// interno (prateleiras/fundo) ou portas (frentes).
+export interface MDFSlot {
+  espessura: number; // 6 | 15 | 18
+  acabamento: string; // "Branco TX", "Louro Freijó"…
+}
+export interface ConfiguracaoMaterialModulo {
+  interno: MDFSlot;
+  externo: MDFSlot;
+  portas: MDFSlot;
+  temFundo: boolean;
+}
+
 export interface ModuloInstanciado {
   id: string;
   templateCodigo: string;
@@ -78,6 +92,7 @@ export interface ModuloInstanciado {
   profundidade_mm: number;
   config?: Record<string, number>;
   overridesMaterial?: Partial<MateriaisAmbiente>;
+  configMaterial?: ConfiguracaoMaterialModulo; // V2-1 (sobrescreve a herança)
 }
 
 export interface EngineInput {
@@ -87,6 +102,9 @@ export interface EngineInput {
   };
   modulos: ModuloInstanciado[];
   parametros: ParametrosFabrica;
+  // V2-4: templates customizados por requisição (overrides do configurador de
+  // engenharia). Se ausente, usa a Biblioteca de Engenharia padrão.
+  templates?: Record<string, ModuloTemplate>;
 }
 
 // ---- Saída ----

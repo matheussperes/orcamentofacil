@@ -99,6 +99,89 @@ describe("motor — elementos contínuos (etapa global)", () => {
   });
 });
 
+describe("motor — configuração de material por módulo (V2-1)", () => {
+  const base: EngineInput = {
+    ambiente: { tipo: "Cozinha", materiais: MATERIAIS_PADRAO },
+    parametros: PARAMETROS_FABRICA_PADRAO,
+    modulos: [
+      {
+        id: "m1",
+        templateCodigo: "BASE_PORTAS",
+        largura_mm: 600,
+        altura_mm: 720,
+        profundidade_mm: 550,
+        config: { CONFIG_QTD_PORTAS: 2, CONFIG_QTD_PRATELEIRAS: 1 },
+        configMaterial: {
+          interno: { espessura: 15, acabamento: "Branco TX" },
+          externo: { espessura: 18, acabamento: "Madeirado" },
+          portas: { espessura: 18, acabamento: "Madeirado" },
+          temFundo: true,
+        },
+      },
+    ],
+  };
+
+  it("aplica cor/espessura por slot (externo, interno, portas)", () => {
+    const mod = calcularEngine(base).porModulo[0];
+    const lateral = mod.pecas.find((p) => p.nome === "Lateral")!; // caixa → externo
+    const prateleira = mod.pecas.find((p) => p.nome === "Prateleira")!; // interno
+    const porta = mod.pecas.find((p) => p.nome === "Porta")!; // portas
+    expect(lateral.cor).toBe("Madeirado");
+    expect(lateral.espessura_mm).toBe(18);
+    expect(prateleira.cor).toBe("Branco TX");
+    expect(prateleira.espessura_mm).toBe(15);
+    expect(porta.cor).toBe("Madeirado");
+  });
+
+  it("toggle 'tem fundo = false' remove as peças de fundo", () => {
+    const semFundo = JSON.parse(JSON.stringify(base)) as EngineInput;
+    semFundo.modulos[0].configMaterial!.temFundo = false;
+    const mod = calcularEngine(semFundo).porModulo[0];
+    expect(mod.pecas.some((p) => p.material_tipo === "fundo")).toBe(false);
+  });
+});
+
+describe("motor — template override por requisição (V2-4)", () => {
+  it("usa o template customizado passado na entrada", () => {
+    const input: EngineInput = {
+      ambiente: { tipo: "Cozinha", materiais: MATERIAIS_PADRAO },
+      parametros: PARAMETROS_FABRICA_PADRAO,
+      modulos: [
+        { id: "m1", templateCodigo: "CUSTOM", largura_mm: 600, altura_mm: 700, profundidade_mm: 300 },
+      ],
+      templates: {
+        CUSTOM: {
+          codigo: "CUSTOM",
+          versao: 1,
+          nome: "Nicho custom",
+          categoria: "complemento",
+          limites: {
+            largura: { min: 100, max: 2000 },
+            altura: { min: 100, max: 2000 },
+            profundidade: { min: 100, max: 600 },
+          },
+          config_padrao: {},
+          componentes: [
+            {
+              nome: "Painel único",
+              quantidade: "1",
+              material_tipo: "caixa",
+              dimensoes: { altura: "MEDIDA_ALTURA", largura: "MEDIDA_LARGURA" },
+              fita_borda: { lados_altura: 2, lados_largura: 2 },
+            },
+          ],
+          ferragens: [],
+          participa_elementos_continuos: { tampo: false, rodape: false },
+        },
+      },
+    };
+    const mod = calcularEngine(input).porModulo[0];
+    expect(mod.nome).toBe("Nicho custom");
+    expect(mod.pecas).toHaveLength(1);
+    expect(mod.pecas[0].area_m2).toBeCloseTo((600 * 700) / 1e6, 3);
+  });
+});
+
 describe("motor — validação e determinismo", () => {
   it("acusa medida fora dos limites do template", () => {
     const input = inputBasePortas600();

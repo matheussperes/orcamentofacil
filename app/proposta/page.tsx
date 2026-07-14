@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { PRECOS_REFERENCIA } from "@/lib/engine/prices";
+import { carregarCatalogo, catalogoParaPrecos } from "@/lib/catalog";
+import { montarLinhasInsumos } from "@/lib/insumos";
 import type { EngineOutput } from "@/lib/engine/types";
 import type { ParametrosComerciais } from "@/lib/engine/pricing";
 import "./proposta.css";
@@ -20,55 +21,8 @@ interface Payload {
   comercial: ParametrosComerciais;
 }
 
-interface Linha {
-  item: string;
-  categoria: string;
-  qtd: string;
-  unit: number;
-  total: number;
-}
-
 const brl = (n: number) =>
   n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-
-// Monta a lista unificada de insumos (BOM + custo) no formato de pré-orçamento
-// de fornecedor (parte do ajuste V2-5, já entregue aqui).
-function montarLinhas(engine: EngineOutput): Linha[] {
-  const p = PRECOS_REFERENCIA;
-  const linhas: Linha[] = [];
-
-  for (const g of engine.consolidado.mdf) {
-    const unit = p.chapaPorEspessura[g.espessura_mm] ?? 0;
-    linhas.push({
-      item: `MDF ${g.cor} ${g.espessura_mm}mm`,
-      categoria: "Chapas",
-      qtd: `${g.chapas} chapa(s) · ${g.area_m2.toFixed(2)} m²`,
-      unit,
-      total: g.chapas * unit,
-    });
-  }
-
-  linhas.push({
-    item: "Fita de borda",
-    categoria: "Acabamento",
-    qtd: `${engine.consolidado.fitaTotalM.toFixed(1)} m`,
-    unit: p.fitaMetro,
-    total: engine.consolidado.fitaTotalM * p.fitaMetro,
-  });
-
-  for (const f of engine.consolidado.ferragens) {
-    const unit = p.ferragens[f.item] ?? 0;
-    linhas.push({
-      item: f.item.replace(/_/g, " "),
-      categoria: "Ferragens",
-      qtd: `${f.quantidade}`,
-      unit,
-      total: f.quantidade * unit,
-    });
-  }
-
-  return linhas;
-}
 
 export default function Proposta() {
   const [dados, setDados] = useState<Payload | null>(null);
@@ -91,8 +45,8 @@ export default function Proposta() {
   }
 
   const { engine, financeiro } = dados;
-  const linhas = montarLinhas(engine);
-  const subtotalMateriais = linhas.reduce((s, l) => s + l.total, 0);
+  const precos = catalogoParaPrecos(carregarCatalogo());
+  const { linhas, subtotal: subtotalMateriais } = montarLinhasInsumos(engine, precos);
   const data = new Date(dados.geradoEm).toLocaleDateString("pt-BR");
 
   return (

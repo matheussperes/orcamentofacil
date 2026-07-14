@@ -18,6 +18,18 @@ import type {
 
 const AREA_CHAPA_M2 = 2.75 * 1.84; // 5.06 m² (chapa comercial padrão)
 
+/** Resolve o template: overrides da requisição (V2-4) → Biblioteca padrão. */
+function resolveTemplate(codigo: string, input: EngineInput): ModuloTemplate {
+  return input.templates?.[codigo] ?? getTemplate(codigo);
+}
+
+/** V2-1: mapeia o tipo de peça a um slot de material (interno/externo/portas). */
+function slotDe(tipo: MaterialTipo): "interno" | "externo" | "portas" {
+  if (tipo === "frente") return "portas";
+  if (tipo === "caixa") return "externo";
+  return "interno"; // prateleira, fundo
+}
+
 /**
  * Monta o escopo de variáveis (MEDIDA_*, CONFIG_*, PARAM_*) para avaliar as
  * fórmulas de um módulo (doc 04, etapa 1 — resolução de contexto).
@@ -81,6 +93,30 @@ function corDe(
   }
 }
 
+/**
+ * Resolve cor + espessura de uma peça. Se o módulo tem `configMaterial` (V2-1),
+ * usa o slot correspondente; senão, cai na herança de ambiente + parâmetros de
+ * fábrica (comportamento legado). O fundo mantém a espessura de fábrica
+ * (tipicamente 6mm), variando apenas a cor.
+ */
+function resolverMaterial(
+  tipo: MaterialTipo,
+  modulo: ModuloInstanciado,
+  input: EngineInput
+): { cor: string; espessura: number } {
+  const cm = modulo.configMaterial;
+  if (cm) {
+    const slot = cm[slotDe(tipo)];
+    const espessura =
+      tipo === "fundo" ? input.parametros.ESPESSURA_FUNDO : slot.espessura;
+    return { cor: slot.acabamento, espessura };
+  }
+  return {
+    cor: corDe(tipo, input.ambiente.materiais, modulo.overridesMaterial),
+    espessura: espessuraDe(tipo, input.parametros),
+  };
+}
+
 /** Etapa 2 — validação física contra os limites do template. */
 function validarLimites(
   template: ModuloTemplate,
@@ -112,7 +148,7 @@ function explodirModulo(
   modulo: ModuloInstanciado,
   input: EngineInput
 ): { resultado: ResultadoModulo; warnings: EngineWarning[] } {
-  const template = getTemplate(modulo.templateCodigo);
+  const template = resolveTemplate(modulo.templateCodigo, input);
   const scope = montarEscopo(template, modulo, input.parametros);
   const warnings = validarLimites(template, modulo);
 
@@ -120,7 +156,13 @@ function explodirModulo(
   let areaMdfM2 = 0;
   let fitaM = 0;
 
+  const semFundo =
+    modulo.configMaterial != null && modulo.configMaterial.temFundo === false;
+
   for (const comp of template.componentes) {
+    // V2-1: toggle "tem fundo" remove as peças de fundo.
+    if (semFundo && comp.material_tipo === "fundo") continue;
+
     const quantidade = Math.round(evalFormula(comp.quantidade, scope));
     if (quantidade <= 0) continue;
 
@@ -150,12 +192,13 @@ function explodirModulo(
     areaMdfM2 += areaTotal;
     fitaM += fitaTotal;
 
+    const material = resolverMaterial(comp.material_tipo, modulo, input);
     pecas.push({
       nome: comp.nome,
       quantidade,
       material_tipo: comp.material_tipo,
-      cor: corDe(comp.material_tipo, input.ambiente.materiais, modulo.overridesMaterial),
-      espessura_mm: espessuraDe(comp.material_tipo, input.parametros),
+      cor: material.cor,
+      espessura_mm: material.espessura,
       altura_mm: Math.round(altura),
       largura_mm: Math.round(largura),
       area_m2: round4(areaTotal),
@@ -194,6 +237,9 @@ function calcularElementosContinuos(input: EngineInput): PecaLinear[] {
     comprimento: number;
     profundidadeMax: number;
     modulos: number;
+    // Material do 1º módulo participante com config próprio (V2-1), se houver.
+    corExterno?: string;
+    espExterno?: number;
   }
   const tampoPorParede = new Map<string, Acc>();
   const rodapePorParede = new Map<string, Acc>();
@@ -201,26 +247,30 @@ function calcularElementosContinuos(input: EngineInput): PecaLinear[] {
   const acumular = (
     mapa: Map<string, Acc>,
     parede: string,
-    largura: number,
-    profundidade: number
+    modulo: ModuloInstanciado
   ) => {
     const a =
       mapa.get(parede) ??
       { parede, comprimento: 0, profundidadeMax: 0, modulos: 0 };
-    a.comprimento += largura;
-    a.profundidadeMax = Math.max(a.profundidadeMax, profundidade);
+    // Captura o material externo do primeiro módulo que traz config próprio.
+    if (a.corExterno == null && modulo.configMaterial) {
+      a.corExterno = modulo.configMaterial.externo.acabamento;
+      a.espExterno = modulo.configMaterial.externo.espessura;
+    }
+    a.comprimento += modulo.largura_mm;
+    a.profundidadeMax = Math.max(a.profundidadeMax, modulo.profundidade_mm);
     a.modulos += 1;
     mapa.set(parede, a);
   };
 
   for (const modulo of input.modulos) {
-    const template = getTemplate(modulo.templateCodigo);
+    const template = resolveTemplate(modulo.templateCodigo, input);
     const parede = modulo.parede ?? "—";
     if (template.participa_elementos_continuos.tampo) {
-      acumular(tampoPorParede, parede, modulo.largura_mm, modulo.profundidade_mm);
+      acumular(tampoPorParede, parede, modulo);
     }
     if (template.participa_elementos_continuos.rodape) {
-      acumular(rodapePorParede, parede, modulo.largura_mm, modulo.profundidade_mm);
+      acumular(rodapePorParede, parede, modulo);
     }
   }
 
@@ -236,8 +286,8 @@ function calcularElementosContinuos(input: EngineInput): PecaLinear[] {
       parede: a.parede,
       comprimento_mm: comprimento,
       largura_mm: largura,
-      cor: m.cor_frente,
-      espessura_mm: p.ESPESSURA_FRENTE,
+      cor: a.corExterno ?? m.cor_frente,
+      espessura_mm: a.espExterno ?? p.ESPESSURA_FRENTE,
       area_m2: round4((comprimento * largura) / 1e6),
       fita_m: round4(comprimento / 1000), // borda frontal aparente
       modulos: a.modulos,
@@ -252,8 +302,8 @@ function calcularElementosContinuos(input: EngineInput): PecaLinear[] {
       parede: a.parede,
       comprimento_mm: comprimento,
       largura_mm: altura,
-      cor: m.cor_caixa,
-      espessura_mm: p.ESPESSURA_CAIXA,
+      cor: a.corExterno ?? m.cor_caixa,
+      espessura_mm: a.espExterno ?? p.ESPESSURA_CAIXA,
       area_m2: round4((comprimento * altura) / 1e6),
       fita_m: round4(comprimento / 1000),
       modulos: a.modulos,

@@ -9,6 +9,7 @@ import {
 import type {
   EngineInput,
   ModuloInstanciado,
+  ModuloTemplate,
   ParametrosFabrica,
 } from "@/lib/engine/types";
 
@@ -17,6 +18,7 @@ interface RequestBody {
   modulos: ModuloInstanciado[];
   parametros?: Record<string, number>;
   comercial?: Partial<ParametrosComerciais>;
+  templates?: Record<string, ModuloTemplate>; // V2-4 (overrides de engenharia)
 }
 
 // POST /api/calcular — roda o motor de engenharia + pipeline financeiro.
@@ -47,6 +49,7 @@ export async function POST(req: Request) {
       ...PARAMETROS_FABRICA_PADRAO,
       ...(body.parametros ?? {}),
     } as ParametrosFabrica,
+    templates: body.templates,
   };
 
   const comercial: ParametrosComerciais = {

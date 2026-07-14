@@ -2,13 +2,34 @@
 // Elimina o cold start: a conta nasce apto a orçar. Estes valores são
 // substituíveis pelo usuário (Nível 3) — aqui servem de default.
 
+export interface ChapaEspecifica {
+  cor: string;
+  espessura: number;
+  preco: number;
+}
+
 export interface PrecosReferencia {
-  // Preço da chapa comercial (2,75×1,84m) por espessura em mm.
+  // Preço específico por cor×espessura (V2-6, tem prioridade).
+  chapaEspecifica?: ChapaEspecifica[];
+  // Fallback: preço da chapa comercial (2,75×1,84m) por espessura em mm.
   chapaPorEspessura: Record<number, number>;
   fitaMetro: number; // R$/m
   ferragens: Record<string, number>; // R$/unidade por código de item
   montagemPorM2: number; // R$/m² de MDF
   freteFixo: number; // R$ por orçamento (simplificação MVP)
+}
+
+/** Resolve o preço da chapa por cor×espessura, com fallback por espessura. */
+export function precoChapa(
+  precos: PrecosReferencia,
+  cor: string,
+  espessura: number
+): number {
+  const especifico = precos.chapaEspecifica?.find(
+    (c) => c.cor === cor && c.espessura === espessura
+  );
+  if (especifico) return especifico.preco;
+  return precos.chapaPorEspessura[espessura] ?? 0;
 }
 
 export const PRECOS_REFERENCIA: PrecosReferencia = {

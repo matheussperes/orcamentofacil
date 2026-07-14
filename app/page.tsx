@@ -3,7 +3,21 @@
 import { useEffect, useMemo, useState } from "react";
 import { calcularPreco, type ParametrosComerciais } from "@/lib/engine/pricing";
 import { COMERCIAL_PADRAO } from "@/lib/engine/defaults";
-import type { EngineOutput } from "@/lib/engine/types";
+import type {
+  ConfiguracaoMaterialModulo,
+  EngineOutput,
+} from "@/lib/engine/types";
+import {
+  carregarCatalogo,
+  catalogoParaPrecos,
+  coresDisponiveis,
+  espessurasDaCor,
+  type Catalogo,
+} from "@/lib/catalog";
+import { carregarOverrides } from "@/lib/templateOverrides";
+import { montarLinhasInsumos } from "@/lib/insumos";
+import { ModulePreview } from "./components/ModulePreview";
+import { LayoutVisualizer, type LayoutModulo } from "./components/LayoutVisualizer";
 
 interface TemplateMeta {
   codigo: string;
@@ -20,6 +34,7 @@ interface ModuloUI {
   altura_mm: number;
   profundidade_mm: number;
   config: Record<string, number>;
+  configMaterial?: ConfiguracaoMaterialModulo; // V2-1
 }
 
 const PAREDES_PADRAO: Record<string, number> = { A: 3200, B: 2100 };
@@ -64,6 +79,7 @@ export default function Home() {
   const [tempoMs, setTempoMs] = useState<number | null>(null);
   const [carregando, setCarregando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
+  const [catalogo, setCatalogo] = useState<Catalogo | null>(null);
 
   const [comercial, setComercial] = useState<ParametrosComerciais>(COMERCIAL_PADRAO);
 
@@ -72,14 +88,20 @@ export default function Home() {
       .then((r) => r.json())
       .then((d) => setTemplates(d.templates))
       .catch(() => {});
+    setCatalogo(carregarCatalogo());
   }, []);
 
   const templateMeta = (codigo: string) => templates.find((t) => t.codigo === codigo);
+  const precos = useMemo(
+    () => (catalogo ? catalogoParaPrecos(catalogo) : undefined),
+    [catalogo]
+  );
 
   async function calcular() {
     setCarregando(true);
     setErro(null);
     try {
+      const overrides = carregarOverrides();
       const res = await fetch("/api/calcular", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -93,8 +115,10 @@ export default function Home() {
             altura_mm: m.altura_mm,
             profundidade_mm: m.profundidade_mm,
             config: m.config,
+            configMaterial: m.configMaterial,
           })),
           comercial,
+          templates: Object.keys(overrides).length ? overrides : undefined,
         }),
       });
       const data = await res.json();
@@ -113,13 +137,20 @@ export default function Home() {
   }
 
   // Simulador de margem: recalcula o preço no cliente sem reprocessar a
-  // engenharia (doc 05).
+  // engenharia (doc 05). Usa os preços do catálogo do usuário (V2-6).
   const financeiro = useMemo(
-    () => (engine ? calcularPreco(engine, comercial) : null),
-    [engine, comercial]
+    () => (engine ? calcularPreco(engine, comercial, precos) : null),
+    [engine, comercial, precos]
   );
 
-  // Guarda o orçamento atual e abre a proposta imprimível (etapa PDF).
+  const insumos = useMemo(
+    () =>
+      engine && precos
+        ? montarLinhasInsumos(engine, precos, { incluirServicos: true })
+        : null,
+    [engine, precos]
+  );
+
   function gerarProposta(fin: ReturnType<typeof calcularPreco>) {
     if (!engine) return;
     const payload = {
@@ -142,11 +173,19 @@ export default function Home() {
       ms.map((m) => (m.id === id ? { ...m, config: { ...m.config, [chave]: valor } } : m))
     );
   }
+  function atualizarMaterial(id: string, cm: ConfiguracaoMaterialModulo | undefined) {
+    setModulos((ms) => ms.map((m) => (m.id === id ? { ...m, configMaterial: cm } : m)));
+  }
   function duplicar(id: string) {
     setModulos((ms) => {
       const i = ms.findIndex((m) => m.id === id);
       if (i < 0) return ms;
-      const copia = { ...ms[i], id: novoId(), config: { ...ms[i].config } };
+      const copia = {
+        ...ms[i],
+        id: novoId(),
+        config: { ...ms[i].config },
+        configMaterial: ms[i].configMaterial ? { ...ms[i].configMaterial! } : undefined,
+      };
       return [...ms.slice(0, i + 1), copia, ...ms.slice(i + 1)];
     });
   }
@@ -180,27 +219,57 @@ export default function Home() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [modulos, paredes, templates]);
 
+  // Módulos para o visualizador de layout (V2-3).
+  const layoutModulos: LayoutModulo[] = useMemo(
+    () =>
+      modulos.map((m) => ({
+        id: m.id,
+        parede: m.parede,
+        largura_mm: m.largura_mm,
+        altura_mm: m.altura_mm,
+        profundidade_mm: m.profundidade_mm,
+        categoria: templateMeta(m.templateCodigo)?.categoria ?? "inferior",
+        cor: m.configMaterial?.externo.acabamento,
+      })),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [modulos, templates]
+  );
+
   return (
     <div className="wrap">
       <header className="top">
         <h1>Budget Planner AI</h1>
         <p>
-          Motor paramétrico de orçamento — do módulo ao preço em segundos.
-          Demonstração do MVP (docs 04–06).
+          Motor paramétrico de orçamento — do módulo ao preço em segundos.{" "}
+          <a href="/configuracoes/materiais">Materiais</a> ·{" "}
+          <a href="/configuracoes/engenharia">Engenharia</a>
         </p>
       </header>
 
       <div className="toolbar">
         <button className="primary" onClick={calcular} disabled={carregando}>
-          {carregando ? "Calculando…" : "Calcular orçamento"}
+          {carregando ? "Calculando…" : "Criar orçamento"}
         </button>
         <button onClick={adicionar}>+ Adicionar módulo</button>
-        <button className="ghost" onClick={() => setModulos(PRESET_COZINHA.map((m) => ({ ...m, id: novoId(), config: { ...m.config } })))}>
+        <button
+          className="ghost"
+          onClick={() =>
+            setModulos(
+              PRESET_COZINHA.map((m) => ({ ...m, id: novoId(), config: { ...m.config } }))
+            )
+          }
+        >
           Recarregar preset "Cozinha em L"
         </button>
       </div>
 
       {erro && <div className="aviso erro">{erro}</div>}
+
+      {/* V2-3 — Layout das paredes em 2D */}
+      <div className="card">
+        <h2>Layout do ambiente (2D)</h2>
+        <LayoutVisualizer modulos={layoutModulos} paredes={paredes} />
+      </div>
 
       <div className="grid">
         {/* Coluna esquerda: módulos + barra de ocupação */}
@@ -233,9 +302,7 @@ export default function Home() {
                       Parede {b.parede} · {b.tipo}
                     </span>
                     <span className={estouro ? "" : "muted"} style={estouro ? { color: "var(--red)" } : {}}>
-                      {estouro
-                        ? `estouro de ${Math.abs(sobra)}mm`
-                        : `sobra ${sobra}mm`}
+                      {estouro ? `estouro de ${Math.abs(sobra)}mm` : `sobra ${sobra}mm`}
                     </span>
                   </div>
                   <div className={`barra ${estouro ? "estouro" : "ok"}`}>
@@ -261,79 +328,98 @@ export default function Home() {
               const meta = templateMeta(m.templateCodigo);
               return (
                 <div className="modulo" key={m.id}>
-                  <div className="linha">
-                    <select
-                      className="nome"
-                      value={m.templateCodigo}
-                      onChange={(e) => {
-                        const t = templateMeta(e.target.value);
-                        atualizar(m.id, {
-                          templateCodigo: e.target.value,
-                          config: { ...(t?.config_padrao ?? {}) },
-                        });
+                  <div style={{ display: "flex", gap: 12 }}>
+                    <ModulePreview
+                      modulo={{
+                        largura_mm: m.largura_mm,
+                        altura_mm: m.altura_mm,
+                        config: m.config,
+                        corExterno: m.configMaterial?.externo.acabamento,
                       }}
-                    >
-                      {templates.map((t) => (
-                        <option key={t.codigo} value={t.codigo}>
-                          {t.nome}
-                        </option>
-                      ))}
-                    </select>
-                    <select
-                      value={m.parede}
-                      onChange={(e) => atualizar(m.id, { parede: e.target.value })}
-                      style={{ width: 70 }}
-                    >
-                      {Object.keys(paredes).map((p) => (
-                        <option key={p} value={p}>
-                          {p}
-                        </option>
-                      ))}
-                    </select>
-                    <div className="acoes">
-                      <button onClick={() => duplicar(m.id)}>Duplicar</button>
-                      <button className="danger" onClick={() => excluir(m.id)}>
-                        Excluir
-                      </button>
+                    />
+                    <div style={{ flex: 1 }}>
+                      <div className="linha">
+                        <select
+                          className="nome"
+                          value={m.templateCodigo}
+                          onChange={(e) => {
+                            const t = templateMeta(e.target.value);
+                            atualizar(m.id, {
+                              templateCodigo: e.target.value,
+                              config: { ...(t?.config_padrao ?? {}) },
+                            });
+                          }}
+                        >
+                          {templates.map((t) => (
+                            <option key={t.codigo} value={t.codigo}>
+                              {t.nome}
+                            </option>
+                          ))}
+                        </select>
+                        <select
+                          value={m.parede}
+                          onChange={(e) => atualizar(m.id, { parede: e.target.value })}
+                          style={{ width: 60 }}
+                        >
+                          {Object.keys(paredes).map((p) => (
+                            <option key={p} value={p}>
+                              {p}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="campos" style={{ marginTop: 8 }}>
+                        <div>
+                          <label>Largura</label>
+                          <input
+                            type="number"
+                            value={m.largura_mm}
+                            onChange={(e) => atualizar(m.id, { largura_mm: Number(e.target.value) })}
+                          />
+                        </div>
+                        <div>
+                          <label>Altura</label>
+                          <input
+                            type="number"
+                            value={m.altura_mm}
+                            onChange={(e) => atualizar(m.id, { altura_mm: Number(e.target.value) })}
+                          />
+                        </div>
+                        <div>
+                          <label>Prof.</label>
+                          <input
+                            type="number"
+                            value={m.profundidade_mm}
+                            onChange={(e) =>
+                              atualizar(m.id, { profundidade_mm: Number(e.target.value) })
+                            }
+                          />
+                        </div>
+                        {Object.keys(meta?.config_padrao ?? m.config).map((chave) => (
+                          <div key={chave}>
+                            <label>{chave.replace("CONFIG_QTD_", "").replace("CONFIG_", "")}</label>
+                            <input
+                              type="number"
+                              value={m.config[chave] ?? 0}
+                              onChange={(e) => atualizarConfig(m.id, chave, Number(e.target.value))}
+                            />
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   </div>
-                  <div className="campos">
-                    <div>
-                      <label>Largura (mm)</label>
-                      <input
-                        type="number"
-                        value={m.largura_mm}
-                        onChange={(e) => atualizar(m.id, { largura_mm: Number(e.target.value) })}
-                      />
-                    </div>
-                    <div>
-                      <label>Altura (mm)</label>
-                      <input
-                        type="number"
-                        value={m.altura_mm}
-                        onChange={(e) => atualizar(m.id, { altura_mm: Number(e.target.value) })}
-                      />
-                    </div>
-                    <div>
-                      <label>Prof. (mm)</label>
-                      <input
-                        type="number"
-                        value={m.profundidade_mm}
-                        onChange={(e) =>
-                          atualizar(m.id, { profundidade_mm: Number(e.target.value) })
-                        }
-                      />
-                    </div>
-                    {Object.keys(meta?.config_padrao ?? m.config).map((chave) => (
-                      <div key={chave}>
-                        <label>{chave.replace("CONFIG_QTD_", "").replace("CONFIG_", "")}</label>
-                        <input
-                          type="number"
-                          value={m.config[chave] ?? 0}
-                          onChange={(e) => atualizarConfig(m.id, chave, Number(e.target.value))}
-                        />
-                      </div>
-                    ))}
+
+                  <MaterialModulo
+                    catalogo={catalogo}
+                    valor={m.configMaterial}
+                    onChange={(cm) => atualizarMaterial(m.id, cm)}
+                  />
+
+                  <div className="acoes" style={{ marginTop: 8 }}>
+                    <button onClick={() => duplicar(m.id)}>Duplicar</button>
+                    <button className="danger" onClick={() => excluir(m.id)}>
+                      Excluir
+                    </button>
                   </div>
                 </div>
               );
@@ -366,94 +452,79 @@ export default function Home() {
           </div>
 
           {financeiro && (
-            <>
-              <div className="card">
-                <h2>Resultado</h2>
-                <div className="kpis">
-                  <div className="kpi destaque">
-                    <div className="rot">Preço final</div>
-                    <div className="val">{brl(financeiro.precoComDesconto)}</div>
-                  </div>
-                  <div className="kpi">
-                    <div className="rot">Custo direto</div>
-                    <div className="val">{brl(financeiro.custoDireto)}</div>
-                  </div>
-                  <div className="kpi">
-                    <div className="rot">Lucro bruto</div>
-                    <div className="val">{brl(financeiro.lucroBruto)}</div>
-                  </div>
-                  <div
-                    className="kpi"
-                    style={
-                      financeiro.abaixoDaMargemMinima ? { borderColor: "var(--red)" } : {}
-                    }
-                  >
-                    <div className="rot">Margem efetiva</div>
-                    <div className="val">{pct(financeiro.margemEfetiva)}</div>
-                  </div>
+            <div className="card">
+              <h2>Resultado</h2>
+              <div className="kpis">
+                <div className="kpi destaque">
+                  <div className="rot">Preço final</div>
+                  <div className="val">{brl(financeiro.precoComDesconto)}</div>
                 </div>
-                {financeiro.avisos.map((a, i) => (
-                  <div className="aviso" key={i} style={{ marginTop: 10 }}>
-                    {a}
-                  </div>
-                ))}
-                {tempoMs !== null && (
-                  <div className="tempo">
-                    Engenharia calculada em {tempoMs}ms (alvo &lt; 2000ms).
-                  </div>
-                )}
-                <button
-                  className="primary"
-                  style={{ marginTop: 12, width: "100%" }}
-                  onClick={() => gerarProposta(financeiro)}
+                <div className="kpi">
+                  <div className="rot">Custo direto</div>
+                  <div className="val">{brl(financeiro.custoDireto)}</div>
+                </div>
+                <div className="kpi">
+                  <div className="rot">Lucro bruto</div>
+                  <div className="val">{brl(financeiro.lucroBruto)}</div>
+                </div>
+                <div
+                  className="kpi"
+                  style={financeiro.abaixoDaMargemMinima ? { borderColor: "var(--red)" } : {}}
                 >
-                  Gerar proposta (PDF)
-                </button>
+                  <div className="rot">Margem efetiva</div>
+                  <div className="val">{pct(financeiro.margemEfetiva)}</div>
+                </div>
               </div>
-
-              <div className="card">
-                <h2>Composição do custo</h2>
-                <table>
-                  <tbody>
-                    {financeiro.detalhes.map((d) => (
-                      <tr key={d.descricao}>
-                        <td>{d.descricao}</td>
-                        <td className="num">{brl(d.valor)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </>
+              {financeiro.avisos.map((a, i) => (
+                <div className="aviso" key={i} style={{ marginTop: 10 }}>
+                  {a}
+                </div>
+              ))}
+              {tempoMs !== null && (
+                <div className="tempo">
+                  Engenharia calculada em {tempoMs}ms (alvo &lt; 2000ms).
+                </div>
+              )}
+              <button
+                className="primary"
+                style={{ marginTop: 12, width: "100%" }}
+                onClick={() => gerarProposta(financeiro)}
+              >
+                Gerar proposta (PDF)
+              </button>
+            </div>
           )}
 
-          {engine && (
+          {/* V2-5 — Pré-orçamento de insumos unificado (BOM + custo) */}
+          {engine && insumos && (
             <div className="card">
-              <h2>Lista de materiais (BOM)</h2>
+              <h2>Pré-orçamento de insumos</h2>
               <table>
                 <thead>
                   <tr>
-                    <th>MDF (cor · esp.)</th>
-                    <th className="num">Área m²</th>
-                    <th className="num">Chapas</th>
+                    <th>Item</th>
+                    <th>Categoria</th>
+                    <th>Qtd</th>
+                    <th className="num">Custo unit.</th>
+                    <th className="num">Total</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {engine.consolidado.mdf.map((g, i) => (
+                  {insumos.linhas.map((l, i) => (
                     <tr key={i}>
-                      <td>
-                        {g.cor} · {g.espessura_mm}mm
-                      </td>
-                      <td className="num">{g.area_m2.toFixed(2)}</td>
-                      <td className="num">{g.chapas}</td>
+                      <td>{l.item}</td>
+                      <td className="muted">{l.categoria}</td>
+                      <td>{l.qtd}</td>
+                      <td className="num">{brl(l.unit)}</td>
+                      <td className="num">{brl(l.total)}</td>
                     </tr>
                   ))}
                   <tr>
-                    <td>
-                      <strong>Fita de borda</strong>
+                    <td colSpan={4}>
+                      <strong>Subtotal (custo direto)</strong>
                     </td>
-                    <td className="num" colSpan={2}>
-                      {engine.consolidado.fitaTotalM.toFixed(1)} m
+                    <td className="num">
+                      <strong>{brl(insumos.subtotal)}</strong>
                     </td>
                   </tr>
                 </tbody>
@@ -482,23 +553,6 @@ export default function Home() {
                 </table>
               )}
 
-              <table style={{ marginTop: 12 }}>
-                <thead>
-                  <tr>
-                    <th>Ferragem / acessório</th>
-                    <th className="num">Qtd</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {engine.consolidado.ferragens.map((f) => (
-                    <tr key={f.item}>
-                      <td>{f.item}</td>
-                      <td className="num">{f.quantidade}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-
               {engine.warnings.length > 0 && (
                 <div style={{ marginTop: 12 }}>
                   {engine.warnings.map((w, i) => (
@@ -514,13 +568,107 @@ export default function Home() {
       </div>
 
       <div className="footer">
-        Documentação completa do pipeline em <code>/docs</code>. Biblioteca de
-        engenharia em <code>/engine/templates</code>. Este é um MVP de
-        demonstração do motor — persistência, autenticação e PDF são as próximas
-        etapas (ver <code>DEPLOY.md</code>).
+        Documentação em <code>/docs</code>. Configure materiais e a engenharia dos
+        módulos no menu acima. Preços do catálogo salvos no navegador (V2-6).
       </div>
     </div>
   );
+}
+
+// V2-1 — Editor de material por módulo (interno/externo/portas + tem fundo).
+function MaterialModulo({
+  catalogo,
+  valor,
+  onChange,
+}: {
+  catalogo: Catalogo | null;
+  valor?: ConfiguracaoMaterialModulo;
+  onChange: (cm: ConfiguracaoMaterialModulo | undefined) => void;
+}) {
+  const cores = catalogo ? coresDisponiveis(catalogo) : ["Branco TX", "Louro Freijó"];
+
+  if (!valor) {
+    return (
+      <button
+        style={{ marginTop: 8 }}
+        onClick={() => onChange(materialInicial(cores))}
+      >
+        + Personalizar material
+      </button>
+    );
+  }
+
+  const slot = (
+    nome: "interno" | "externo" | "portas",
+    rot: string
+  ) => {
+    const s = valor[nome];
+    const espessuras = catalogo ? espessurasDaCor(catalogo, s.acabamento) : [15, 18];
+    return (
+      <div>
+        <label>{rot}</label>
+        <select
+          value={s.acabamento}
+          onChange={(e) =>
+            onChange({ ...valor, [nome]: { ...s, acabamento: e.target.value } })
+          }
+        >
+          {cores.map((c) => (
+            <option key={c} value={c}>
+              {c}
+            </option>
+          ))}
+        </select>
+        <select
+          value={s.espessura}
+          style={{ marginTop: 4 }}
+          onChange={(e) =>
+            onChange({ ...valor, [nome]: { ...s, espessura: Number(e.target.value) } })
+          }
+        >
+          {(espessuras.length ? espessuras : [15, 18]).map((esp) => (
+            <option key={esp} value={esp}>
+              {esp} mm
+            </option>
+          ))}
+        </select>
+      </div>
+    );
+  };
+
+  return (
+    <div style={{ marginTop: 10, borderTop: "1px solid var(--border)", paddingTop: 8 }}>
+      <div className="campos">
+        {slot("interno", "Interno")}
+        {slot("externo", "Externo")}
+        {slot("portas", "Portas")}
+        <div>
+          <label>Tem fundo</label>
+          <select
+            value={valor.temFundo ? "sim" : "nao"}
+            onChange={(e) => onChange({ ...valor, temFundo: e.target.value === "sim" })}
+          >
+            <option value="sim">Sim</option>
+            <option value="nao">Não</option>
+          </select>
+        </div>
+      </div>
+      <button className="ghost" style={{ marginTop: 6 }} onClick={() => onChange(undefined)}>
+        Usar padrão do ambiente
+      </button>
+    </div>
+  );
+}
+
+function materialInicial(cores: string[]): ConfiguracaoMaterialModulo {
+  const branco = cores.find((c) => c.toLowerCase().includes("branco")) ?? cores[0];
+  const frente = cores.find((c) => c !== branco) ?? branco;
+  return {
+    interno: { espessura: 15, acabamento: branco },
+    externo: { espessura: 18, acabamento: branco },
+    portas: { espessura: 18, acabamento: frente },
+    temFundo: true,
+  };
 }
 
 function Slider({
