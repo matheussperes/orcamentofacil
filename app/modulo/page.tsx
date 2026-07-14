@@ -30,8 +30,10 @@ import {
   listarPresets,
   removerPreset,
   salvarPreset,
+  seedPresetsPadrao,
   type BoxPreset,
 } from "@/lib/boxPresets";
+import { listarCategorias, adicionarCategoria } from "@/lib/categorias";
 import { planoDeCorte } from "@/lib/engine/box/cutting";
 import { PlanoCorteCanvas } from "../components/PlanoCorteCanvas";
 
@@ -58,6 +60,9 @@ export default function EditorModulo() {
   const [box, setBox] = useState<BoxModule>(() => caixaInicial("Branco TX"));
   const [sel, setSel] = useState<string | null>("raiz");
   const [presets, setPresets] = useState<BoxPreset[]>([]);
+  const [categorias, setCategorias] = useState<string[]>([]);
+  const [categoriaSalvar, setCategoriaSalvar] = useState("Cozinha");
+  const [novaCategoria, setNovaCategoria] = useState("");
 
   // Controles do vão selecionado.
   const [splitQtd, setSplitQtd] = useState(1);
@@ -77,7 +82,9 @@ export default function EditorModulo() {
   useEffect(() => {
     const cat = carregarCatalogo();
     setCatalogo(cat);
+    seedPresetsPadrao();
     setPresets(listarPresets());
+    setCategorias(listarCategorias());
     const branco = coresDisponiveis(cat).find((c) => c.toLowerCase().includes("branco"));
     if (branco) {
       setBox((b) => ({ ...b, caixa: { ...b.caixa, cor: branco } }));
@@ -161,9 +168,18 @@ export default function EditorModulo() {
   }
 
   function salvar() {
-    const p = salvarPreset(box.nome || "Módulo", box);
+    const p = salvarPreset(box.nome || "Módulo", categoriaSalvar, box);
     setPresets(listarPresets());
-    alert(`Preset "${p.nome}" salvo. Ficará disponível ao criar módulos.`);
+    alert(
+      `Preset "${p.nome}" salvo em "${p.categoria}". Disponível no orçamento em Ambiente → Tipo → Modelo.`
+    );
+  }
+  function criarCategoria() {
+    if (!novaCategoria.trim()) return;
+    adicionarCategoria(novaCategoria);
+    setCategorias(listarCategorias());
+    setCategoriaSalvar(novaCategoria.trim());
+    setNovaCategoria("");
   }
   function aplicarPreset(p: BoxPreset) {
     setBox({ ...p.box, id: box.id });
@@ -484,16 +500,52 @@ export default function EditorModulo() {
           </div>
 
           <div className="card">
-            <h2>Presets</h2>
-            <button className="primary" onClick={salvar}>
+            <h2>Presets — o editor é a fonte da verdade</h2>
+            <p className="muted" style={{ fontSize: 12, marginTop: -6 }}>
+              Todo módulo salvo aqui, com sua categoria, fica disponível no
+              orçamento em Ambiente → Tipo → Modelo.
+            </p>
+            <div className="campos">
+              <div>
+                <label>Categoria / ambiente</label>
+                <select value={categoriaSalvar} onChange={(e) => setCategoriaSalvar(e.target.value)}>
+                  {categorias.map((c) => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label>Nova categoria</label>
+                <div style={{ display: "flex", gap: 4 }}>
+                  <input
+                    value={novaCategoria}
+                    placeholder="ex.: Escritório"
+                    onChange={(e) => setNovaCategoria(e.target.value)}
+                  />
+                  <button onClick={criarCategoria}>+</button>
+                </div>
+              </div>
+            </div>
+            <button className="primary" style={{ marginTop: 10 }} onClick={salvar}>
               Salvar este módulo como preset
             </button>
             {presets.length > 0 && (
               <table style={{ marginTop: 10 }}>
+                <thead>
+                  <tr>
+                    <th>Nome</th>
+                    <th>Categoria</th>
+                    <th>Tipo</th>
+                    <th></th>
+                    <th></th>
+                  </tr>
+                </thead>
                 <tbody>
                   {presets.map((p) => (
                     <tr key={p.id}>
                       <td>{p.nome}</td>
+                      <td className="muted">{p.categoria}</td>
+                      <td className="muted">{p.box.tipo}</td>
                       <td>
                         <button onClick={() => aplicarPreset(p)}>Aplicar</button>
                       </td>

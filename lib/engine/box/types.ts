@@ -45,6 +45,19 @@ export interface BayNode {
   content?: BayContent; // conteúdo quando split === "none"
 }
 
+// Tamponamento de INSTÂNCIA (comercial/instalação) — diferente do
+// `BayContent` "tamponamento" (que é estrutural, parte do gabarito). Decidido:
+// o painel é colado POR FORA da carcaça já pronta, somando à largura de
+// instalação do módulo (não altera as peças internas da carcaça).
+export interface TamponamentoInstancia {
+  esquerdo: boolean;
+  direito: boolean;
+  superior: boolean;
+  inferior: boolean;
+  sarrafo: boolean; // true = quadro de sarrafos; false = chapa inteiriça
+  material: BoxMaterial;
+}
+
 export interface BoxModule {
   id: string;
   nome: string;
@@ -55,6 +68,16 @@ export interface BoxModule {
   profundidade: number; // mm
   caixa: BoxMaterial; // cor + espessura da caixa interna (laterais, base, tampo…)
   raiz: BayNode;
+  tamponamento?: TamponamentoInstancia; // override de instância (doc 12, Etapa 3)
+}
+
+/** Espessura lateral extra somada à largura de instalação (doc 12: decisão A). */
+export function larguraInstalacaoBox(box: BoxModule): number {
+  const t = box.tamponamento;
+  if (!t) return box.largura;
+  const esq = t.esquerdo ? t.material.espessura : 0;
+  const dir = t.direito ? t.material.espessura : 0;
+  return box.largura + esq + dir;
 }
 
 /** Cria um vão-folha vazio. */

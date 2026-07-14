@@ -12,7 +12,7 @@ import type {
   EngineOutput,
   ModuloInstanciado,
 } from "@/lib/engine/types";
-import type { BoxModule } from "@/lib/engine/box/types";
+import { larguraInstalacaoBox, type BoxModule, type TamponamentoInstancia } from "@/lib/engine/box/types";
 import {
   calcularOrcamentoMisto,
   idDoItem,
@@ -23,7 +23,7 @@ import {
   corExternaDoItem,
   type ModuloOrcamento,
 } from "@/lib/orcamento";
-import { listarPresets, type BoxPreset } from "@/lib/boxPresets";
+import { listarPresets, seedPresetsPadrao, type BoxPreset } from "@/lib/boxPresets";
 import {
   carregarCatalogo,
   catalogoParaPrecos,
@@ -34,6 +34,7 @@ import {
 import { carregarOverrides } from "@/lib/templateOverrides";
 import { montarLinhasInsumos } from "@/lib/insumos";
 import { ModulePreview } from "./components/ModulePreview";
+import { BoxCanvas } from "./components/BoxCanvas";
 import { LayoutVisualizer, type LayoutModulo } from "./components/LayoutVisualizer";
 
 interface TemplateMeta {
@@ -121,6 +122,12 @@ export default function Home() {
   const [erro, setErro] = useState<string | null>(null);
   const [catalogo, setCatalogo] = useState<Catalogo | null>(null);
 
+  // Assistente "+ Novo módulo": Ambiente → Tipo → Modelo, lido a partir dos
+  // presets salvos no editor (o editor é a fonte da verdade).
+  const [wizardAberto, setWizardAberto] = useState(false);
+  const [wizAmbiente, setWizAmbiente] = useState("");
+  const [wizTipo, setWizTipo] = useState("");
+
   const [comercial, setComercial] = useState<ParametrosComerciais>(COMERCIAL_PADRAO);
 
   useEffect(() => {
@@ -129,6 +136,7 @@ export default function Home() {
       .then((d) => setTemplates(d.templates))
       .catch(() => {});
     setCatalogo(carregarCatalogo());
+    seedPresetsPadrao();
     setPresets(listarPresets());
   }, []);
 
@@ -238,11 +246,6 @@ export default function Home() {
   function excluir(id: string) {
     setItens((its) => its.filter((it) => idDoItem(it) !== id));
   }
-  function adicionar() {
-    const t = templates[0];
-    if (!t) return;
-    setItens((its) => [...its, itemTemplatePreset(t.codigo, "A", 600, 720, 550, { ...t.config_padrao })]);
-  }
   // Instancia um preset do editor de caixa (V3) como cópia editável.
   function adicionarBox(p: BoxPreset) {
     const clone: BoxModule = JSON.parse(JSON.stringify(p.box));
@@ -289,37 +292,10 @@ export default function Home() {
         <button className="primary" onClick={calcular} disabled={carregando}>
           {carregando ? "Calculando…" : "Criar orçamento"}
         </button>
-        <button onClick={adicionar}>+ Adicionar módulo (template)</button>
-        {presets.length > 0 && (
-          <select
-            defaultValue=""
-            onChange={(e) => {
-              const p = presets.find((x) => x.id === e.target.value);
-              if (p) adicionarBox(p);
-              e.target.value = "";
-            }}
-          >
-            <option value="" disabled>
-              + Adicionar caixa (preset)…
-            </option>
-            {presets.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.nome}
-              </option>
-            ))}
-          </select>
-        )}
         <button className="ghost" onClick={() => setItens(PRESET_COZINHA.map(clonarItem))}>
-          Recarregar preset "Cozinha em L"
+          Recarregar preset "Cozinha em L" (demo legado)
         </button>
       </div>
-      {presets.length === 0 && (
-        <div className="muted" style={{ fontSize: 13, marginBottom: 12 }}>
-          Dica: monte módulos no{" "}
-          <a href="/modulo">editor de caixa (V3)</a>, salve como preset e eles
-          aparecerão aqui para adicionar ao orçamento.
-        </div>
-      )}
 
       {erro && <div className="aviso erro">{erro}</div>}
 
@@ -349,6 +325,39 @@ export default function Home() {
         <div>
           <div className="card">
             <h2>Módulos ({itens.length})</h2>
+
+            {!wizardAberto && (
+              <button
+                className="primary"
+                style={{ marginBottom: 12 }}
+                onClick={() => {
+                  setWizAmbiente("");
+                  setWizTipo("");
+                  setWizardAberto(true);
+                }}
+              >
+                + Novo módulo
+              </button>
+            )}
+
+            {wizardAberto && (
+              <NovoModuloWizard
+                presets={presets}
+                ambiente={wizAmbiente}
+                tipo={wizTipo}
+                onAmbiente={(a) => {
+                  setWizAmbiente(a);
+                  setWizTipo("");
+                }}
+                onTipo={setWizTipo}
+                onEscolher={(p) => {
+                  adicionarBox(p);
+                  setWizardAberto(false);
+                }}
+                onCancelar={() => setWizardAberto(false)}
+              />
+            )}
+
             {itens.map((it) => {
               const id = idDoItem(it);
               return (
@@ -642,8 +651,109 @@ function TemplateModuloCard({
   );
 }
 
-// Card de edição de um módulo-CAIXA (V3): apenas overrides comerciais — a
-// engenharia (subdivisões/conteúdo) é definida no laboratório (/modulo).
+// Assistente "+ Novo módulo": Ambiente → Tipo → Modelo, lido a partir dos
+// presets salvos no editor (/modulo é a fonte da verdade — doc 12/Etapa 2-3).
+function NovoModuloWizard({
+  presets,
+  ambiente,
+  tipo,
+  onAmbiente,
+  onTipo,
+  onEscolher,
+  onCancelar,
+}: {
+  presets: BoxPreset[];
+  ambiente: string;
+  tipo: string;
+  onAmbiente: (a: string) => void;
+  onTipo: (t: string) => void;
+  onEscolher: (p: BoxPreset) => void;
+  onCancelar: () => void;
+}) {
+  if (presets.length === 0) {
+    return (
+      <div className="modulo" style={{ borderColor: "var(--accent)" }}>
+        <p className="muted">
+          Nenhum módulo cadastrado ainda. Monte um no{" "}
+          <a href="/modulo">editor de caixa</a> e salve como preset — ele
+          aparecerá aqui para adicionar ao orçamento.
+        </p>
+        <button onClick={onCancelar}>Cancelar</button>
+      </div>
+    );
+  }
+
+  const rotuloTipo: Record<string, string> = {
+    aereo: "Aéreo",
+    inferior: "Inferior",
+    torre: "Torre",
+  };
+  const ambientes = [...new Set(presets.map((p) => p.categoria))].sort();
+  const tipos = ambiente
+    ? [...new Set(presets.filter((p) => p.categoria === ambiente).map((p) => p.box.tipo))]
+    : [];
+  const modelos =
+    ambiente && tipo
+      ? presets.filter((p) => p.categoria === ambiente && p.box.tipo === tipo)
+      : [];
+
+  return (
+    <div className="modulo" style={{ borderColor: "var(--accent)" }}>
+      <div className="linha">
+        <strong className="nome">Novo módulo</strong>
+        <button className="ghost" onClick={onCancelar}>
+          Cancelar
+        </button>
+      </div>
+      <div className="campos" style={{ marginTop: 8 }}>
+        <div>
+          <label>1. Ambiente</label>
+          <select value={ambiente} onChange={(e) => onAmbiente(e.target.value)}>
+            <option value="" disabled>
+              Selecione…
+            </option>
+            {ambientes.map((a) => (
+              <option key={a} value={a}>
+                {a}
+              </option>
+            ))}
+          </select>
+        </div>
+        {ambiente && (
+          <div>
+            <label>2. Tipo</label>
+            <select value={tipo} onChange={(e) => onTipo(e.target.value)}>
+              <option value="" disabled>
+                Selecione…
+              </option>
+              {tipos.map((t) => (
+                <option key={t} value={t}>
+                  {rotuloTipo[t] ?? t}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+      </div>
+      {ambiente && tipo && (
+        <div style={{ marginTop: 10 }}>
+          <label>3. Modelo</label>
+          <div className="toolbar" style={{ marginTop: 4 }}>
+            {modelos.map((p) => (
+              <button key={p.id} onClick={() => onEscolher(p)}>
+                {p.nome}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Card de edição de um módulo-CAIXA (V3): overrides comerciais de instância
+// (dimensões, cor/espessura interna, tamponamento) — a engenharia interna
+// (subdivisões/conteúdo dos vãos) é definida no laboratório (/modulo).
 function BoxModuloCard({
   box,
   paredes,
@@ -656,57 +766,161 @@ function BoxModuloCard({
   onAtualizar: (patch: Partial<BoxModule>) => void;
 }) {
   const cores = catalogo ? coresDisponiveis(catalogo) : [box.caixa.cor];
+  const larguraInstalacao = larguraInstalacaoBox(box);
+
   return (
     <>
-      <div className="linha">
-        <span className="nome">
-          {box.nome}{" "}
-          <span className="muted" style={{ fontSize: 12 }}>
-            ({box.tipo})
-          </span>
-        </span>
-        <select
-          value={box.parede ?? "A"}
-          onChange={(e) => onAtualizar({ parede: e.target.value })}
-          style={{ width: 60 }}
-        >
-          {Object.keys(paredes).map((p) => (
-            <option key={p} value={p}>
-              {p}
-            </option>
-          ))}
-        </select>
+      <div style={{ display: "flex", gap: 12 }}>
+        <div style={{ width: 180, flexShrink: 0 }}>
+          <BoxCanvas box={box} selecionado={null} onSelecionar={() => {}} />
+        </div>
+        <div style={{ flex: 1 }}>
+          <div className="linha">
+            <span className="nome">
+              {box.nome}{" "}
+              <span className="muted" style={{ fontSize: 12 }}>
+                ({box.tipo})
+              </span>
+            </span>
+            <select
+              value={box.parede ?? "A"}
+              onChange={(e) => onAtualizar({ parede: e.target.value })}
+              style={{ width: 60 }}
+            >
+              {Object.keys(paredes).map((p) => (
+                <option key={p} value={p}>
+                  {p}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="campos" style={{ marginTop: 8 }}>
+            <div>
+              <label>Largura</label>
+              <input
+                type="number"
+                value={box.largura}
+                onChange={(e) => onAtualizar({ largura: Number(e.target.value) })}
+              />
+            </div>
+            <div>
+              <label>Altura</label>
+              <input
+                type="number"
+                value={box.altura}
+                onChange={(e) => onAtualizar({ altura: Number(e.target.value) })}
+              />
+            </div>
+            <div>
+              <label>Prof.</label>
+              <input
+                type="number"
+                value={box.profundidade}
+                onChange={(e) => onAtualizar({ profundidade: Number(e.target.value) })}
+              />
+            </div>
+            <div>
+              <label>Cor interno</label>
+              <select
+                value={box.caixa.cor}
+                onChange={(e) => onAtualizar({ caixa: { ...box.caixa, cor: e.target.value } })}
+              >
+                {cores.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label>Esp. interno</label>
+              <select
+                value={box.caixa.espessura}
+                onChange={(e) =>
+                  onAtualizar({ caixa: { ...box.caixa, espessura: Number(e.target.value) } })
+                }
+              >
+                {[15, 18].map((esp) => (
+                  <option key={esp} value={esp}>
+                    {esp} mm
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+          {larguraInstalacao !== box.largura && (
+            <div className="muted" style={{ fontSize: 12, marginTop: 6 }}>
+              Largura de instalação: {larguraInstalacao}mm (carcaça {box.largura}mm +
+              tamponamento)
+            </div>
+          )}
+        </div>
       </div>
-      <div className="campos" style={{ marginTop: 8 }}>
+
+      <TamponamentoConfig
+        catalogo={catalogo}
+        valor={box.tamponamento}
+        onChange={(t) => onAtualizar({ tamponamento: t })}
+      />
+
+      <div className="muted" style={{ fontSize: 12, marginTop: 6 }}>
+        Estrutura interna (vãos, portas, gavetas) definida no editor.{" "}
+        <a href="/modulo">Editar em /modulo</a>.
+      </div>
+    </>
+  );
+}
+
+// Tamponamento de instância (doc 12): soma à largura de instalação, não altera
+// a carcaça já pronta.
+function TamponamentoConfig({
+  catalogo,
+  valor,
+  onChange,
+}: {
+  catalogo: Catalogo | null;
+  valor?: TamponamentoInstancia;
+  onChange: (t: TamponamentoInstancia | undefined) => void;
+}) {
+  const cores = catalogo ? coresDisponiveis(catalogo) : ["Branco TX", "Madeirado"];
+
+  if (!valor) {
+    return (
+      <button style={{ marginTop: 8 }} onClick={() => onChange(tamponamentoInicial(cores))}>
+        + Adicionar tamponamento
+      </button>
+    );
+  }
+
+  const espessuras = catalogo ? espessurasDaCor(catalogo, valor.material.cor) : [15, 18, 25];
+  const lado = (chave: keyof Pick<TamponamentoInstancia, "esquerdo" | "direito" | "superior" | "inferior">, rot: string) => (
+    <label key={chave} style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12 }}>
+      <input
+        type="checkbox"
+        checked={valor[chave]}
+        onChange={(e) => onChange({ ...valor, [chave]: e.target.checked })}
+      />
+      {rot}
+    </label>
+  );
+
+  return (
+    <div style={{ marginTop: 10, borderTop: "1px solid var(--border)", paddingTop: 8 }}>
+      <label>Tamponamento (onde)</label>
+      <div style={{ display: "flex", gap: 14, flexWrap: "wrap", margin: "6px 0" }}>
+        {lado("esquerdo", "Esquerdo")}
+        {lado("direito", "Direito")}
+        {lado("superior", "Superior")}
+        {lado("inferior", "Inferior")}
+      </div>
+      <div className="campos">
         <div>
-          <label>Largura</label>
-          <input
-            type="number"
-            value={box.largura}
-            onChange={(e) => onAtualizar({ largura: Number(e.target.value) })}
-          />
-        </div>
-        <div>
-          <label>Altura</label>
-          <input
-            type="number"
-            value={box.altura}
-            onChange={(e) => onAtualizar({ altura: Number(e.target.value) })}
-          />
-        </div>
-        <div>
-          <label>Prof.</label>
-          <input
-            type="number"
-            value={box.profundidade}
-            onChange={(e) => onAtualizar({ profundidade: Number(e.target.value) })}
-          />
-        </div>
-        <div>
-          <label>Cor caixa</label>
+          <label>Cor</label>
           <select
-            value={box.caixa.cor}
-            onChange={(e) => onAtualizar({ caixa: { ...box.caixa, cor: e.target.value } })}
+            value={valor.material.cor}
+            onChange={(e) =>
+              onChange({ ...valor, material: { ...valor.material, cor: e.target.value } })
+            }
           >
             {cores.map((c) => (
               <option key={c} value={c}>
@@ -716,26 +930,50 @@ function BoxModuloCard({
           </select>
         </div>
         <div>
-          <label>Esp. caixa</label>
+          <label>Espessura</label>
           <select
-            value={box.caixa.espessura}
+            value={valor.material.espessura}
             onChange={(e) =>
-              onAtualizar({ caixa: { ...box.caixa, espessura: Number(e.target.value) } })
+              onChange({
+                ...valor,
+                material: { ...valor.material, espessura: Number(e.target.value) },
+              })
             }
           >
-            {[15, 18].map((esp) => (
+            {(espessuras.length ? espessuras : [15, 18, 25]).map((esp) => (
               <option key={esp} value={esp}>
                 {esp} mm
               </option>
             ))}
           </select>
         </div>
+        <div>
+          <label>Montagem</label>
+          <select
+            value={valor.sarrafo ? "sarrafo" : "inteirica"}
+            onChange={(e) => onChange({ ...valor, sarrafo: e.target.value === "sarrafo" })}
+          >
+            <option value="inteirica">Inteiriça</option>
+            <option value="sarrafo">Sarrafo</option>
+          </select>
+        </div>
       </div>
-      <div className="muted" style={{ fontSize: 12, marginTop: 6 }}>
-        Engenharia definida no editor. Edite a estrutura em <a href="/modulo">/modulo</a>.
-      </div>
-    </>
+      <button className="ghost" style={{ marginTop: 6 }} onClick={() => onChange(undefined)}>
+        Remover tamponamento
+      </button>
+    </div>
   );
+}
+
+function tamponamentoInicial(cores: string[]): TamponamentoInstancia {
+  return {
+    esquerdo: false,
+    direito: false,
+    superior: false,
+    inferior: false,
+    sarrafo: false,
+    material: { cor: cores[0] ?? "Branco TX", espessura: 18 },
+  };
 }
 
 // V2-1 — Editor de material por módulo (interno/externo/portas + tem fundo).

@@ -1,6 +1,6 @@
 import { calcularEngine, consolidarResultados } from "./engine/engine";
 import { explodeBox } from "./engine/box";
-import type { BoxModule } from "./engine/box/types";
+import { larguraInstalacaoBox, type BoxModule } from "./engine/box/types";
 import type {
   EngineOutput,
   MateriaisAmbiente,
@@ -25,8 +25,11 @@ export function idDoItem(m: ModuloOrcamento): string {
 export function paredeDoItem(m: ModuloOrcamento): string {
   return (m.origem === "template" ? m.modulo.parede : m.box.parede) ?? "A";
 }
+// Largura de INSTALAÇÃO (doc 12: tamponamento soma à largura, decisão A) —
+// usada na barra/canvas de ocupação da parede. Não é a largura de fabricação
+// da carcaça (essa fica em `box.largura`, intacta para o cálculo de peças).
 export function larguraDoItem(m: ModuloOrcamento): number {
-  return m.origem === "template" ? m.modulo.largura_mm : m.box.largura;
+  return m.origem === "template" ? m.modulo.largura_mm : larguraInstalacaoBox(m.box);
 }
 export function alturaDoItem(m: ModuloOrcamento): number {
   return m.origem === "template" ? m.modulo.altura_mm : m.box.altura;

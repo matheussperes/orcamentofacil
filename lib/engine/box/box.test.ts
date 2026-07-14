@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { explodeBox, calcularOrcamentoBox } from "./index";
-import { vaoVazio, type BayNode, type BoxModule } from "./types";
+import { vaoVazio, larguraInstalacaoBox, type BayNode, type BoxModule } from "./types";
 
 const CAIXA = { cor: "Branco TX", espessura: 15 };
 
@@ -125,5 +125,61 @@ describe("box — integração com o pipeline de custo", () => {
     expect(out.porModulo).toHaveLength(1);
     expect(out.consolidado.mdf.length).toBeGreaterThan(0);
     expect(out.consolidado.mdf[0].chapas).toBeGreaterThanOrEqual(1);
+  });
+});
+
+describe("box — tamponamento de instância (soma à largura, doc 12)", () => {
+  const material = { cor: "Madeirado", espessura: 25 };
+
+  it("sem tamponamento, largura de instalação = largura de fabricação", () => {
+    const box = caixaVazia("inferior");
+    expect(larguraInstalacaoBox(box)).toBe(800);
+  });
+
+  it("soma a espessura apenas dos lados ativos (esquerdo/direito) à largura de instalação", () => {
+    const box: BoxModule = {
+      ...caixaVazia("inferior"),
+      tamponamento: {
+        esquerdo: true, direito: false, superior: false, inferior: false,
+        sarrafo: false, material,
+      },
+    };
+    expect(larguraInstalacaoBox(box)).toBe(825); // 800 + 25
+  });
+
+  it("gera 1 peça inteiriça por lado ativo, sem alterar as peças internas da carcaça", () => {
+    const box: BoxModule = {
+      ...caixaVazia("inferior"),
+      tamponamento: {
+        esquerdo: true, direito: true, superior: false, inferior: false,
+        sarrafo: false, material,
+      },
+    };
+    const semTamponamento = explodeBox(caixaVazia("inferior"));
+    const comTamponamento = explodeBox(box);
+    const tamponamentos = comTamponamento.pecas.filter((p) => p.nome.startsWith("Tamponamento"));
+    expect(tamponamentos).toHaveLength(2);
+    expect(tamponamentos.every((p) => p.cor === "Madeirado" && p.espessura_mm === 25)).toBe(true);
+    // Peças da carcaça (laterais/base/travessas) permanecem idênticas.
+    const semNomes = semTamponamento.pecas.map((p) => `${p.nome}:${p.largura_mm}x${p.altura_mm}`).sort();
+    const comNomesCarcaca = comTamponamento.pecas
+      .filter((p) => !p.nome.startsWith("Tamponamento"))
+      .map((p) => `${p.nome}:${p.largura_mm}x${p.altura_mm}`)
+      .sort();
+    expect(comNomesCarcaca).toEqual(semNomes);
+  });
+
+  it("usa quadro de sarrafos (4 peças por lado) quando sarrafo=true", () => {
+    const box: BoxModule = {
+      ...caixaVazia("torre"),
+      tamponamento: {
+        esquerdo: false, direito: false, superior: true, inferior: false,
+        sarrafo: true, material,
+      },
+    };
+    const r = explodeBox(box);
+    const sarrafos = r.pecas.filter((p) => p.nome.includes("Sarrafo tamponamento (superior)"));
+    const totalSarrafos = sarrafos.reduce((s, p) => s + p.quantidade, 0);
+    expect(totalSarrafos).toBe(4);
   });
 });

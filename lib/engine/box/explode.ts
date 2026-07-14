@@ -183,6 +183,35 @@ function aplicarConteudo(ctx: Ctx, node: BayNode, W: number, H: number, D: numbe
   }
 }
 
+/**
+ * Tamponamento de INSTÂNCIA (doc 12): painéis colados por fora da carcaça já
+ * pronta, um por lado ativado. Não altera as peças internas da caixa — soma
+ * apenas ao consumo de material (a largura de instalação é somada à parte,
+ * ver `larguraInstalacaoBox`).
+ */
+function gerarTamponamentoInstancia(ctx: Ctx, box: BoxModule) {
+  const t = box.tamponamento;
+  if (!t) return;
+
+  const lados: { ativo: boolean; lado: string; comp: number }[] = [
+    { ativo: t.esquerdo, lado: "esquerdo", comp: box.altura },
+    { ativo: t.direito, lado: "direito", comp: box.altura },
+    { ativo: t.superior, lado: "superior", comp: box.largura },
+    { ativo: t.inferior, lado: "inferior", comp: box.largura },
+  ];
+
+  const profundidade = box.profundidade + TAMPONAMENTO_EXTRA;
+  for (const l of lados) {
+    if (!l.ativo) continue;
+    if (t.sarrafo) {
+      push(ctx, `Sarrafo tamponamento (${l.lado})`, 2, t.material, "frente", l.comp, SARRAFO_LARGURA, 0, 0);
+      push(ctx, `Sarrafo tamponamento (${l.lado})`, 2, t.material, "frente", profundidade - 2 * SARRAFO_LARGURA, SARRAFO_LARGURA, 0, 0);
+    } else {
+      push(ctx, `Tamponamento ${l.lado}`, 1, t.material, "frente", l.comp, profundidade, 1, 0);
+    }
+  }
+}
+
 export function explodeBox(box: BoxModule): BoxResult {
   const ctx: Ctx = {
     pecas: [],
@@ -200,6 +229,7 @@ export function explodeBox(box: BoxModule): BoxResult {
     box.tipo === "inferior" ? box.altura - t - TRAVESSA_H : box.altura - 2 * t;
 
   explodeVao(ctx, box.raiz, interiorW, interiorH, interiorD);
+  gerarTamponamentoInstancia(ctx, box);
 
   const areaMdfM2 = round4(ctx.pecas.reduce((s, p) => s + p.area_m2, 0));
   const fitaM = round4(ctx.pecas.reduce((s, p) => s + p.fita_m, 0));
