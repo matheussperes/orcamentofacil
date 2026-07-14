@@ -1,5 +1,6 @@
 import type { BayNode, FrenteConteudo } from "./engine/box/types";
 import type { BoxModule } from "./engine/box/types";
+import { migrarBoxModule } from "./engine/box/migrate";
 
 // Presets de módulo salvos pelo usuário (V3): ele monta uma caixa uma vez no
 // Laboratório (/modulo), salva com uma categoria/ambiente, e depois só
@@ -18,13 +19,31 @@ export interface BoxPreset {
   box: BoxModule; // molde (as medidas podem ser ajustadas ao aplicar)
 }
 
+/**
+ * Lê os presets migrando qualquer um salvo no formato antigo de BayContent
+ * (doc 13) — sem isso, um preset salvo antes da refatoração quebra a
+ * aplicação ao ser instanciado. Autocorrige o localStorage na primeira
+ * leitura (write-back) para não precisar migrar de novo a cada chamada.
+ */
 export function listarPresets(): BoxPreset[] {
   if (typeof window === "undefined") return [];
+  let brutos: BoxPreset[];
   try {
-    return JSON.parse(window.localStorage.getItem(CHAVE) ?? "[]");
+    brutos = JSON.parse(window.localStorage.getItem(CHAVE) ?? "[]");
   } catch {
     return [];
   }
+
+  let mudou = false;
+  const migrados = brutos.map((p) => {
+    const antes = JSON.stringify(p.box);
+    const box = migrarBoxModule(p.box);
+    if (JSON.stringify(box) !== antes) mudou = true;
+    return { ...p, box };
+  });
+
+  if (mudou) window.localStorage.setItem(CHAVE, JSON.stringify(migrados));
+  return migrados;
 }
 
 export function salvarPreset(
