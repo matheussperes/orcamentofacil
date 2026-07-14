@@ -319,8 +319,12 @@ interface EntradaMdf {
   area_m2: number;
 }
 
-/** Etapa 5 — consolidação de MDF (por cor×espessura), fita e ferragens. */
-function consolidar(
+/**
+ * Etapa 5 — consolidação de MDF (por cor×espessura), fita e ferragens.
+ * Exportada para ser reutilizada por outros motores (ex.: box-builder da V3),
+ * garantindo um único caminho de custo/BOM.
+ */
+export function consolidarResultados(
   modulos: ResultadoModulo[],
   globais: PecaLinear[],
   perdaMdf: number
@@ -384,7 +388,11 @@ export function calcularEngine(input: EngineInput): EngineOutput {
   }
 
   const globais = calcularElementosContinuos(input);
-  const consolidado = consolidar(porModulo, globais, input.parametros.perda_mdf);
+  const consolidado = consolidarResultados(
+    porModulo,
+    globais,
+    input.parametros.perda_mdf
+  );
   return { porModulo, globais, consolidado, warnings };
 }
 
