@@ -32,6 +32,8 @@ import {
   salvarPreset,
   type BoxPreset,
 } from "@/lib/boxPresets";
+import { planoDeCorte } from "@/lib/engine/box/cutting";
+import { PlanoCorteCanvas } from "../components/PlanoCorteCanvas";
 
 const brl = (n: number) =>
   n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -98,6 +100,10 @@ export default function EditorModulo() {
       : null;
     return { engine, financeiro, insumos };
   }, [box, catalogo]);
+
+  // Peças técnicas (sem preço) + plano de corte gráfico (Fase 3, Etapa 1).
+  const pecas = resultado.engine.porModulo[0]?.pecas ?? [];
+  const grupos = useMemo(() => planoDeCorte(pecas), [pecas]);
 
   function setBoxCampo(patch: Partial<BoxModule>) {
     setBox((b) => ({ ...b, ...patch }));
@@ -418,6 +424,63 @@ export default function EditorModulo() {
                 </tbody>
               </table>
             )}
+          </div>
+
+          <div className="card">
+            <h2>Peças (lista técnica)</h2>
+            <table>
+              <thead>
+                <tr>
+                  <th>Peça</th>
+                  <th>Material</th>
+                  <th className="num">Qtd</th>
+                  <th className="num">Dimensões (mm)</th>
+                </tr>
+              </thead>
+              <tbody>
+                {pecas.map((p, i) => (
+                  <tr key={i}>
+                    <td>{p.nome}</td>
+                    <td>{p.cor} {p.espessura_mm}mm</td>
+                    <td className="num">{p.quantidade}</td>
+                    <td className="num">{p.largura_mm}×{p.altura_mm}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="card">
+            <h2>Plano de corte</h2>
+            <p className="muted" style={{ fontSize: 12, marginTop: -6 }}>
+              Chapas de {grupos[0]?.larguraChapa ?? 2750}×{grupos[0]?.alturaChapa ?? 1840}mm,
+              escala 1:10. Empacotamento heurístico (prateleiras) — apenas para validação
+              visual, não substitui um otimizador de corte industrial.
+            </p>
+            {grupos.length === 0 && <p className="muted">Nenhuma peça gerada ainda.</p>}
+            {grupos.map((g) => (
+              <div key={`${g.cor}-${g.espessura_mm}`} style={{ marginBottom: 16 }}>
+                <div style={{ fontWeight: 600, marginBottom: 6 }}>
+                  MDF {g.cor} {g.espessura_mm}mm — {g.chapas.length} chapa(s)
+                </div>
+                <div>
+                  {g.chapas.map((c) => (
+                    <PlanoCorteCanvas
+                      key={c.index}
+                      chapa={c}
+                      larguraChapa={g.larguraChapa}
+                      alturaChapa={g.alturaChapa}
+                    />
+                  ))}
+                </div>
+                {g.pecasForaDaChapa.length > 0 && (
+                  <div className="aviso erro">
+                    {g.pecasForaDaChapa.length} peça(s) maior(es) que a chapa em
+                    qualquer orientação: {g.pecasForaDaChapa.map((p) => p.nome).join(", ")}.
+                  </div>
+                )}
+              </div>
+            ))}
           </div>
 
           <div className="card">

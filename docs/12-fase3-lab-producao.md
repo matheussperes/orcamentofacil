@@ -27,14 +27,21 @@ ajusta medidas/cores/tamponamento e arruma os módulos na parede).
 - **`ModuloInstanciado`**: referência ao gabarito + overrides comerciais (dims, cores,
   espessuras, `temFundo`, tamponamento por lado, `paredeId`, índice de posição).
 
-## Etapa 1 — Laboratório + Plano de Corte gráfico
+## Etapa 1 — Laboratório + Plano de Corte gráfico ✅ concluída
 
-- `/modulo` vira área de **validação de engenharia** (esconder preços na lista de peças).
-- Componente **`PlanoCorteCanvas`**: algoritmo *Shelf-First Bin Packing* — ordena as
-  peças da maior para a menor e as empacota em chapas de **2750×1840 mm** (escala 1:10),
-  uma chapa por combinação cor×espessura.
-- Métrica de **aproveitamento**: `Σ(w×h das peças) / (2750×1840) × 100`.
-- Critério: projetar um balcão e ver as chapas populadas + % de aproveitamento.
+- `lib/engine/box/cutting.ts`: `empacotarChapas` (shelf-first bin packing, com
+  giro de peça quando necessário para caber, e detecção de peças maiores que a
+  chapa em qualquer orientação) + `planoDeCorte` (agrupa por cor×espessura e
+  empacota cada grupo). 7 testes golden (sem sobreposição, dentro dos limites,
+  rotação, múltiplas chapas, aproveitamento).
+- `PlanoCorteCanvas`: desenha cada chapa 2750×1840mm em escala 1:10, com o
+  aproveitamento (%) abaixo.
+- `/modulo` ganhou duas seções novas: **"Peças (lista técnica)"** (nome,
+  material, qtd, dimensões — **sem preço**) e **"Plano de corte"** (uma chapa
+  por grupo cor×espessura, com aviso para peças que não cabem).
+- A seção "Custo ao vivo" (comercial) permanece na mesma página por ora — a
+  separação completa em duas áreas/rotas fica para quando a Etapa 3
+  (instanciação) definir melhor o que é "laboratório" vs. "produção".
 
 ## Etapa 2 — Cadastro de Bibliotecas (Categorias)
 
