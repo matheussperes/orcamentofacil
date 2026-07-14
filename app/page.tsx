@@ -241,6 +241,7 @@ export default function Home() {
         <h1>Budget Planner AI</h1>
         <p>
           Motor paramétrico de orçamento — do módulo ao preço em segundos.{" "}
+          <a href="/modulo">Editor de módulo (V3)</a> ·{" "}
           <a href="/configuracoes/materiais">Materiais</a> ·{" "}
           <a href="/configuracoes/engenharia">Engenharia</a>
         </p>
