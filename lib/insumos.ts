@@ -1,9 +1,29 @@
 import { precoChapa, type PrecosReferencia } from "./engine/prices";
-import type { EngineOutput } from "./engine/types";
+import type { EngineOutput, Peca } from "./engine/types";
 
 // V2-5 — Lista unificada de insumos (BOM + custo) no formato de pré-orçamento
 // de fornecedor. Fonte única de verdade usada pela tela de resultado e pela
 // proposta em PDF.
+
+/** Todas as peças do orçamento (de todos os módulos + elementos contínuos),
+ * achatadas num único array — usado pelo plano de corte do orçamento completo. */
+export function todasAsPecas(engine: EngineOutput): Peca[] {
+  const pecas: Peca[] = engine.porModulo.flatMap((m) => m.pecas);
+  for (const g of engine.globais) {
+    pecas.push({
+      nome: g.tipo === "tampo" ? "Tampo contínuo" : "Rodapé contínuo",
+      quantidade: 1,
+      material_tipo: "caixa",
+      cor: g.cor,
+      espessura_mm: g.espessura_mm,
+      altura_mm: g.largura_mm,
+      largura_mm: g.comprimento_mm,
+      area_m2: g.area_m2,
+      fita_m: g.fita_m,
+    });
+  }
+  return pecas;
+}
 
 export interface LinhaInsumo {
   item: string;

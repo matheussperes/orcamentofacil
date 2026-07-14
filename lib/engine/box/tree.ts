@@ -96,20 +96,25 @@ export function layoutVaos(
   return [{ id: node.id, x, y, w, h, node }];
 }
 
-/** Rótulo curto do conteúdo para exibir no vão. */
+/** Rótulo curto do conteúdo para exibir no vão. Combina frente + prateleiras
+ * + fundo, já que agora são independentes e podem coexistir no mesmo vão. */
 export function rotuloConteudo(node: BayNode): string {
   const c = node.content;
-  if (!c || c.tipo === "vazio") return "vazio";
-  switch (c.tipo) {
+  if (!c) return "vazio";
+
+  if (c.tipo === "tamponamento") return `tamp. ${c.lado}`;
+
+  const partes: string[] = [];
+  switch (c.frente.tipo) {
     case "portas":
-      return `${c.qtd} porta(s)`;
+      partes.push(`${c.frente.qtd} porta(s)`);
+      break;
     case "gaveta":
-      return `${c.qtd} gaveta(s)${c.interna ? " int." : ""}`;
-    case "prateleira":
-      return `${c.qtd} prat.`;
-    case "fundo":
-      return `fundo ${c.espessura}mm`;
-    case "tamponamento":
-      return `tamp. ${c.lado}`;
+      partes.push(`${c.frente.qtd} gaveta(s)${c.frente.interna ? " int." : ""}`);
+      break;
   }
+  if (c.prateleiras && c.prateleiras.qtd > 0) partes.push(`${c.prateleiras.qtd} prat.`);
+  if (c.fundo) partes.push(`fundo ${c.fundo.espessura}mm`);
+
+  return partes.length > 0 ? partes.join(" + ") : "vazio";
 }

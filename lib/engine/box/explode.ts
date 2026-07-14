@@ -1,12 +1,15 @@
 import type { ItemQtd, Peca } from "../types";
-import type { BayNode, BoxMaterial, BoxModule, CarcassType } from "./types";
+import type { BayNode, BoxMaterial, BoxModule } from "./types";
 
 // Explosão geométrica recursiva da caixa (V3). Funções puras: dado um BoxModule,
 // devolve a lista de peças (Peca) + ferragens. Reaproveita o tipo Peca para
 // alimentar a mesma consolidação/custo do motor de templates.
 
 const RECUO_DIVISORIA = 20; // recuo frontal de divisórias/prateleiras (mm)
-const TRAVESSA_H = 70; // altura da travessa do módulo inferior (mm)
+// Profundidade que a travessa avança para dentro do móvel (mm). A travessa é
+// montada DEITADA, como a base — quem olha de frente vê só a espessura do
+// MDF, não os 70mm. Por isso NÃO reduz a altura útil do vão (ver interiorH).
+const TRAVESSA_PROFUNDIDADE = 70;
 const RODAPE_H = 100;
 const FOLGA_PORTA = 3;
 const FOLGA_PORTA_V = 4;
@@ -16,6 +19,7 @@ const GAVETA_LATERAL_H = 120;
 const GAVETA_CAIXOTE_H = 100;
 const GAVETA_FUNDO_ESP = 6;
 const AFASTADOR = 30;
+const FUNDO_ESP_PADRAO = 6; // usado quando overrideTemFundo=true injeta fundo num vão sem um
 
 export interface BoxResult {
   pecas: Peca[];
@@ -29,6 +33,8 @@ interface Ctx {
   ferragens: Map<string, number>;
   caixa: BoxMaterial;
   altura: number; // altura total do módulo (p/ tamponamento lateral)
+  overridePortas?: BoxMaterial;
+  overrideTemFundo?: boolean;
 }
 
 function addFerragem(ctx: Ctx, item: string, q: number) {
@@ -72,9 +78,11 @@ function gerarCarcaca(ctx: Ctx, box: BoxModule) {
   push(ctx, "Base", 1, caixa, "caixa", box.profundidade, larguraInterna, 0, 1);
 
   if (box.tipo === "inferior") {
-    // Topo = 2 travessas de 70mm; sem tampo inteiriço.
-    push(ctx, "Travessa Superior Frontal", 1, caixa, "caixa", TRAVESSA_H, larguraInterna, 0, 1);
-    push(ctx, "Travessa Superior Traseira", 1, caixa, "caixa", TRAVESSA_H, larguraInterna, 0, 1);
+    // Topo = 2 travessas rasas (deitadas, como a base — ver TRAVESSA_PROFUNDIDADE),
+    // não um tampo inteiriço. Cada travessa é uma tira de TRAVESSA_PROFUNDIDADE
+    // de profundidade × larguraInterna, uma junto à frente, outra ao fundo.
+    push(ctx, "Travessa Superior Frontal", 1, caixa, "caixa", TRAVESSA_PROFUNDIDADE, larguraInterna, 0, 1);
+    push(ctx, "Travessa Superior Traseira", 1, caixa, "caixa", TRAVESSA_PROFUNDIDADE, larguraInterna, 0, 1);
   } else {
     push(ctx, "Tampo", 1, caixa, "caixa", box.profundidade, larguraInterna, 0, 1);
   }
@@ -117,14 +125,45 @@ function explodeVao(ctx: Ctx, node: BayNode, W: number, H: number, D: number) {
 
 function aplicarConteudo(ctx: Ctx, node: BayNode, W: number, H: number, D: number) {
   const c = node.content;
-  if (!c || c.tipo === "vazio") return;
+  if (!c) return;
 
-  switch (c.tipo) {
+  if (c.tipo === "tamponamento") {
+    aplicarTamponamentoGabarito(ctx, c, W, D);
+    return;
+  }
+
+  // c.tipo === "espaco": frente + prateleiras + fundo são independentes e
+  // combináveis — um vão com 2 portas PODE ter prateleiras internas e fundo
+  // ao mesmo tempo, sem precisar dividir a caixa.
+  aplicarFrente(ctx, c.frente, W, H, D);
+  if (c.prateleiras && c.prateleiras.qtd > 0) {
+    push(ctx, "Prateleira", c.prateleiras.qtd, ctx.caixa, "prateleira", D - c.prateleiras.recuo, W - 2, 0, 1);
+  }
+
+  // overrideTemFundo (instância) vence o que foi salvo no gabarito.
+  const temFundo = ctx.overrideTemFundo ?? c.fundo != null;
+  if (temFundo) {
+    const espessura = c.fundo?.espessura ?? FUNDO_ESP_PADRAO;
+    push(ctx, "Fundo", 1, { cor: ctx.caixa.cor, espessura }, "fundo", H, W, 0, 0);
+  }
+}
+
+function aplicarFrente(
+  ctx: Ctx,
+  frente: Extract<NonNullable<BayNode["content"]>, { tipo: "espaco" }>["frente"],
+  W: number,
+  H: number,
+  D: number
+) {
+  switch (frente.tipo) {
+    case "vazio":
+      return;
     case "portas": {
-      const larguraPorta = W / c.qtd - FOLGA_PORTA;
+      const material = ctx.overridePortas ?? frente.material;
+      const larguraPorta = W / frente.qtd - FOLGA_PORTA;
       const alturaPorta = H - FOLGA_PORTA_V;
-      push(ctx, "Porta", c.qtd, c.material, "frente", alturaPorta, larguraPorta, 2, 2);
-      c.sentidos.slice(0, c.qtd).forEach((s) => {
+      push(ctx, "Porta", frente.qtd, material, "frente", alturaPorta, larguraPorta, 2, 2);
+      frente.sentidos.slice(0, frente.qtd).forEach((s) => {
         if (s === "basculante") {
           addFerragem(ctx, "pistao", 1);
           addFerragem(ctx, "dobradica_35", 2);
@@ -133,84 +172,85 @@ function aplicarConteudo(ctx: Ctx, node: BayNode, W: number, H: number, D: numbe
         }
         if (s !== "cava") addFerragem(ctx, "puxador", 1);
       });
-      break;
-    }
-    case "prateleira": {
-      push(ctx, "Prateleira", c.qtd, ctx.caixa, "prateleira", D - c.recuo, W - 2, 0, 1);
-      break;
-    }
-    case "fundo": {
-      push(ctx, "Fundo", 1, { cor: ctx.caixa.cor, espessura: c.espessura }, "fundo", H, W, 0, 0);
-      break;
-    }
-    case "tamponamento": {
-      const profundidade = D + TAMPONAMENTO_EXTRA;
-      const ehLateral = c.lado === "direito" || c.lado === "esquerdo";
-      const comp = ehLateral ? ctx.altura : W;
-      if (c.sarrafo) {
-        // Quadro de sarrafos de 80mm.
-        push(ctx, `Sarrafo tamponamento (${c.lado})`, 2, c.material, "frente", comp, SARRAFO_LARGURA, 0, 0);
-        push(ctx, `Sarrafo tamponamento (${c.lado})`, 2, c.material, "frente", profundidade - 2 * SARRAFO_LARGURA, SARRAFO_LARGURA, 0, 0);
-      } else {
-        push(ctx, `Tamponamento ${c.lado}`, 1, c.material, "frente", comp, profundidade, 1, 0);
-      }
-      break;
+      return;
     }
     case "gaveta": {
-      const alturaFrente = H / c.qtd - FOLGA_PORTA;
+      const alturaFrente = H / frente.qtd - FOLGA_PORTA;
       const larguraFrente = W - FOLGA_PORTA;
-      if (c.interna) {
+      if (frente.interna) {
         // Frente interna = cor da caixa; + montante interno do guarda-roupa.
-        push(ctx, "Frente Gaveta Interna", c.qtd, ctx.caixa, "caixa", alturaFrente, larguraFrente, 2, 2);
+        push(ctx, "Frente Gaveta Interna", frente.qtd, ctx.caixa, "caixa", alturaFrente, larguraFrente, 2, 2);
         push(ctx, "Lateral Montante", 2, ctx.caixa, "caixa", H, D - 100, 1, 0);
         push(ctx, "Travessa Montante", 2, ctx.caixa, "caixa", 100, W - 2 * ctx.caixa.espessura, 0, 1);
         push(ctx, "Afastador Montante", 2, ctx.caixa, "caixa", H, AFASTADOR, 0, 0);
       } else {
         const material: BoxMaterial = {
-          cor: c.corFrente ?? ctx.caixa.cor,
-          espessura: c.espessuraFrente ?? 18,
+          cor: frente.corFrente ?? ctx.caixa.cor,
+          espessura: frente.espessuraFrente ?? 18,
         };
-        push(ctx, "Frente Gaveta Externa", c.qtd, material, "frente", alturaFrente, larguraFrente, 2, 2);
-        addFerragem(ctx, "puxador", c.qtd);
+        push(ctx, "Frente Gaveta Externa", frente.qtd, material, "frente", alturaFrente, larguraFrente, 2, 2);
+        addFerragem(ctx, "puxador", frente.qtd);
       }
       // Caixote da gaveta (comum às duas).
-      push(ctx, "Lateral de Gaveta", c.qtd * 2, ctx.caixa, "caixa", GAVETA_LATERAL_H, c.profundidade, 0, 1);
-      push(ctx, "Frente/Contrafrente Gaveta", c.qtd * 2, ctx.caixa, "caixa", GAVETA_CAIXOTE_H, W - 50, 0, 1);
-      push(ctx, "Fundo de Gaveta", c.qtd, { cor: ctx.caixa.cor, espessura: GAVETA_FUNDO_ESP }, "fundo", c.profundidade, W - 35, 0, 0);
-      addFerragem(ctx, "corredica_par", c.qtd);
-      break;
+      push(ctx, "Lateral de Gaveta", frente.qtd * 2, ctx.caixa, "caixa", GAVETA_LATERAL_H, frente.profundidade, 0, 1);
+      push(ctx, "Frente/Contrafrente Gaveta", frente.qtd * 2, ctx.caixa, "caixa", GAVETA_CAIXOTE_H, W - 50, 0, 1);
+      push(ctx, "Fundo de Gaveta", frente.qtd, { cor: ctx.caixa.cor, espessura: GAVETA_FUNDO_ESP }, "fundo", frente.profundidade, W - 35, 0, 0);
+      addFerragem(ctx, "corredica_par", frente.qtd);
+      return;
     }
+  }
+}
+
+/** Tamponamento ESTRUTURAL (gabarito): o vão inteiro vira um painel lateral. */
+function aplicarTamponamentoGabarito(
+  ctx: Ctx,
+  c: Extract<NonNullable<BayNode["content"]>, { tipo: "tamponamento" }>,
+  W: number,
+  D: number
+) {
+  const profundidade = D + TAMPONAMENTO_EXTRA;
+  const ehLateral = c.lado === "direito" || c.lado === "esquerdo";
+  const comp = ehLateral ? ctx.altura : W;
+  if (c.sarrafo) {
+    push(ctx, `Sarrafo tamponamento (${c.lado})`, 2, c.material, "frente", comp, SARRAFO_LARGURA, 0, 0);
+    push(ctx, `Sarrafo tamponamento (${c.lado})`, 2, c.material, "frente", profundidade - 2 * SARRAFO_LARGURA, SARRAFO_LARGURA, 0, 0);
+  } else {
+    push(ctx, `Tamponamento ${c.lado}`, 1, c.material, "frente", comp, profundidade, 1, 0);
   }
 }
 
 /**
  * Tamponamento de INSTÂNCIA (doc 12): painéis colados por fora da carcaça já
- * pronta, um por lado ativado. Não altera as peças internas da caixa — soma
- * apenas ao consumo de material (a largura de instalação é somada à parte,
- * ver `larguraInstalacaoBox`).
+ * pronta, um por lado ativado, cada um com sua própria montagem (inteiriça ou
+ * sarrafo) e material. Não altera as peças internas da caixa — soma apenas ao
+ * consumo de material (a largura de instalação é somada à parte, ver
+ * `larguraInstalacaoBox`).
  */
 function gerarTamponamentoInstancia(ctx: Ctx, box: BoxModule) {
   const t = box.tamponamento;
   if (!t) return;
 
-  const lados: { ativo: boolean; lado: string; comp: number }[] = [
-    { ativo: t.esquerdo, lado: "esquerdo", comp: box.altura },
-    { ativo: t.direito, lado: "direito", comp: box.altura },
-    { ativo: t.superior, lado: "superior", comp: box.largura },
-    { ativo: t.inferior, lado: "inferior", comp: box.largura },
+  const lados: { lado: TamponamentoLadoNome; comp: number }[] = [
+    { lado: "esquerdo", comp: box.altura },
+    { lado: "direito", comp: box.altura },
+    { lado: "superior", comp: box.largura },
+    { lado: "inferior", comp: box.largura },
   ];
 
   const profundidade = box.profundidade + TAMPONAMENTO_EXTRA;
   for (const l of lados) {
-    if (!l.ativo) continue;
-    if (t.sarrafo) {
-      push(ctx, `Sarrafo tamponamento (${l.lado})`, 2, t.material, "frente", l.comp, SARRAFO_LARGURA, 0, 0);
-      push(ctx, `Sarrafo tamponamento (${l.lado})`, 2, t.material, "frente", profundidade - 2 * SARRAFO_LARGURA, SARRAFO_LARGURA, 0, 0);
+    const cfg = t[l.lado];
+    if (!cfg.ativo) continue;
+    if (cfg.sarrafo) {
+      push(ctx, `Sarrafo tamponamento (${l.lado})`, 2, cfg.material, "frente", l.comp, SARRAFO_LARGURA, 0, 0);
+      push(ctx, `Sarrafo tamponamento (${l.lado})`, 2, cfg.material, "frente", profundidade - 2 * SARRAFO_LARGURA, SARRAFO_LARGURA, 0, 0);
     } else {
-      push(ctx, `Tamponamento ${l.lado}`, 1, t.material, "frente", l.comp, profundidade, 1, 0);
+      push(ctx, `Tamponamento ${l.lado}`, 1, cfg.material, "frente", l.comp, profundidade, 1, 0);
     }
   }
 }
+
+type TamponamentoLadoNome = "esquerdo" | "direito" | "superior" | "inferior";
 
 export function explodeBox(box: BoxModule): BoxResult {
   const ctx: Ctx = {
@@ -218,6 +258,8 @@ export function explodeBox(box: BoxModule): BoxResult {
     ferragens: new Map(),
     caixa: box.caixa,
     altura: box.altura,
+    overridePortas: box.overridePortas,
+    overrideTemFundo: box.overrideTemFundo,
   };
   const t = box.caixa.espessura;
 
@@ -225,8 +267,9 @@ export function explodeBox(box: BoxModule): BoxResult {
 
   const interiorW = box.largura - 2 * t;
   const interiorD = box.profundidade;
-  const interiorH =
-    box.tipo === "inferior" ? box.altura - t - TRAVESSA_H : box.altura - 2 * t;
+  // A travessa do "inferior" é deitada (como a base) — só consome a espessura
+  // t da caixa, igual aereo/torre. Ver TRAVESSA_PROFUNDIDADE acima.
+  const interiorH = box.altura - 2 * t;
 
   explodeVao(ctx, box.raiz, interiorW, interiorH, interiorD);
   gerarTamponamentoInstancia(ctx, box);

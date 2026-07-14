@@ -81,11 +81,37 @@ export function BoxCanvas({
       ctx.lineWidth = sel ? 2.5 : 1;
       ctx.strokeRect(x, y, w, h);
 
-      // Rótulo do conteúdo.
-      ctx.fillStyle = "#1c2430";
-      ctx.font = "11px sans-serif";
-      ctx.textAlign = "center";
-      ctx.fillText(rotuloConteudo(r.node), x + w / 2, y + h / 2 + 4);
+      // Rótulo do conteúdo (omitido quando vazio, para reduzir ruído visual).
+      const rotulo = rotuloConteudo(r.node);
+      if (rotulo !== "vazio") {
+        ctx.fillStyle = "#1c2430";
+        ctx.font = "11px sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText(rotulo, x + w / 2, y + h / 2 + 4);
+      }
+    }
+
+    // Tamponamento de instância: tiras coloridas por fora da carcaça, com a
+    // cor de cada lado — dá feedback visual imediato da configuração atual.
+    const t = box.tamponamento;
+    if (t) {
+      const faixa = 10; // px, espessura visual da tira (não depende da escala real)
+      if (t.esquerdo.ativo) {
+        ctx.fillStyle = corParaHex(t.esquerdo.material.cor);
+        ctx.fillRect(px(0) - faixa, py(0), faixa, box.altura * g.scale);
+      }
+      if (t.direito.ativo) {
+        ctx.fillStyle = corParaHex(t.direito.material.cor);
+        ctx.fillRect(px(0) + box.largura * g.scale, py(0), faixa, box.altura * g.scale);
+      }
+      if (t.superior.ativo) {
+        ctx.fillStyle = corParaHex(t.superior.material.cor);
+        ctx.fillRect(px(0), py(0) - faixa, box.largura * g.scale, faixa);
+      }
+      if (t.inferior.ativo) {
+        ctx.fillStyle = corParaHex(t.inferior.material.cor);
+        ctx.fillRect(px(0), py(0) + box.altura * g.scale, box.largura * g.scale, faixa);
+      }
     }
   }, [box, selecionado]);
 

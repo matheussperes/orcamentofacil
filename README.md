@@ -24,6 +24,8 @@ materiais (BOM), calcula custos, aplica margem e gera uma proposta comercial em 
 | 09 | [DevOps, CI/CD e Testes](docs/09-devops-ci-cd.md) | Pipeline de CI/CD, testes de engenharia, hospedagem |
 | 10 | [Ajustes da V2 (backlog)](docs/10-v2-ajustes.md) | Config de cor por módulo, previews Canvas 2D, layout de paredes, configurador de engenharia, BOM unificada, cadastro de materiais |
 | 11 | [V3 — Box-builder CAD](docs/11-v3-box-builder.md) | Motor de caixa vazia + subdivisões recursivas, editor visual em Canvas, presets |
+| 12 | [Fase 3 — Laboratório × Produção](docs/12-fase3-lab-producao.md) | Plano de corte, categorias, assistente Ambiente→Tipo→Modelo, tamponamento de instância |
+| 13 | [Correções do box V3](docs/13-correcoes-box-v3.md) | Fix da travessa, prateleiras/fundo combináveis, tamponamento por lado, overrides rápidos, card colapsável, plano de corte geral |
 
 ## Biblioteca de Engenharia (Templates Iniciais)
 

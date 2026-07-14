@@ -8,6 +8,8 @@ import {
   type BayContent,
   type BoxModule,
   type CarcassType,
+  type FrenteConteudo,
+  type LadoTamponamento,
   type SentidoPorta,
 } from "@/lib/engine/box";
 import {
@@ -53,7 +55,57 @@ function caixaInicial(cor: string): BoxModule {
   };
 }
 
-type TipoConteudo = BayContent["tipo"];
+// Estado do formulário do vão selecionado. Campos SEPARADOS por finalidade
+// (frente/prateleiras/fundo/tamponamento) porque agora coexistem na mesma
+// tela — reaproveitar um único campo "espessura" para tudo causaria colisão
+// entre, por ex., a espessura das portas e a espessura do fundo.
+interface FormVao {
+  modo: "espaco" | "tamponamento";
+  frenteTipo: FrenteConteudo["tipo"];
+  portasQtd: number;
+  portasSentido: SentidoPorta;
+  portasCor: string;
+  portasEspessura: number;
+  gavetaQtd: number;
+  gavetaProfundidade: number;
+  gavetaInterna: boolean;
+  gavetaCor: string;
+  gavetaEspessura: number;
+  temPrateleiras: boolean;
+  prateleirasQtd: number;
+  prateleirasRecuo: number;
+  temFundo: boolean;
+  fundoEspessura: number;
+  tampLado: LadoTamponamento;
+  tampSarrafo: boolean;
+  tampCor: string;
+  tampEspessura: number;
+}
+
+function formInicial(cor: string): FormVao {
+  return {
+    modo: "espaco",
+    frenteTipo: "portas",
+    portasQtd: 2,
+    portasSentido: "direita",
+    portasCor: cor,
+    portasEspessura: 18,
+    gavetaQtd: 3,
+    gavetaProfundidade: 450,
+    gavetaInterna: false,
+    gavetaCor: cor,
+    gavetaEspessura: 18,
+    temPrateleiras: false,
+    prateleirasQtd: 1,
+    prateleirasRecuo: 20,
+    temFundo: false,
+    fundoEspessura: 6,
+    tampLado: "direito",
+    tampSarrafo: false,
+    tampCor: cor,
+    tampEspessura: 18,
+  };
+}
 
 export default function EditorModulo() {
   const [catalogo, setCatalogo] = useState<Catalogo | null>(null);
@@ -64,20 +116,8 @@ export default function EditorModulo() {
   const [categoriaSalvar, setCategoriaSalvar] = useState("Cozinha");
   const [novaCategoria, setNovaCategoria] = useState("");
 
-  // Controles do vão selecionado.
   const [splitQtd, setSplitQtd] = useState(1);
-  const [tipoConteudo, setTipoConteudo] = useState<TipoConteudo>("portas");
-  const [form, setForm] = useState<Record<string, number | string | boolean>>({
-    qtd: 2,
-    sentido: "direita",
-    cor: "Branco TX",
-    espessura: 18,
-    profundidade: 450,
-    interna: false,
-    recuo: 20,
-    lado: "direito",
-    sarrafo: false,
-  });
+  const [form, setForm] = useState<FormVao>(() => formInicial("Branco TX"));
 
   useEffect(() => {
     const cat = carregarCatalogo();
@@ -88,7 +128,7 @@ export default function EditorModulo() {
     const branco = coresDisponiveis(cat).find((c) => c.toLowerCase().includes("branco"));
     if (branco) {
       setBox((b) => ({ ...b, caixa: { ...b.caixa, cor: branco } }));
-      setForm((f) => ({ ...f, cor: branco }));
+      setForm(formInicial(branco));
     }
   }, []);
 
@@ -129,37 +169,44 @@ export default function EditorModulo() {
 
   function montarConteudo(): BayContent {
     const f = form;
-    switch (tipoConteudo) {
-      case "portas":
-        return {
-          tipo: "portas",
-          qtd: Number(f.qtd),
-          sentidos: Array(Number(f.qtd)).fill(f.sentido as SentidoPorta),
-          material: { cor: String(f.cor), espessura: Number(f.espessura) },
-        };
-      case "gaveta":
-        return {
-          tipo: "gaveta",
-          qtd: Number(f.qtd),
-          profundidade: Number(f.profundidade),
-          interna: Boolean(f.interna),
-          corFrente: String(f.cor),
-          espessuraFrente: Number(f.espessura),
-        };
-      case "prateleira":
-        return { tipo: "prateleira", qtd: Number(f.qtd), recuo: Number(f.recuo) };
-      case "fundo":
-        return { tipo: "fundo", espessura: Number(f.espessura) };
-      case "tamponamento":
-        return {
-          tipo: "tamponamento",
-          lado: f.lado as "direito" | "esquerdo" | "superior" | "inferior",
-          material: { cor: String(f.cor), espessura: Number(f.espessura) },
-          sarrafo: Boolean(f.sarrafo),
-        };
-      default:
-        return { tipo: "vazio" };
+    if (f.modo === "tamponamento") {
+      return {
+        tipo: "tamponamento",
+        lado: f.tampLado,
+        material: { cor: f.tampCor, espessura: f.tampEspessura },
+        sarrafo: f.tampSarrafo,
+      };
     }
+
+    let frente: FrenteConteudo;
+    if (f.frenteTipo === "portas") {
+      frente = {
+        tipo: "portas",
+        qtd: f.portasQtd,
+        sentidos: Array(f.portasQtd).fill(f.portasSentido),
+        material: { cor: f.portasCor, espessura: f.portasEspessura },
+      };
+    } else if (f.frenteTipo === "gaveta") {
+      frente = {
+        tipo: "gaveta",
+        qtd: f.gavetaQtd,
+        profundidade: f.gavetaProfundidade,
+        interna: f.gavetaInterna,
+        corFrente: f.gavetaCor,
+        espessuraFrente: f.gavetaEspessura,
+      };
+    } else {
+      frente = { tipo: "vazio" };
+    }
+
+    return {
+      tipo: "espaco",
+      frente,
+      prateleiras: f.temPrateleiras
+        ? { qtd: f.prateleirasQtd, recuo: f.prateleirasRecuo }
+        : undefined,
+      fundo: f.temFundo ? { espessura: f.fundoEspessura } : undefined,
+    };
   }
 
   function limpar() {
@@ -190,8 +237,9 @@ export default function EditorModulo() {
     setPresets(listarPresets());
   }
 
-  const setF = (k: string, v: number | string | boolean) =>
+  function setF<K extends keyof FormVao>(k: K, v: FormVao[K]) {
     setForm((f) => ({ ...f, [k]: v }));
+  }
 
   return (
     <div className="wrap">
@@ -283,111 +331,171 @@ export default function EditorModulo() {
 
                 {ehFolha ? (
                   <div style={{ marginTop: 12, borderTop: "1px solid var(--border)", paddingTop: 10 }}>
-                    <label>Conteúdo do vão</label>
+                    <label>Este vão é</label>
                     <select
-                      value={tipoConteudo}
-                      onChange={(e) => setTipoConteudo(e.target.value as TipoConteudo)}
+                      value={form.modo}
+                      onChange={(e) => setF("modo", e.target.value as FormVao["modo"])}
                     >
-                      <option value="portas">Portas</option>
-                      <option value="gaveta">Gaveta</option>
-                      <option value="prateleira">Prateleira</option>
-                      <option value="fundo">Fundo</option>
-                      <option value="tamponamento">Tamponamento</option>
+                      <option value="espaco">Espaço normal (frente + interior)</option>
+                      <option value="tamponamento">Painel de tamponamento (lateral estrutural)</option>
                     </select>
 
-                    <div className="campos" style={{ marginTop: 8 }}>
-                      {(tipoConteudo === "portas" ||
-                        tipoConteudo === "gaveta" ||
-                        tipoConteudo === "prateleira") && (
-                        <div>
-                          <label>Quantidade</label>
-                          <input type="number" min={1} value={Number(form.qtd)} onChange={(e) => setF("qtd", Number(e.target.value))} />
-                        </div>
-                      )}
-                      {tipoConteudo === "portas" && (
-                        <div>
-                          <label>Sentido</label>
-                          <select value={String(form.sentido)} onChange={(e) => setF("sentido", e.target.value)}>
-                            <option value="direita">Direita</option>
-                            <option value="esquerda">Esquerda</option>
-                            <option value="basculante">Basculante</option>
-                            <option value="cava">Cava (sem puxador)</option>
+                    {form.modo === "espaco" ? (
+                      <>
+                        {/* Frente: vazio | portas | gaveta — mutuamente exclusivos */}
+                        <div style={{ marginTop: 10 }}>
+                          <label>Frente</label>
+                          <select
+                            value={form.frenteTipo}
+                            onChange={(e) => setF("frenteTipo", e.target.value as FrenteConteudo["tipo"])}
+                          >
+                            <option value="vazio">Vazio (nicho aberto)</option>
+                            <option value="portas">Portas</option>
+                            <option value="gaveta">Gaveta</option>
                           </select>
                         </div>
-                      )}
-                      {tipoConteudo === "gaveta" && (
-                        <>
-                          <div>
-                            <label>Profundidade</label>
-                            <input type="number" value={Number(form.profundidade)} onChange={(e) => setF("profundidade", Number(e.target.value))} />
-                          </div>
-                          <div>
-                            <label>Tipo</label>
-                            <select value={form.interna ? "int" : "ext"} onChange={(e) => setF("interna", e.target.value === "int")}>
-                              <option value="ext">Externa</option>
-                              <option value="int">Interna (guarda-roupa)</option>
-                            </select>
-                          </div>
-                        </>
-                      )}
-                      {tipoConteudo === "prateleira" && (
-                        <div>
-                          <label>Recuo frontal</label>
-                          <input type="number" value={Number(form.recuo)} onChange={(e) => setF("recuo", Number(e.target.value))} />
-                        </div>
-                      )}
-                      {tipoConteudo === "tamponamento" && (
-                        <>
-                          <div>
-                            <label>Lado</label>
-                            <select value={String(form.lado)} onChange={(e) => setF("lado", e.target.value)}>
-                              <option value="direito">Direito</option>
-                              <option value="esquerdo">Esquerdo</option>
-                              <option value="superior">Superior</option>
-                              <option value="inferior">Inferior</option>
-                            </select>
-                          </div>
-                          <div>
-                            <label>Sarrafo?</label>
-                            <select value={form.sarrafo ? "s" : "n"} onChange={(e) => setF("sarrafo", e.target.value === "s")}>
-                              <option value="n">Inteiriça</option>
-                              <option value="s">Sarrafo</option>
-                            </select>
-                          </div>
-                        </>
-                      )}
-                      {(tipoConteudo === "portas" ||
-                        tipoConteudo === "fundo" ||
-                        tipoConteudo === "tamponamento" ||
-                        (tipoConteudo === "gaveta" && !form.interna)) && (
-                        <>
-                          {tipoConteudo !== "fundo" && (
+
+                        {form.frenteTipo === "portas" && (
+                          <div className="campos" style={{ marginTop: 8 }}>
+                            <div>
+                              <label>Quantidade</label>
+                              <input type="number" min={1} value={form.portasQtd} onChange={(e) => setF("portasQtd", Number(e.target.value))} />
+                            </div>
+                            <div>
+                              <label>Sentido</label>
+                              <select value={form.portasSentido} onChange={(e) => setF("portasSentido", e.target.value as SentidoPorta)}>
+                                <option value="direita">Direita</option>
+                                <option value="esquerda">Esquerda</option>
+                                <option value="basculante">Basculante</option>
+                                <option value="cava">Cava (sem puxador)</option>
+                              </select>
+                            </div>
                             <div>
                               <label>Cor</label>
-                              <select value={String(form.cor)} onChange={(e) => setF("cor", e.target.value)}>
-                                {cores.map((c) => (
-                                  <option key={c} value={c}>{c}</option>
+                              <select value={form.portasCor} onChange={(e) => setF("portasCor", e.target.value)}>
+                                {cores.map((c) => <option key={c} value={c}>{c}</option>)}
+                              </select>
+                            </div>
+                            <div>
+                              <label>Espessura</label>
+                              <select value={form.portasEspessura} onChange={(e) => setF("portasEspessura", Number(e.target.value))}>
+                                {(catalogo ? espessurasDaCor(catalogo, form.portasCor) : [15, 18]).map((esp) => (
+                                  <option key={esp} value={esp}>{esp} mm</option>
                                 ))}
                               </select>
                             </div>
-                          )}
-                          <div>
-                            <label>Espessura</label>
-                            <select
-                              value={Number(form.espessura)}
-                              onChange={(e) => setF("espessura", Number(e.target.value))}
-                            >
-                              {(catalogo && tipoConteudo !== "fundo"
-                                ? espessurasDaCor(catalogo, String(form.cor))
-                                : [6, 15, 18]
-                              ).map((esp) => (
-                                <option key={esp} value={esp}>{esp} mm</option>
-                              ))}
-                            </select>
                           </div>
-                        </>
-                      )}
-                    </div>
+                        )}
+
+                        {form.frenteTipo === "gaveta" && (
+                          <div className="campos" style={{ marginTop: 8 }}>
+                            <div>
+                              <label>Quantidade</label>
+                              <input type="number" min={1} value={form.gavetaQtd} onChange={(e) => setF("gavetaQtd", Number(e.target.value))} />
+                            </div>
+                            <div>
+                              <label>Profundidade</label>
+                              <input type="number" value={form.gavetaProfundidade} onChange={(e) => setF("gavetaProfundidade", Number(e.target.value))} />
+                            </div>
+                            <div>
+                              <label>Tipo</label>
+                              <select value={form.gavetaInterna ? "int" : "ext"} onChange={(e) => setF("gavetaInterna", e.target.value === "int")}>
+                                <option value="ext">Externa</option>
+                                <option value="int">Interna (guarda-roupa)</option>
+                              </select>
+                            </div>
+                            {!form.gavetaInterna && (
+                              <>
+                                <div>
+                                  <label>Cor</label>
+                                  <select value={form.gavetaCor} onChange={(e) => setF("gavetaCor", e.target.value)}>
+                                    {cores.map((c) => <option key={c} value={c}>{c}</option>)}
+                                  </select>
+                                </div>
+                                <div>
+                                  <label>Espessura</label>
+                                  <select value={form.gavetaEspessura} onChange={(e) => setF("gavetaEspessura", Number(e.target.value))}>
+                                    {(catalogo ? espessurasDaCor(catalogo, form.gavetaCor) : [15, 18]).map((esp) => (
+                                      <option key={esp} value={esp}>{esp} mm</option>
+                                    ))}
+                                  </select>
+                                </div>
+                              </>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Prateleiras e fundo: independentes da frente, sempre visíveis */}
+                        <div style={{ marginTop: 12, borderTop: "1px solid var(--border)", paddingTop: 8 }}>
+                          <label style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                            <input type="checkbox" checked={form.temPrateleiras} onChange={(e) => setF("temPrateleiras", e.target.checked)} />
+                            Prateleiras internas
+                          </label>
+                          {form.temPrateleiras && (
+                            <div className="campos" style={{ marginTop: 6 }}>
+                              <div>
+                                <label>Quantidade</label>
+                                <input type="number" min={1} value={form.prateleirasQtd} onChange={(e) => setF("prateleirasQtd", Number(e.target.value))} />
+                              </div>
+                              <div>
+                                <label>Recuo frontal</label>
+                                <input type="number" value={form.prateleirasRecuo} onChange={(e) => setF("prateleirasRecuo", Number(e.target.value))} />
+                              </div>
+                            </div>
+                          )}
+                        </div>
+
+                        <div style={{ marginTop: 10 }}>
+                          <label style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                            <input type="checkbox" checked={form.temFundo} onChange={(e) => setF("temFundo", e.target.checked)} />
+                            Tem fundo
+                          </label>
+                          {form.temFundo && (
+                            <div className="campos" style={{ marginTop: 6 }}>
+                              <div>
+                                <label>Espessura</label>
+                                <select value={form.fundoEspessura} onChange={(e) => setF("fundoEspessura", Number(e.target.value))}>
+                                  {[6, 15].map((esp) => <option key={esp} value={esp}>{esp} mm</option>)}
+                                </select>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </>
+                    ) : (
+                      <div className="campos" style={{ marginTop: 8 }}>
+                        <div>
+                          <label>Lado</label>
+                          <select value={form.tampLado} onChange={(e) => setF("tampLado", e.target.value as LadoTamponamento)}>
+                            <option value="direito">Direito</option>
+                            <option value="esquerdo">Esquerdo</option>
+                            <option value="superior">Superior</option>
+                            <option value="inferior">Inferior</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label>Montagem</label>
+                          <select value={form.tampSarrafo ? "s" : "n"} onChange={(e) => setF("tampSarrafo", e.target.value === "s")}>
+                            <option value="n">Inteiriça</option>
+                            <option value="s">Sarrafo</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label>Cor</label>
+                          <select value={form.tampCor} onChange={(e) => setF("tampCor", e.target.value)}>
+                            {cores.map((c) => <option key={c} value={c}>{c}</option>)}
+                          </select>
+                        </div>
+                        <div>
+                          <label>Espessura</label>
+                          <select value={form.tampEspessura} onChange={(e) => setF("tampEspessura", Number(e.target.value))}>
+                            {(catalogo ? espessurasDaCor(catalogo, form.tampCor) : [15, 18]).map((esp) => (
+                              <option key={esp} value={esp}>{esp} mm</option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+                    )}
 
                     <div className="acoes" style={{ marginTop: 10 }}>
                       <button className="primary" onClick={aplicarConteudo}>
