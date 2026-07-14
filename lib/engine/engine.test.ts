@@ -46,21 +46,56 @@ describe("motor — BASE_PORTAS 600×720×550 (golden)", () => {
     expect(f.parafuso_kit_modulo).toBe(1);
   });
 
-  it("consolida MDF por cor×espessura com áreas conferidas", () => {
-    const g = Object.fromEntries(
-      out.consolidado.mdf.map((x) => [`${x.cor}|${x.espessura_mm}`, x])
-    );
-    expect(g["Branco TX|15"].area_m2).toBeCloseTo(1.5216, 3);
-    expect(g["Louro Freijó|18"].area_m2).toBeCloseTo(0.4241, 3);
-    expect(g["Branco TX|6"].area_m2).toBeCloseTo(0.432, 3);
+  it("agrupa as peças do módulo por espessura com áreas conferidas", () => {
+    const porEsp = new Map<number, number>();
+    for (const p of mod.pecas) {
+      porEsp.set(p.espessura_mm, (porEsp.get(p.espessura_mm) ?? 0) + p.area_m2);
+    }
+    expect(porEsp.get(15)).toBeCloseTo(1.5216, 3); // caixaria + prateleira
+    expect(porEsp.get(18)).toBeCloseTo(0.4241, 3); // portas
+    expect(porEsp.get(6)).toBeCloseTo(0.432, 3); // fundo
   });
 
-  it("converte cada grupo em 1 chapa comercial", () => {
+  it("converte cada grupo consolidado em 1 chapa comercial", () => {
     for (const g of out.consolidado.mdf) expect(g.chapas).toBe(1);
   });
 
   it("não emite erros de validação física", () => {
     expect(out.warnings.filter((w) => w.severidade === "erro")).toHaveLength(0);
+  });
+});
+
+describe("motor — elementos contínuos (etapa global)", () => {
+  // Dois módulos base na mesma parede formam UM tampo e UM rodapé contínuos.
+  const input: EngineInput = {
+    ambiente: { tipo: "Cozinha", materiais: MATERIAIS_PADRAO },
+    parametros: PARAMETROS_FABRICA_PADRAO,
+    modulos: [
+      { id: "a", templateCodigo: "BASE_PORTAS", parede: "A", largura_mm: 600, altura_mm: 720, profundidade_mm: 550, config: { CONFIG_QTD_PORTAS: 2 } },
+      { id: "b", templateCodigo: "BASE_PORTAS", parede: "A", largura_mm: 600, altura_mm: 720, profundidade_mm: 550, config: { CONFIG_QTD_PORTAS: 2 } },
+    ],
+  };
+  const out = calcularEngine(input);
+
+  it("gera 1 tampo e 1 rodapé para a parede", () => {
+    const tampos = out.globais.filter((g) => g.tipo === "tampo");
+    const rodapes = out.globais.filter((g) => g.tipo === "rodape");
+    expect(tampos).toHaveLength(1);
+    expect(rodapes).toHaveLength(1);
+    expect(tampos[0].modulos).toBe(2);
+  });
+
+  it("tampo cobre a largura somada (1200mm) na profundidade (550mm)", () => {
+    const tampo = out.globais.find((g) => g.tipo === "tampo")!;
+    expect(tampo.comprimento_mm).toBe(1200);
+    expect(tampo.largura_mm).toBe(550);
+    expect(tampo.area_m2).toBeCloseTo(0.66, 3);
+  });
+
+  it("rodapé desconta o recuo das duas pontas (1200 − 2×50 = 1100mm)", () => {
+    const rodape = out.globais.find((g) => g.tipo === "rodape")!;
+    expect(rodape.comprimento_mm).toBe(1100);
+    expect(rodape.area_m2).toBeCloseTo(0.11, 3);
   });
 });
 

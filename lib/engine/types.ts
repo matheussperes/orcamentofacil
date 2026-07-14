@@ -57,6 +57,8 @@ export interface ParametrosFabrica {
   LARGURA_PORTA_CANTO: number;
   ALTURA_NICHOS_ELETRO: number;
   PROFUNDIDADE_RASGO: number;
+  ALTURA_RODAPE: number; // altura da peça de rodapé (mm)
+  RECUO_RODAPE: number; // recuo lateral do rodapé por ponta (mm)
   perda_mdf: number; // fração, ex.: 0.12
   [k: string]: number;
 }
@@ -124,6 +126,20 @@ export interface GrupoMdf {
   chapas: number;
 }
 
+// Elemento contínuo agregado por parede (etapa global — doc 04): tampo/rodapé
+// que atravessam vários módulos formando uma única peça.
+export interface PecaLinear {
+  tipo: "tampo" | "rodape";
+  parede: string;
+  comprimento_mm: number;
+  largura_mm: number; // profundidade (tampo) ou altura (rodapé)
+  cor: string;
+  espessura_mm: number;
+  area_m2: number;
+  fita_m: number;
+  modulos: number; // quantos módulos o elemento cobre
+}
+
 export interface EngineWarning {
   moduloId?: string;
   severidade: "erro" | "aviso";
@@ -133,6 +149,7 @@ export interface EngineWarning {
 
 export interface EngineOutput {
   porModulo: ResultadoModulo[];
+  globais: PecaLinear[];
   consolidado: {
     mdf: GrupoMdf[];
     fitaTotalM: number;

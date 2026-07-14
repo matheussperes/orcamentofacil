@@ -22,6 +22,7 @@ materiais (BOM), calcula custos, aplica margem e gera uma proposta comercial em 
 | 07 | [Onboarding e Estratégia de Preços](docs/07-onboarding-precos.md) | Biblioteca pré-carregada, modelagem Catálogo → Fornecedor → Preço |
 | 08 | [Roadmap e Backlog do MVP](docs/08-roadmap.md) | Sprints, backlog técnico, fases futuras (V2–V4) |
 | 09 | [DevOps, CI/CD e Testes](docs/09-devops-ci-cd.md) | Pipeline de CI/CD, testes de engenharia, hospedagem |
+| 10 | [Ajustes da V2 (backlog)](docs/10-v2-ajustes.md) | Config de cor por módulo, previews Canvas 2D, layout de paredes, configurador de engenharia, BOM unificada, cadastro de materiais |
 
 ## Biblioteca de Engenharia (Templates Iniciais)
 

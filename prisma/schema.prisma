@@ -32,12 +32,13 @@ enum Papel {
 }
 
 model Usuario {
-  id       String @id @default(uuid())
-  tenantId String
-  tenant   Tenant @relation(fields: [tenantId], references: [id])
-  nome     String
-  email    String @unique
-  papel    Papel  @default(vendedor)
+  id        String @id @default(uuid())
+  tenantId  String
+  tenant    Tenant @relation(fields: [tenantId], references: [id])
+  nome      String
+  email     String @unique
+  senhaHash String
+  papel     Papel  @default(vendedor)
 
   @@index([tenantId])
 }

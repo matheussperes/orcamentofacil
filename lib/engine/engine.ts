@@ -12,6 +12,7 @@ import type {
   ModuloTemplate,
   ParametrosFabrica,
   Peca,
+  PecaLinear,
   ResultadoModulo,
 } from "./types";
 
@@ -182,34 +183,122 @@ function explodirModulo(
   };
 }
 
+/**
+ * Etapa 4 — elementos contínuos (doc 04). Agrega, por parede, os módulos que
+ * participam de tampo/rodapé e gera UMA peça linear por parede em vez de peças
+ * picadas por módulo (marceneiro quer um tampo/rodapé único).
+ */
+function calcularElementosContinuos(input: EngineInput): PecaLinear[] {
+  interface Acc {
+    parede: string;
+    comprimento: number;
+    profundidadeMax: number;
+    modulos: number;
+  }
+  const tampoPorParede = new Map<string, Acc>();
+  const rodapePorParede = new Map<string, Acc>();
+
+  const acumular = (
+    mapa: Map<string, Acc>,
+    parede: string,
+    largura: number,
+    profundidade: number
+  ) => {
+    const a =
+      mapa.get(parede) ??
+      { parede, comprimento: 0, profundidadeMax: 0, modulos: 0 };
+    a.comprimento += largura;
+    a.profundidadeMax = Math.max(a.profundidadeMax, profundidade);
+    a.modulos += 1;
+    mapa.set(parede, a);
+  };
+
+  for (const modulo of input.modulos) {
+    const template = getTemplate(modulo.templateCodigo);
+    const parede = modulo.parede ?? "—";
+    if (template.participa_elementos_continuos.tampo) {
+      acumular(tampoPorParede, parede, modulo.largura_mm, modulo.profundidade_mm);
+    }
+    if (template.participa_elementos_continuos.rodape) {
+      acumular(rodapePorParede, parede, modulo.largura_mm, modulo.profundidade_mm);
+    }
+  }
+
+  const p = input.parametros;
+  const m = input.ambiente.materiais;
+  const pecas: PecaLinear[] = [];
+
+  for (const a of tampoPorParede.values()) {
+    const comprimento = a.comprimento;
+    const largura = a.profundidadeMax;
+    pecas.push({
+      tipo: "tampo",
+      parede: a.parede,
+      comprimento_mm: comprimento,
+      largura_mm: largura,
+      cor: m.cor_frente,
+      espessura_mm: p.ESPESSURA_FRENTE,
+      area_m2: round4((comprimento * largura) / 1e6),
+      fita_m: round4(comprimento / 1000), // borda frontal aparente
+      modulos: a.modulos,
+    });
+  }
+
+  for (const a of rodapePorParede.values()) {
+    const comprimento = Math.max(0, a.comprimento - 2 * p.RECUO_RODAPE);
+    const altura = p.ALTURA_RODAPE;
+    pecas.push({
+      tipo: "rodape",
+      parede: a.parede,
+      comprimento_mm: comprimento,
+      largura_mm: altura,
+      cor: m.cor_caixa,
+      espessura_mm: p.ESPESSURA_CAIXA,
+      area_m2: round4((comprimento * altura) / 1e6),
+      fita_m: round4(comprimento / 1000),
+      modulos: a.modulos,
+    });
+  }
+
+  return pecas;
+}
+
+interface EntradaMdf {
+  cor: string;
+  espessura_mm: number;
+  area_m2: number;
+}
+
 /** Etapa 5 — consolidação de MDF (por cor×espessura), fita e ferragens. */
 function consolidar(
   modulos: ResultadoModulo[],
+  globais: PecaLinear[],
   perdaMdf: number
 ): EngineOutput["consolidado"] {
   const mdfMap = new Map<string, GrupoMdf>();
   const ferragensMap = new Map<string, number>();
   let fitaTotalM = 0;
 
+  const somaMdf = ({ cor, espessura_mm, area_m2 }: EntradaMdf) => {
+    const chave = `${cor}|${espessura_mm}`;
+    const g =
+      mdfMap.get(chave) ??
+      { cor, espessura_mm, area_m2: 0, area_com_perda_m2: 0, chapas: 0 };
+    g.area_m2 += area_m2;
+    mdfMap.set(chave, g);
+  };
+
   for (const mod of modulos) {
     fitaTotalM += mod.fitaM;
-    for (const peca of mod.pecas) {
-      const chave = `${peca.cor}|${peca.espessura_mm}`;
-      const g =
-        mdfMap.get(chave) ??
-        {
-          cor: peca.cor,
-          espessura_mm: peca.espessura_mm,
-          area_m2: 0,
-          area_com_perda_m2: 0,
-          chapas: 0,
-        };
-      g.area_m2 += peca.area_m2;
-      mdfMap.set(chave, g);
-    }
+    for (const peca of mod.pecas) somaMdf(peca);
     for (const f of mod.ferragens) {
       ferragensMap.set(f.item, (ferragensMap.get(f.item) ?? 0) + f.quantidade);
     }
+  }
+
+  for (const g of globais) {
+    fitaTotalM += g.fita_m;
+    somaMdf(g);
   }
 
   const mdf: GrupoMdf[] = [];
@@ -244,8 +333,9 @@ export function calcularEngine(input: EngineInput): EngineOutput {
     warnings.push(...w);
   }
 
-  const consolidado = consolidar(porModulo, input.parametros.perda_mdf);
-  return { porModulo, consolidado, warnings };
+  const globais = calcularElementosContinuos(input);
+  const consolidado = consolidar(porModulo, globais, input.parametros.perda_mdf);
+  return { porModulo, globais, consolidado, warnings };
 }
 
 function round4(n: number): number {

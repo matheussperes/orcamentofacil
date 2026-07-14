@@ -119,6 +119,21 @@ export default function Home() {
     [engine, comercial]
   );
 
+  // Guarda o orçamento atual e abre a proposta imprimível (etapa PDF).
+  function gerarProposta(fin: ReturnType<typeof calcularPreco>) {
+    if (!engine) return;
+    const payload = {
+      geradoEm: new Date().toISOString(),
+      ambiente: "Cozinha",
+      cliente: "Cliente exemplo",
+      engine,
+      financeiro: fin,
+      comercial,
+    };
+    sessionStorage.setItem("proposta", JSON.stringify(payload));
+    window.open("/proposta", "_blank");
+  }
+
   function atualizar(id: string, patch: Partial<ModuloUI>) {
     setModulos((ms) => ms.map((m) => (m.id === id ? { ...m, ...patch } : m)));
   }
@@ -387,6 +402,13 @@ export default function Home() {
                     Engenharia calculada em {tempoMs}ms (alvo &lt; 2000ms).
                   </div>
                 )}
+                <button
+                  className="primary"
+                  style={{ marginTop: 12, width: "100%" }}
+                  onClick={() => gerarProposta(financeiro)}
+                >
+                  Gerar proposta (PDF)
+                </button>
               </div>
 
               <div className="card">
@@ -436,6 +458,29 @@ export default function Home() {
                   </tr>
                 </tbody>
               </table>
+
+              {engine.globais.length > 0 && (
+                <table style={{ marginTop: 12 }}>
+                  <thead>
+                    <tr>
+                      <th>Elemento contínuo</th>
+                      <th className="num">Comp. (m)</th>
+                      <th className="num">Cobre</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {engine.globais.map((g, i) => (
+                      <tr key={i}>
+                        <td>
+                          {g.tipo === "tampo" ? "Tampo" : "Rodapé"} · parede {g.parede}
+                        </td>
+                        <td className="num">{(g.comprimento_mm / 1000).toFixed(2)}</td>
+                        <td className="num">{g.modulos} mód.</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
 
               <table style={{ marginTop: 12 }}>
                 <thead>
