@@ -14,7 +14,6 @@ import {
   definirConteudo,
   dividirVao,
   excluirDivisoria,
-  limparVao,
 } from "@/lib/engine/box/tree";
 import {
   carregarCatalogo,
@@ -77,6 +76,10 @@ export default function EditorModulo() {
   const [box, setBox] = useState<BoxModule>(() => caixaInicial("Branco TX", "Cozinha"));
 
   const [modoSelecao, setModoSelecao] = useState<"vaos" | "divisoes">("vaos");
+  // Desativado (padrão): clicar num vão troca a seleção (só 1 por vez).
+  // Ativado: clicar soma/remove vãos da seleção (usado pra aplicar portas em
+  // vários vãos de uma vez).
+  const [multiSelecaoVaos, setMultiSelecaoVaos] = useState(false);
   const [vaosSelecionados, setVaosSelecionados] = useState<string[]>([]);
   const [divisaoSelecionada, setDivisaoSelecionada] = useState<DivisaoSel | null>(null);
 
@@ -114,13 +117,29 @@ export default function EditorModulo() {
     setBox((b) => ({ ...b, ...patch }));
   }
 
-  function trocarModoSelecao(m: "vaos" | "divisoes") {
-    setModoSelecao(m);
-    if (m === "vaos") setDivisaoSelecionada(null);
-    else setVaosSelecionados([]);
+  // Botão "Selecionar vãos": se ainda não é o modo atual, só troca de modo
+  // (preserva o estado único/múltiplos que já estava). Se já é o modo atual,
+  // alterna entre único e múltiplos (esse é o botão de 2 estados).
+  function clicarSelecionarVaos() {
+    if (modoSelecao !== "vaos") {
+      setModoSelecao("vaos");
+      setDivisaoSelecionada(null);
+      return;
+    }
+    setMultiSelecaoVaos((v) => !v);
+    setVaosSelecionados([]);
+  }
+
+  function clicarSelecionarDivisoes() {
+    setModoSelecao("divisoes");
+    setVaosSelecionados([]);
   }
 
   function toggleVao(id: string) {
+    if (!multiSelecaoVaos) {
+      setVaosSelecionados([id]);
+      return;
+    }
     setVaosSelecionados((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
   }
 
@@ -229,9 +248,15 @@ export default function EditorModulo() {
     }));
   }
 
-  function esvaziarVao() {
-    setBox((b) => ({ ...b, raiz: vaosSelecionados.reduce((raiz, id) => limparVao(raiz, id), b.raiz) }));
+  // Reseta o módulo inteiro (caixa + divisões + portas + gavetas) pra
+  // começar do zero — não é mais "esvaziar só o vão selecionado".
+  function resetar() {
+    if (!confirm("Isso apaga toda a configuração atual do módulo (divisões, portas, gavetas) e recomeça do zero. Continuar?")) {
+      return;
+    }
+    setBox((b) => caixaInicial(b.caixa.cor, b.categoria ?? categorias[0] ?? "Cozinha"));
     setVaosSelecionados([]);
+    setDivisaoSelecionada(null);
   }
 
   function salvar() {
@@ -267,6 +292,7 @@ export default function EditorModulo() {
             vaosSelecionados={vaosSelecionados}
             cores={cores}
             catalogo={catalogo}
+            temPortaCaixaInteira={box.portas.some((g) => g.alvo.tipo === "caixa_inteira")}
             onAplicarCaixaInteira={aplicarPortasCaixaInteira}
             onAplicarVaosSelecionados={aplicarPortasVaosSelecionados}
             onExcluir={excluirPortas}
@@ -284,15 +310,6 @@ export default function EditorModulo() {
             tipo={box.puxador}
             onChange={(tipo) => setBoxCampo({ puxador: tipo })}
           />
-
-          <div className="card">
-            <div className="acoes" style={{ display: "flex", gap: 8 }}>
-              <button className="primary" onClick={salvar}>Salvar este módulo como preset</button>
-              <button className="danger" disabled={vaosSelecionados.length === 0} onClick={esvaziarVao}>
-                Esvaziar vão
-              </button>
-            </div>
-          </div>
 
           <div className="card">
             <h2>Plano de corte</h2>
@@ -335,13 +352,13 @@ export default function EditorModulo() {
             <div className="acoes" style={{ display: "flex", gap: 8, marginBottom: 10 }}>
               <button
                 className={modoSelecao === "vaos" ? "primary" : "ghost"}
-                onClick={() => trocarModoSelecao("vaos")}
+                onClick={clicarSelecionarVaos}
               >
-                Selecionar vãos
+                Selecionar vãos{modoSelecao === "vaos" && multiSelecaoVaos ? " (múltiplos)" : ""}
               </button>
               <button
                 className={modoSelecao === "divisoes" ? "primary" : "ghost"}
-                onClick={() => trocarModoSelecao("divisoes")}
+                onClick={clicarSelecionarDivisoes}
               >
                 Selecionar divisões
               </button>
@@ -354,6 +371,10 @@ export default function EditorModulo() {
               divisaoSelecionada={divisaoSelecionada}
               onSelecionarDivisoria={setDivisaoSelecionada}
             />
+            <div className="acoes" style={{ display: "flex", gap: 8, marginTop: 10 }}>
+              <button className="primary" onClick={salvar}>Salvar este módulo</button>
+              <button className="danger" onClick={resetar}>Resetar</button>
+            </div>
           </div>
 
           <div className="card">

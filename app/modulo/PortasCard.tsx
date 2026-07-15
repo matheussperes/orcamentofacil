@@ -28,6 +28,7 @@ export function PortasCard({
   vaosSelecionados,
   cores,
   catalogo,
+  temPortaCaixaInteira,
   onAplicarCaixaInteira,
   onAplicarVaosSelecionados,
   onExcluir,
@@ -35,6 +36,9 @@ export function PortasCard({
   vaosSelecionados: string[];
   cores: string[];
   catalogo: Catalogo | null;
+  /** Já existe um grupo de porta cobrindo a caixa inteira — bloqueia adicionar
+   * portas em vãos internos (evita porta espremida atrás de outra porta). */
+  temPortaCaixaInteira: boolean;
   onAplicarCaixaInteira: (cfg: ConfigPortas) => void;
   onAplicarVaosSelecionados: (cfg: ConfigPortas) => void;
   onExcluir: () => void;
@@ -101,7 +105,8 @@ export function PortasCard({
         <button onClick={() => onAplicarCaixaInteira(cfg())}>Aplicar na caixa inteira</button>
         <button
           className="primary"
-          disabled={vaosSelecionados.length === 0}
+          disabled={vaosSelecionados.length === 0 || temPortaCaixaInteira}
+          title={temPortaCaixaInteira ? "Já existe uma porta cobrindo a caixa inteira — exclua-a antes de adicionar portas em vãos internos." : undefined}
           onClick={() => onAplicarVaosSelecionados(cfg())}
         >
           Aplicar em vãos selecionados
