@@ -667,7 +667,7 @@ function ResumoModulo({
   return (
     <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
       <div style={{ width: 96, flexShrink: 0 }}>
-        <BoxCanvas box={box} selecionado={null} onSelecionar={() => {}} />
+        <BoxCanvas box={box} selecionado={null} onSelecionar={() => {}} comercial />
       </div>
       <div style={{ fontSize: 13, lineHeight: 1.6 }}>
         <div style={{ fontWeight: 600 }}>
@@ -913,12 +913,13 @@ function BoxModuloCard({
 }) {
   const cores = catalogo ? coresDisponiveis(catalogo) : [box.caixa.cor];
   const larguraInstalacao = larguraInstalacaoBox(box);
+  const [outrasAbertas, setOutrasAbertas] = useState(false);
 
   return (
     <>
       <div style={{ display: "flex", gap: 12 }}>
         <div style={{ width: 180, flexShrink: 0 }}>
-          <BoxCanvas box={box} selecionado={null} onSelecionar={() => {}} />
+          <BoxCanvas box={box} selecionado={null} onSelecionar={() => {}} comercial />
         </div>
         <div style={{ flex: 1 }}>
           <div className="linha">
@@ -1003,59 +1004,72 @@ function BoxModuloCard({
         </div>
       </div>
 
-      {/* Overrides rápidos de instância: portas e fundo, sem reabrir o editor. */}
+      {/* Outras configurações: overrides rápidos de instância (portas e fundo),
+          sem reabrir o editor — agrupados atrás de um único botão colapsável. */}
       <div style={{ marginTop: 10, borderTop: "1px solid var(--border)", paddingTop: 8 }}>
-        <div className="campos">
-          <div>
-            <label>Tem fundo</label>
-            <select
-              value={box.overrideTemFundo === undefined ? "gabarito" : box.overrideTemFundo ? "sim" : "nao"}
-              onChange={(e) => {
-                const v = e.target.value;
-                onAtualizar({ overrideTemFundo: v === "gabarito" ? undefined : v === "sim" });
-              }}
-            >
-              <option value="gabarito">Padrão do gabarito</option>
-              <option value="sim">Sim (todos os vãos)</option>
-              <option value="nao">Não (nenhum vão)</option>
-            </select>
-          </div>
-        </div>
-
-        {!box.overridePortas ? (
-          <button
-            style={{ marginTop: 8 }}
-            onClick={() => onAtualizar({ overridePortas: { cor: cores[0] ?? box.caixa.cor, espessura: 18 } })}
-          >
-            + Personalizar cor das portas
+        {!outrasAbertas ? (
+          <button style={{ marginTop: 0 }} onClick={() => setOutrasAbertas(true)}>
+            Outras configurações
           </button>
         ) : (
-          <div style={{ marginTop: 8 }}>
-            <label>Cor/espessura das portas (todas)</label>
-            <div className="campos" style={{ marginTop: 4 }}>
+          <>
+            <button className="ghost" onClick={() => setOutrasAbertas(false)}>
+              Fechar outras configurações
+            </button>
+
+            <div className="campos" style={{ marginTop: 8 }}>
               <div>
+                <label>Tem fundo</label>
                 <select
-                  value={box.overridePortas.cor}
-                  onChange={(e) => onAtualizar({ overridePortas: { ...box.overridePortas!, cor: e.target.value } })}
+                  value={box.overrideTemFundo === undefined ? "gabarito" : box.overrideTemFundo ? "sim" : "nao"}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    onAtualizar({ overrideTemFundo: v === "gabarito" ? undefined : v === "sim" });
+                  }}
                 >
-                  {cores.map((c) => <option key={c} value={c}>{c}</option>)}
-                </select>
-              </div>
-              <div>
-                <select
-                  value={box.overridePortas.espessura}
-                  onChange={(e) => onAtualizar({ overridePortas: { ...box.overridePortas!, espessura: Number(e.target.value) } })}
-                >
-                  {(catalogo ? espessurasDaCor(catalogo, box.overridePortas.cor) : [15, 18]).map((esp) => (
-                    <option key={esp} value={esp}>{esp} mm</option>
-                  ))}
+                  <option value="gabarito">Padrão do gabarito</option>
+                  <option value="sim">Sim (todos os vãos)</option>
+                  <option value="nao">Não (nenhum vão)</option>
                 </select>
               </div>
             </div>
-            <button className="ghost" style={{ marginTop: 4 }} onClick={() => onAtualizar({ overridePortas: undefined })}>
-              Usar cor do gabarito
-            </button>
-          </div>
+
+            {!box.overridePortas ? (
+              <button
+                style={{ marginTop: 8 }}
+                onClick={() => onAtualizar({ overridePortas: { cor: cores[0] ?? box.caixa.cor, espessura: 18 } })}
+              >
+                + Personalizar cor das portas
+              </button>
+            ) : (
+              <div style={{ marginTop: 8 }}>
+                <label>Cor/espessura das portas (todas)</label>
+                <div className="campos" style={{ marginTop: 4 }}>
+                  <div>
+                    <select
+                      value={box.overridePortas.cor}
+                      onChange={(e) => onAtualizar({ overridePortas: { ...box.overridePortas!, cor: e.target.value } })}
+                    >
+                      {cores.map((c) => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <select
+                      value={box.overridePortas.espessura}
+                      onChange={(e) => onAtualizar({ overridePortas: { ...box.overridePortas!, espessura: Number(e.target.value) } })}
+                    >
+                      {(catalogo ? espessurasDaCor(catalogo, box.overridePortas.cor) : [15, 18]).map((esp) => (
+                        <option key={esp} value={esp}>{esp} mm</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                <button className="ghost" style={{ marginTop: 4 }} onClick={() => onAtualizar({ overridePortas: undefined })}>
+                  Usar cor do gabarito
+                </button>
+              </div>
+            )}
+          </>
         )}
       </div>
 
