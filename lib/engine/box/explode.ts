@@ -1,11 +1,12 @@
 import type { ItemQtd, Peca } from "../types";
-import type { BayNode, BoxMaterial, BoxModule } from "./types";
+import type { BayNode, BoxMaterial, BoxModule, TipoPuxador } from "./types";
+import { retanguloVaos, tamanhosFilhos } from "./tree";
 
 // Explosão geométrica recursiva da caixa (V3). Funções puras: dado um BoxModule,
 // devolve a lista de peças (Peca) + ferragens. Reaproveita o tipo Peca para
 // alimentar a mesma consolidação/custo do motor de templates.
 
-const RECUO_DIVISORIA = 20; // recuo frontal de divisórias/prateleiras (mm)
+const RECUO_DIVISORIA_PADRAO = 20; // fallback quando o nó não tem recuoFrontal (mm)
 // Profundidade que a travessa avança para dentro do móvel (mm). A travessa é
 // montada DEITADA, como a base — quem olha de frente vê só a espessura do
 // MDF, não os 70mm. Por isso NÃO reduz a altura útil do vão (ver interiorH).
@@ -19,7 +20,7 @@ const GAVETA_LATERAL_H = 120;
 const GAVETA_CAIXOTE_H = 100;
 const GAVETA_FUNDO_ESP = 6;
 const AFASTADOR = 30;
-const FUNDO_ESP_PADRAO = 6; // usado quando overrideTemFundo=true injeta fundo num vão sem um
+const FUNDO_ESP_PADRAO = 6; // espessura fixa do fundo quando box.temFundo = true
 
 export interface BoxResult {
   pecas: Peca[];
@@ -33,12 +34,22 @@ interface Ctx {
   ferragens: Map<string, number>;
   caixa: BoxMaterial;
   altura: number; // altura total do módulo (p/ tamponamento lateral)
+  temFundo: boolean;
+  puxador: TipoPuxador;
   overridePortas?: BoxMaterial;
-  overrideTemFundo?: boolean;
 }
 
 function addFerragem(ctx: Ctx, item: string, q: number) {
   if (q > 0) ctx.ferragens.set(item, (ctx.ferragens.get(item) ?? 0) + q);
+}
+
+/** Adiciona a ferragem de puxador de UMA frente, conforme `ctx.puxador`:
+ * "haste" = 1 puxador (un.); "perfil" = `comprimentoMm` de perfil (m);
+ * "sem_puxador" = nada. `comprimentoMm` é o comprimento da borda onde o
+ * perfil correria (largura pra basculante/gaveta, altura pros demais). */
+function addPuxador(ctx: Ctx, comprimentoMm: number) {
+  if (ctx.puxador === "haste") addFerragem(ctx, "puxador", 1);
+  else if (ctx.puxador === "perfil") addFerragem(ctx, "perfil_puxador_m", round4(comprimentoMm / 1000));
 }
 
 function push(
@@ -96,26 +107,20 @@ function explodeVao(ctx: Ctx, node: BayNode, W: number, H: number, D: number) {
   const t = ctx.caixa.espessura;
 
   if (node.split === "vertical" && node.qtdDivisorias > 0) {
-    // Divisórias verticais (painéis) + sub-vãos lado a lado.
-    push(ctx, "Divisória Vertical", node.qtdDivisorias, ctx.caixa, "caixa", H, D - RECUO_DIVISORIA, 1, 0);
-    const bays = node.qtdDivisorias + 1;
-    const childW = (W - node.qtdDivisorias * t) / bays;
+    const recuo = node.recuoFrontal ?? RECUO_DIVISORIA_PADRAO;
+    push(ctx, "Divisória Vertical", node.qtdDivisorias, ctx.caixa, "caixa", H, D - recuo, 1, 0);
+    const larguras = tamanhosFilhos(node, W, t);
     const filhos = node.children ?? [];
-    for (let i = 0; i < bays; i++) {
-      if (filhos[i]) explodeVao(ctx, filhos[i], childW, H, D);
-    }
+    filhos.forEach((filho, i) => explodeVao(ctx, filho, larguras[i], H, D));
     return;
   }
 
   if (node.split === "horizontal" && node.qtdDivisorias > 0) {
-    // Divisórias horizontais (prateleiras estruturais) + sub-vãos empilhados.
-    push(ctx, "Divisória Horizontal", node.qtdDivisorias, ctx.caixa, "caixa", D - RECUO_DIVISORIA, W, 0, 1);
-    const bays = node.qtdDivisorias + 1;
-    const childH = (H - node.qtdDivisorias * t) / bays;
+    const recuo = node.recuoFrontal ?? RECUO_DIVISORIA_PADRAO;
+    push(ctx, "Divisória Horizontal", node.qtdDivisorias, ctx.caixa, "caixa", D - recuo, W, 0, 1);
+    const alturas = tamanhosFilhos(node, H, t);
     const filhos = node.children ?? [];
-    for (let i = 0; i < bays; i++) {
-      if (filhos[i]) explodeVao(ctx, filhos[i], W, childH, D);
-    }
+    filhos.forEach((filho, i) => explodeVao(ctx, filho, W, alturas[i], D));
     return;
   }
 
@@ -132,19 +137,15 @@ function aplicarConteudo(ctx: Ctx, node: BayNode, W: number, H: number, D: numbe
     return;
   }
 
-  // c.tipo === "espaco": frente + prateleiras + fundo são independentes e
-  // combináveis — um vão com 2 portas PODE ter prateleiras internas e fundo
-  // ao mesmo tempo, sem precisar dividir a caixa.
+  // c.tipo === "espaco": frente (vazio/gaveta) + prateleiras são
+  // independentes e combináveis — portas ficam fora daqui (ver
+  // aplicarGruposPortas), pois cobrem 1+ vãos ou a caixa inteira.
   aplicarFrente(ctx, c.frente, W, H, D);
   if (c.prateleiras && c.prateleiras.qtd > 0) {
     push(ctx, "Prateleira", c.prateleiras.qtd, ctx.caixa, "prateleira", D - c.prateleiras.recuo, W - 2, 0, 1);
   }
-
-  // overrideTemFundo (instância) vence o que foi salvo no gabarito.
-  const temFundo = ctx.overrideTemFundo ?? c.fundo != null;
-  if (temFundo) {
-    const espessura = c.fundo?.espessura ?? FUNDO_ESP_PADRAO;
-    push(ctx, "Fundo", 1, { cor: ctx.caixa.cor, espessura }, "fundo", H, W, 0, 0);
+  if (ctx.temFundo) {
+    push(ctx, "Fundo", 1, { cor: ctx.caixa.cor, espessura: FUNDO_ESP_PADRAO }, "fundo", H, W, 0, 0);
   }
 }
 
@@ -158,22 +159,6 @@ function aplicarFrente(
   switch (frente.tipo) {
     case "vazio":
       return;
-    case "portas": {
-      const material = ctx.overridePortas ?? frente.material;
-      const larguraPorta = W / frente.qtd - FOLGA_PORTA;
-      const alturaPorta = H - FOLGA_PORTA_V;
-      push(ctx, "Porta", frente.qtd, material, "frente", alturaPorta, larguraPorta, 2, 2);
-      frente.sentidos.slice(0, frente.qtd).forEach((s) => {
-        if (s === "basculante") {
-          addFerragem(ctx, "pistao", 1);
-          addFerragem(ctx, "dobradica_35", 2);
-        } else {
-          addFerragem(ctx, "dobradica_35", Math.max(2, Math.ceil(alturaPorta / 450)));
-        }
-        if (s !== "cava") addFerragem(ctx, "puxador", 1);
-      });
-      return;
-    }
     case "gaveta": {
       const alturaFrente = H / frente.qtd - FOLGA_PORTA;
       const larguraFrente = W - FOLGA_PORTA;
@@ -189,7 +174,8 @@ function aplicarFrente(
           espessura: frente.espessuraFrente ?? 18,
         };
         push(ctx, "Frente Gaveta Externa", frente.qtd, material, "frente", alturaFrente, larguraFrente, 2, 2);
-        addFerragem(ctx, "puxador", frente.qtd);
+        // Perfil de gaveta corre ao longo da borda superior da frente (largura).
+        for (let i = 0; i < frente.qtd; i++) addPuxador(ctx, larguraFrente);
       }
       // Caixote da gaveta (comum às duas).
       push(ctx, "Lateral de Gaveta", frente.qtd * 2, ctx.caixa, "caixa", GAVETA_LATERAL_H, frente.profundidade, 0, 1);
@@ -197,6 +183,53 @@ function aplicarFrente(
       push(ctx, "Fundo de Gaveta", frente.qtd, { cor: ctx.caixa.cor, espessura: GAVETA_FUNDO_ESP }, "fundo", frente.profundidade, W - 35, 0, 0);
       addFerragem(ctx, "corredica_par", frente.qtd);
       return;
+    }
+  }
+}
+
+/**
+ * Portas como entidade independente da árvore de vãos: cada grupo cobre a
+ * caixa inteira (ignora a divisão interna) ou a união dos vãos selecionados
+ * (bounding box via `retanguloVaos`), sobrepondo o conteúdo desses vãos.
+ */
+function aplicarGruposPortas(ctx: Ctx, box: BoxModule, interiorW: number, interiorH: number, t: number) {
+  for (const grupo of box.portas) {
+    let W: number;
+    let H: number;
+    if (grupo.alvo.tipo === "caixa_inteira") {
+      W = interiorW;
+      H = interiorH;
+    } else {
+      const rect = retanguloVaos(box.raiz, new Set(grupo.alvo.vaoIds), 0, 0, interiorW, interiorH, t);
+      if (!rect) continue;
+      W = rect.w;
+      H = rect.h;
+    }
+
+    const material = ctx.overridePortas ?? grupo.material;
+    const larguraPorta = W / grupo.qtd - FOLGA_PORTA;
+    const alturaPorta = H - FOLGA_PORTA_V;
+    push(ctx, "Porta", grupo.qtd, material, "frente", alturaPorta, larguraPorta, 2, 2);
+
+    const basculante = grupo.sentido === "basculante_pia" || grupo.sentido === "basculante_aereo";
+    // Perfil corre na borda onde o puxador ficaria: horizontal (largura) na
+    // basculante (topo/base), vertical (altura) nas demais (inclui correr).
+    const comprimentoPerfil = basculante ? larguraPorta : alturaPorta;
+
+    if (grupo.tipoAbertura === "correr") {
+      addFerragem(ctx, "kit_porta_correr", 1);
+      for (let i = 0; i < grupo.qtd; i++) addPuxador(ctx, comprimentoPerfil);
+      continue;
+    }
+
+    for (let i = 0; i < grupo.qtd; i++) {
+      if (basculante) {
+        addFerragem(ctx, "pistao", 1);
+        addFerragem(ctx, "dobradica_35", 2);
+      } else {
+        addFerragem(ctx, "dobradica_35", Math.max(2, Math.ceil(alturaPorta / 450)));
+      }
+      addPuxador(ctx, comprimentoPerfil);
     }
   }
 }
@@ -258,8 +291,9 @@ export function explodeBox(box: BoxModule): BoxResult {
     ferragens: new Map(),
     caixa: box.caixa,
     altura: box.altura,
+    temFundo: box.temFundo,
+    puxador: box.puxador,
     overridePortas: box.overridePortas,
-    overrideTemFundo: box.overrideTemFundo,
   };
   const t = box.caixa.espessura;
 
@@ -272,6 +306,7 @@ export function explodeBox(box: BoxModule): BoxResult {
   const interiorH = box.altura - 2 * t;
 
   explodeVao(ctx, box.raiz, interiorW, interiorH, interiorD);
+  aplicarGruposPortas(ctx, box, interiorW, interiorH, t);
   gerarTamponamentoInstancia(ctx, box);
 
   const areaMdfM2 = round4(ctx.pecas.reduce((s, p) => s + p.area_m2, 0));

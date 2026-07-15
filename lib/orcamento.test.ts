@@ -22,6 +22,9 @@ const boxInferior: BoxModule = {
   profundidade: 550,
   caixa: { cor: "Madeirado", espessura: 15 },
   raiz: vaoVazio("r"),
+  portas: [],
+  temFundo: false,
+  puxador: "haste",
 };
 
 const itemTemplate: ModuloOrcamento = {

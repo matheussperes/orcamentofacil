@@ -1,4 +1,4 @@
-import type { BayNode, FrenteConteudo } from "./engine/box/types";
+import type { BayNode, FrenteConteudo, GrupoPortas } from "./engine/box/types";
 import type { BoxModule } from "./engine/box/types";
 import { migrarBoxModule } from "./engine/box/migrate";
 
@@ -68,20 +68,42 @@ export function removerPreset(id: string): void {
   window.localStorage.setItem(CHAVE, JSON.stringify(presets));
 }
 
-/** Vão-folha "espaço": frente + prateleiras + fundo são independentes e
- * combináveis (ex.: portas na frente + prateleiras internas + fundo). */
+/** Vão-folha "espaço": frente (vazio/gaveta) + prateleiras são independentes
+ * e combináveis. Portas não entram aqui — são um `GrupoPortas` à parte (ver
+ * `portas()`), e fundo é global (`box.temFundo`). */
 function espaco(
   id: string,
   frente: FrenteConteudo,
-  opts: { prateleiras?: { qtd: number; recuo: number }; fundo?: { espessura: number } } = {}
+  opts: { prateleiras?: { qtd: number; recuo: number } } = {}
 ): BayNode {
   return {
     id,
     split: "none",
     qtdDivisorias: 0,
-    content: { tipo: "espaco", frente, prateleiras: opts.prateleiras, fundo: opts.fundo },
+    content: { tipo: "espaco", frente, prateleiras: opts.prateleiras },
   };
 }
+
+let contadorGrupoPortas = 0;
+
+/** Grupo de porta cobrindo um único vão (uso nos seeds — cobertura de
+ * múltiplos vãos/caixa inteira é montada pelo usuário no laboratório). */
+function portas(
+  vaoId: string,
+  opts: { qtd: number; sentido: GrupoPortas["sentido"]; tipoAbertura?: GrupoPortas["tipoAbertura"]; material: BoxMaterialLocal }
+): GrupoPortas {
+  contadorGrupoPortas += 1;
+  return {
+    id: `seed-porta-${contadorGrupoPortas}`,
+    alvo: { tipo: "vaos", vaoIds: [vaoId] },
+    tipoAbertura: opts.tipoAbertura ?? "abrir",
+    sentido: opts.sentido,
+    qtd: opts.qtd,
+    material: opts.material,
+  };
+}
+
+type BoxMaterialLocal = { cor: string; espessura: number };
 
 // Conjunto inicial de presets (Fase 3, Etapa 2): dá conteúdo real ao fluxo
 // Ambiente → Tipo → Modelo desde o primeiro uso, sem exigir que o usuário
@@ -96,13 +118,12 @@ function presetsSeed(): Omit<BoxPreset, "id">[] {
         id: "seed", nome: "Balcão 2 Portas", tipo: "inferior",
         largura: 800, altura: 720, profundidade: 550,
         caixa: { cor: "Branco TX", espessura: 15 },
-        // Portas + 1 prateleira interna + fundo — mostra que não precisam
-        // dividir o vão para coexistir.
-        raiz: espaco(
-          "raiz-1",
-          { tipo: "portas", qtd: 2, sentidos: ["esquerda", "direita"], material: { cor: "Louro Freijó", espessura: 18 } },
-          { prateleiras: { qtd: 1, recuo: 20 }, fundo: { espessura: 6 } }
-        ),
+        temFundo: true,
+        puxador: "haste",
+        // 1 prateleira interna + porta cobrindo o vão inteiro — mostra que
+        // não precisam dividir o vão para coexistir.
+        raiz: espaco("raiz-1", { tipo: "vazio" }, { prateleiras: { qtd: 1, recuo: 20 } }),
+        portas: [portas("raiz-1", { qtd: 2, sentido: "direita", material: { cor: "Louro Freijó", espessura: 18 } })],
       },
     },
     {
@@ -112,10 +133,13 @@ function presetsSeed(): Omit<BoxPreset, "id">[] {
         id: "seed", nome: "Gaveteiro 4 Gavetas", tipo: "inferior",
         largura: 450, altura: 720, profundidade: 550,
         caixa: { cor: "Branco TX", espessura: 15 },
+        temFundo: false,
+        puxador: "haste",
         raiz: espaco("raiz-2", {
           tipo: "gaveta", qtd: 4, profundidade: 500, interna: false,
           corFrente: "Louro Freijó", espessuraFrente: 18,
         }),
+        portas: [],
       },
     },
     {
@@ -125,11 +149,10 @@ function presetsSeed(): Omit<BoxPreset, "id">[] {
         id: "seed", nome: "Aéreo 2 Portas", tipo: "aereo",
         largura: 800, altura: 700, profundidade: 350,
         caixa: { cor: "Branco TX", espessura: 15 },
-        raiz: espaco(
-          "raiz-3",
-          { tipo: "portas", qtd: 2, sentidos: ["esquerda", "direita"], material: { cor: "Louro Freijó", espessura: 18 } },
-          { prateleiras: { qtd: 1, recuo: 20 }, fundo: { espessura: 6 } }
-        ),
+        temFundo: true,
+        puxador: "haste",
+        raiz: espaco("raiz-3", { tipo: "vazio" }, { prateleiras: { qtd: 1, recuo: 20 } }),
+        portas: [portas("raiz-3", { qtd: 2, sentido: "direita", material: { cor: "Louro Freijó", espessura: 18 } })],
       },
     },
     {
@@ -139,17 +162,19 @@ function presetsSeed(): Omit<BoxPreset, "id">[] {
         id: "seed", nome: "Torre Quente Basculante + Portas", tipo: "torre",
         largura: 700, altura: 2200, profundidade: 600,
         caixa: { cor: "Branco TX", espessura: 15 },
+        temFundo: true,
+        puxador: "haste",
         raiz: {
-          id: "raiz-4", split: "horizontal", qtdDivisorias: 1,
+          id: "raiz-4", split: "horizontal", qtdDivisorias: 1, recuoFrontal: 20, posicao: "centralizado",
           children: [
-            espaco("raiz-4-a", { tipo: "portas", qtd: 1, sentidos: ["basculante"], material: { cor: "Louro Freijó", espessura: 18 } }),
-            espaco(
-              "raiz-4-b",
-              { tipo: "portas", qtd: 2, sentidos: ["esquerda", "direita"], material: { cor: "Louro Freijó", espessura: 18 } },
-              { prateleiras: { qtd: 2, recuo: 20 }, fundo: { espessura: 6 } }
-            ),
+            espaco("raiz-4-a", { tipo: "vazio" }),
+            espaco("raiz-4-b", { tipo: "vazio" }, { prateleiras: { qtd: 2, recuo: 20 } }),
           ],
         },
+        portas: [
+          portas("raiz-4-a", { qtd: 1, sentido: "basculante_pia", material: { cor: "Louro Freijó", espessura: 18 } }),
+          portas("raiz-4-b", { qtd: 2, sentido: "direita", material: { cor: "Louro Freijó", espessura: 18 } }),
+        ],
       },
     },
     {
@@ -159,11 +184,10 @@ function presetsSeed(): Omit<BoxPreset, "id">[] {
         id: "seed", nome: "Guarda-roupa 2 Portas", tipo: "torre",
         largura: 900, altura: 2400, profundidade: 600,
         caixa: { cor: "Branco TX", espessura: 15 },
-        raiz: espaco(
-          "raiz-5",
-          { tipo: "portas", qtd: 2, sentidos: ["esquerda", "direita"], material: { cor: "Branco TX", espessura: 18 } },
-          { prateleiras: { qtd: 3, recuo: 20 }, fundo: { espessura: 6 } }
-        ),
+        temFundo: true,
+        puxador: "haste",
+        raiz: espaco("raiz-5", { tipo: "vazio" }, { prateleiras: { qtd: 3, recuo: 20 } }),
+        portas: [portas("raiz-5", { qtd: 2, sentido: "direita", material: { cor: "Branco TX", espessura: 18 } })],
       },
     },
     {
@@ -173,17 +197,16 @@ function presetsSeed(): Omit<BoxPreset, "id">[] {
         id: "seed", nome: "Guarda-roupa Gaveteiro Interno", tipo: "torre",
         largura: 900, altura: 2400, profundidade: 600,
         caixa: { cor: "Branco TX", espessura: 15 },
+        temFundo: true,
+        puxador: "haste",
         raiz: {
-          id: "raiz-6", split: "horizontal", qtdDivisorias: 1,
+          id: "raiz-6", split: "horizontal", qtdDivisorias: 1, recuoFrontal: 20, posicao: "centralizado",
           children: [
-            espaco(
-              "raiz-6-a",
-              { tipo: "portas", qtd: 2, sentidos: ["esquerda", "direita"], material: { cor: "Branco TX", espessura: 18 } },
-              { prateleiras: { qtd: 2, recuo: 20 }, fundo: { espessura: 6 } }
-            ),
-            espaco("raiz-6-b", { tipo: "gaveta", qtd: 3, profundidade: 500, interna: true }, { fundo: { espessura: 6 } }),
+            espaco("raiz-6-a", { tipo: "vazio" }, { prateleiras: { qtd: 2, recuo: 20 } }),
+            espaco("raiz-6-b", { tipo: "gaveta", qtd: 3, profundidade: 500, interna: true }),
           ],
         },
+        portas: [portas("raiz-6-a", { qtd: 2, sentido: "direita", material: { cor: "Branco TX", espessura: 18 } })],
       },
     },
   ];
