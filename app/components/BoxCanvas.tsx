@@ -1,17 +1,29 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import type { BayNode, BoxModule } from "@/lib/engine/box/types";
-import { layoutVaos, rotuloConteudo, type BayRect } from "@/lib/engine/box/tree";
+import type { BayNode, BoxModule, GrupoPortas } from "@/lib/engine/box/types";
+import {
+  layoutDivisorias,
+  layoutVaos,
+  retanguloVaos,
+  rotuloConteudo,
+  type BayRect,
+  type DivisoriaRect,
+} from "@/lib/engine/box/tree";
 import { corParaHex } from "./ModulePreview";
 
 // V3 — Canvas 2D do módulo-caixa, em dois modos:
-//  - Laboratório (padrão): vãos com borda técnica, rótulo do conteúdo e
-//    destaque de seleção — usado em /modulo, onde o clique importa.
+//  - Laboratório (padrão): vãos com borda técnica, rótulo do conteúdo,
+//    seleção múltipla de vãos ou seleção de uma divisória — usado em
+//    /modulo, onde o clique importa.
 //  - Comercial (`comercial`): visual limpo, sem bordas/rótulos técnicos,
 //    com indicadores de portas/gavetas no mesmo estilo do ModulePreview
 //    (linhas divisórias finas + marcas de puxador) — usado nos cards do
 //    orçamento, onde a imagem precisa ficar "bonitinha".
+//
+// Em ambos os modos, os grupos de porta (`box.portas`) são desenhados por
+// cima dos vãos — são independentes da árvore e podem cobrir 1+ vãos ou a
+// caixa inteira.
 
 const W = 380;
 const H = 360;
@@ -22,6 +34,8 @@ interface Geo {
   oy: number;
   interiorTop: number;
   interiorH: number;
+  interiorW: number;
+  t: number;
   rects: BayRect[];
 }
 
@@ -36,8 +50,9 @@ function geometria(box: BoxModule): Geo {
   // TRAVESSA_PROFUNDIDADE em explode.ts). Mesmo cálculo para os 3 tipos.
   const interiorTop = t;
   const interiorH = box.altura - 2 * t;
-  const rects = layoutVaos(box.raiz, t, interiorTop, box.largura - 2 * t, interiorH, t);
-  return { scale, ox, oy, interiorTop, interiorH, rects };
+  const interiorW = box.largura - 2 * t;
+  const rects = layoutVaos(box.raiz, t, interiorTop, interiorW, interiorH, t);
+  return { scale, ox, oy, interiorTop, interiorH, interiorW, t, rects };
 }
 
 function linha(ctx: CanvasRenderingContext2D, x1: number, y1: number, x2: number, y2: number) {
@@ -48,8 +63,8 @@ function linha(ctx: CanvasRenderingContext2D, x1: number, y1: number, x2: number
 }
 
 /** Desenho "bonito" (modo comercial): recursa a árvore de vãos desenhando só
- * divisórias finas + indicadores de porta/gaveta/prateleira — sem bordas
- * técnicas nem texto, no mesmo estilo visual do ModulePreview (V2-2). */
+ * divisórias finas + indicador de gaveta/prateleira — sem bordas técnicas
+ * nem texto. Portas não entram aqui (ver `desenharGrupoPortas`). */
 function desenharConteudoBonito(
   ctx: CanvasRenderingContext2D,
   node: BayNode,
@@ -107,19 +122,6 @@ function desenharConteudoBonito(
       const gy = y + (h / qtd) * (i + 0.5);
       ctx.fillRect(x + w / 2 - 8, gy - 1.5, 16, 3);
     }
-  } else if (frente.tipo === "portas") {
-    const qtd = Math.max(1, frente.qtd);
-    if (qtd > 1) {
-      for (let i = 1; i < qtd; i++) {
-        const px = x + (w / qtd) * i;
-        linha(ctx, px, y + 3, px, y + h - 3);
-      }
-    }
-    ctx.fillStyle = "rgba(28,36,48,0.5)";
-    for (let i = 0; i < qtd; i++) {
-      const px = x + (w / qtd) * (i + 1) - 6;
-      ctx.fillRect(px, y + h / 2 - 8, 3, 16);
-    }
   }
 
   // Prateleiras internas: independentes da frente, sempre desenhadas se houver.
@@ -132,17 +134,92 @@ function desenharConteudoBonito(
   }
 }
 
+/** Marca de puxador de UM painel de porta, posicionada conforme o sentido
+ * (ver descrições em PortasCard) — todos os painéis de um mesmo grupo usam a
+ * mesma posição (sentido é único por grupo, não um por porta). */
+function desenharPuxador(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  grupo: GrupoPortas
+) {
+  ctx.fillStyle = "rgba(28,36,48,0.6)";
+  const espessura = 3;
+  const comp = 16;
+  const margem = 3;
+
+  if (grupo.tipoAbertura === "correr") {
+    if (grupo.sentido === "direita") {
+      ctx.fillRect(x + w - espessura - margem, y + h / 2 - comp / 2, espessura, comp);
+    } else {
+      ctx.fillRect(x + margem, y + h / 2 - comp / 2, espessura, comp);
+    }
+    return;
+  }
+
+  switch (grupo.sentido) {
+    case "basculante_pia": // abre pra baixo, puxador centralizado no topo
+      ctx.fillRect(x + w / 2 - comp / 2, y + margem, comp, espessura);
+      break;
+    case "basculante_aereo": // abre pra cima, puxador centralizado na base
+      ctx.fillRect(x + w / 2 - comp / 2, y + h - espessura - margem, comp, espessura);
+      break;
+    case "direita": // abre pra direita, puxador no topo esquerdo
+      ctx.fillRect(x + margem, y + margem, espessura, comp);
+      break;
+    case "esquerda": // abre pra esquerda, puxador no topo direito
+      ctx.fillRect(x + w - espessura - margem, y + margem, espessura, comp);
+      break;
+  }
+}
+
+/** Desenha um grupo de porta (retângulo já em px) — linhas divisórias entre
+ * os painéis + marca de puxador em cada um. */
+function desenharGrupoPortas(
+  ctx: CanvasRenderingContext2D,
+  rect: { x: number; y: number; w: number; h: number },
+  grupo: GrupoPortas
+) {
+  const { x, y, w, h } = rect;
+  const qtd = Math.max(1, grupo.qtd);
+  const larguraPainel = w / qtd;
+
+  ctx.strokeStyle = "rgba(28,36,48,0.55)";
+  ctx.lineWidth = 1.5;
+  ctx.strokeRect(x + 1, y + 1, w - 2, h - 2);
+  for (let i = 1; i < qtd; i++) {
+    const px = x + larguraPainel * i;
+    linha(ctx, px, y + 2, px, y + h - 2);
+  }
+  for (let i = 0; i < qtd; i++) {
+    desenharPuxador(ctx, x + larguraPainel * i, y, larguraPainel, h, grupo);
+  }
+}
+
+export interface DivisaoSelecionada {
+  parentId: string;
+  indice: number;
+}
+
 export function BoxCanvas({
   box,
-  selecionado,
-  onSelecionar,
   comercial = false,
+  modoSelecao = "vaos",
+  vaosSelecionados = [],
+  onToggleVao,
+  divisaoSelecionada = null,
+  onSelecionarDivisoria,
 }: {
   box: BoxModule;
-  selecionado: string | null;
-  onSelecionar: (id: string) => void;
-  /** Modo bonito para cards do orçamento — sem bordas/rótulos técnicos. */
+  /** Modo bonito para cards do orçamento — sem bordas/rótulos técnicos, não interativo. */
   comercial?: boolean;
+  modoSelecao?: "vaos" | "divisoes";
+  vaosSelecionados?: string[];
+  onToggleVao?: (id: string) => void;
+  divisaoSelecionada?: DivisaoSelecionada | null;
+  onSelecionarDivisoria?: (sel: DivisaoSelecionada) => void;
 }) {
   const ref = useRef<HTMLCanvasElement>(null);
 
@@ -169,7 +246,7 @@ export function BoxCanvas({
         box.raiz,
         px(t),
         py(g.interiorTop),
-        (box.largura - 2 * t) * g.scale,
+        g.interiorW * g.scale,
         g.interiorH * g.scale,
         t * g.scale
       );
@@ -180,7 +257,7 @@ export function BoxCanvas({
         const y = py(r.y);
         const w = r.w * g.scale;
         const h = r.h * g.scale;
-        const sel = r.id === selecionado;
+        const sel = modoSelecao === "vaos" && vaosSelecionados.includes(r.id);
         ctx.fillStyle = sel ? "rgba(79,140,255,0.28)" : "#ffffff";
         ctx.fillRect(x, y, w, h);
         ctx.strokeStyle = sel ? "#4f8cff" : "#94a3b8";
@@ -195,6 +272,37 @@ export function BoxCanvas({
           ctx.fillText(rotulo, x + w / 2, y + h / 2 + 4);
         }
       }
+
+      // Divisórias: no modo "Selecionar divisões", destaca a divisória
+      // atualmente selecionada (as demais já aparecem como a borda entre
+      // vãos vizinhos, não precisam de traço extra).
+      if (modoSelecao === "divisoes" && divisaoSelecionada) {
+        const divisorias = layoutDivisorias(box.raiz, t, g.interiorTop, g.interiorW, g.interiorH, t);
+        const d = divisorias.find(
+          (d) => d.parentId === divisaoSelecionada.parentId && d.indice === divisaoSelecionada.indice
+        );
+        if (d) {
+          ctx.fillStyle = "#4f8cff";
+          ctx.fillRect(px(d.x) - 1.5, py(d.y) - 1.5, Math.max(d.w * g.scale, 1) + 3, Math.max(d.h * g.scale, 1) + 3);
+        }
+      }
+    }
+
+    // Grupos de porta: independentes da árvore, desenhados por cima dos vãos
+    // (cobrem 1+ vãos selecionados no laboratório, ou a caixa inteira).
+    for (const grupo of box.portas) {
+      let rectMm: { x: number; y: number; w: number; h: number } | null;
+      if (grupo.alvo.tipo === "caixa_inteira") {
+        rectMm = { x: t, y: g.interiorTop, w: g.interiorW, h: g.interiorH };
+      } else {
+        rectMm = retanguloVaos(box.raiz, new Set(grupo.alvo.vaoIds), t, g.interiorTop, g.interiorW, g.interiorH, t);
+      }
+      if (!rectMm) continue;
+      desenharGrupoPortas(
+        ctx,
+        { x: px(rectMm.x), y: py(rectMm.y), w: rectMm.w * g.scale, h: rectMm.h * g.scale },
+        grupo
+      );
     }
 
     // Tamponamento de instância: tiras coloridas por fora da carcaça, com a
@@ -219,7 +327,7 @@ export function BoxCanvas({
         ctx.fillRect(px(0), py(0) + box.altura * g.scale, box.largura * g.scale, faixa);
       }
     }
-  }, [box, selecionado, comercial]);
+  }, [box, comercial, modoSelecao, vaosSelecionados, divisaoSelecionada]);
 
   function clique(e: React.MouseEvent<HTMLCanvasElement>) {
     if (comercial) return; // preview comercial não é interativo
@@ -229,11 +337,29 @@ export function BoxCanvas({
     const cx = ((e.clientX - rectEl.left) / rectEl.width) * W;
     const cy = ((e.clientY - rectEl.top) / rectEl.height) * H;
     const g = geometria(box);
+    const t = box.caixa.espessura;
+
+    if (modoSelecao === "divisoes") {
+      const PAD = 5;
+      const divisorias: DivisoriaRect[] = layoutDivisorias(box.raiz, t, g.interiorTop, g.interiorW, g.interiorH, t);
+      for (const d of divisorias) {
+        const x = g.ox + d.x * g.scale;
+        const y = g.oy + d.y * g.scale;
+        const w = d.w * g.scale;
+        const h = d.h * g.scale;
+        if (cx >= x - PAD && cx <= x + w + PAD && cy >= y - PAD && cy <= y + h + PAD) {
+          onSelecionarDivisoria?.({ parentId: d.parentId, indice: d.indice });
+          return;
+        }
+      }
+      return;
+    }
+
     for (const r of g.rects) {
       const x = g.ox + r.x * g.scale;
       const y = g.oy + r.y * g.scale;
       if (cx >= x && cx <= x + r.w * g.scale && cy >= y && cy <= y + r.h * g.scale) {
-        onSelecionar(r.id);
+        onToggleVao?.(r.id);
         return;
       }
     }

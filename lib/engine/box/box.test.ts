@@ -1,33 +1,50 @@
 import { describe, it, expect } from "vitest";
 import { explodeBox, calcularOrcamentoBox } from "./index";
-import { vaoVazio, larguraInstalacaoBox, type BayNode, type BoxModule, type FrenteConteudo, type TamponamentoLado } from "./types";
+import { vaoVazio, larguraInstalacaoBox, type BayNode, type BoxModule, type FrenteConteudo, type GrupoPortas, type TamponamentoLado } from "./types";
 import type { Peca } from "../types";
 
 const CAIXA = { cor: "Branco TX", espessura: 15 };
 
-function caixaVazia(tipo: BoxModule["tipo"], raiz?: BayNode): BoxModule {
+function caixaVazia(
+  tipo: BoxModule["tipo"],
+  raiz?: BayNode,
+  opts: { portas?: GrupoPortas[]; temFundo?: boolean; largura?: number; altura?: number; profundidade?: number } = {}
+): BoxModule {
   return {
     id: "b1",
     nome: `Caixa ${tipo}`,
     tipo,
-    largura: 800,
-    altura: 720,
-    profundidade: 550,
+    largura: opts.largura ?? 800,
+    altura: opts.altura ?? 720,
+    profundidade: opts.profundidade ?? 550,
     caixa: CAIXA,
     raiz: raiz ?? vaoVazio("r"),
+    portas: opts.portas ?? [],
+    temFundo: opts.temFundo ?? false,
   };
 }
 
 function espaco(
   id: string,
   frente: FrenteConteudo,
-  opts: { prateleiras?: { qtd: number; recuo: number }; fundo?: { espessura: number } } = {}
+  opts: { prateleiras?: { qtd: number; recuo: number } } = {}
 ): BayNode {
   return {
     id,
     split: "none",
     qtdDivisorias: 0,
-    content: { tipo: "espaco", frente, prateleiras: opts.prateleiras, fundo: opts.fundo },
+    content: { tipo: "espaco", frente, prateleiras: opts.prateleiras },
+  };
+}
+
+function grupoPortas(alvo: GrupoPortas["alvo"], opts: Partial<Omit<GrupoPortas, "alvo">> = {}): GrupoPortas {
+  return {
+    id: opts.id ?? "grupo-1",
+    alvo,
+    tipoAbertura: opts.tipoAbertura ?? "abrir",
+    sentido: opts.sentido ?? "direita",
+    qtd: opts.qtd ?? 1,
+    material: opts.material ?? CAIXA,
   };
 }
 
@@ -71,11 +88,9 @@ describe("box — carcaça por tipo", () => {
     // Mesmo box (L=800,H=720,P=550,t=15), mesma porta em inferior x aereo:
     // a altura da porta deve ser IDÊNTICA nos dois casos, pois a travessa
     // (deitada, como a base) só consome a espessura t, igual ao tampo.
-    const portaContent: FrenteConteudo = {
-      tipo: "portas", qtd: 1, sentidos: ["direita"], material: CAIXA,
-    };
-    const rInferior = explodeBox(caixaVazia("inferior", espaco("r", portaContent)));
-    const rAereo = explodeBox(caixaVazia("aereo", espaco("r", portaContent)));
+    const portas = [grupoPortas({ tipo: "vaos", vaoIds: ["r"] }, { qtd: 1, material: CAIXA })];
+    const rInferior = explodeBox(caixaVazia("inferior", espaco("r", { tipo: "vazio" }), { portas }));
+    const rAereo = explodeBox(caixaVazia("aereo", espaco("r", { tipo: "vazio" }), { portas }));
     expect(peca(rInferior, "Porta")!.altura_mm).toBe(peca(rAereo, "Porta")!.altura_mm);
   });
 
@@ -89,24 +104,17 @@ describe("box — carcaça por tipo", () => {
 
 describe("box — frente + prateleiras + fundo combináveis (não precisa dividir)", () => {
   it("um vão com 2 portas TAMBÉM tem prateleiras internas e fundo, sem split", () => {
-    const raiz = espaco(
-      "r",
-      { tipo: "portas", qtd: 2, sentidos: ["esquerda", "direita"], material: { cor: "Louro Freijó", espessura: 18 } },
-      { prateleiras: { qtd: 2, recuo: 20 }, fundo: { espessura: 6 } }
-    );
-    const r = explodeBox(caixaVazia("inferior", raiz));
+    const raiz = espaco("r", { tipo: "vazio" }, { prateleiras: { qtd: 2, recuo: 20 } });
+    const portas = [grupoPortas({ tipo: "vaos", vaoIds: ["r"] }, { qtd: 2, material: { cor: "Louro Freijó", espessura: 18 } })];
+    const r = explodeBox(caixaVazia("inferior", raiz, { portas, temFundo: true }));
     expect(qtd(r, "Porta")).toBe(2);
     expect(qtd(r, "Prateleira")).toBe(2);
     expect(qtd(r, "Fundo")).toBe(1);
   });
 
   it("gaveta também pode ter prateleiras e fundo simultaneamente", () => {
-    const raiz = espaco(
-      "r",
-      { tipo: "gaveta", qtd: 2, profundidade: 500, interna: false, corFrente: "Madeirado", espessuraFrente: 18 },
-      { fundo: { espessura: 6 } }
-    );
-    const r = explodeBox(caixaVazia("inferior", raiz));
+    const raiz = espaco("r", { tipo: "gaveta", qtd: 2, profundidade: 500, interna: false, corFrente: "Madeirado", espessuraFrente: 18 });
+    const r = explodeBox(caixaVazia("inferior", raiz, { temFundo: true }));
     expect(qtd(r, "Frente Gaveta Externa")).toBe(2);
     expect(qtd(r, "Fundo")).toBe(1);
   });
@@ -127,11 +135,14 @@ describe("box — subdivisão horizontal com conteúdos distintos", () => {
     split: "horizontal",
     qtdDivisorias: 1,
     children: [
-      espaco("cima", { tipo: "portas", qtd: 1, sentidos: ["basculante"], material: { cor: "Madeirado", espessura: 18 } }),
+      espaco("cima", { tipo: "vazio" }),
       espaco("baixo", { tipo: "gaveta", qtd: 1, profundidade: 500, interna: false, corFrente: "Madeirado", espessuraFrente: 18 }),
     ],
   };
-  const r = explodeBox(caixaVazia("inferior", raiz));
+  const portas = [
+    grupoPortas({ tipo: "vaos", vaoIds: ["cima"] }, { qtd: 1, sentido: "basculante_pia", material: { cor: "Madeirado", espessura: 18 } }),
+  ];
+  const r = explodeBox(caixaVazia("inferior", raiz, { portas }));
 
   it("gera 1 divisória horizontal, 1 porta e 1 frente de gaveta", () => {
     expect(qtd(r, "Divisória Horizontal")).toBe(1);
@@ -178,37 +189,65 @@ describe("box — integração com o pipeline de custo", () => {
   });
 });
 
-describe("box — overrides de instância (portas e fundo)", () => {
-  const raiz = espaco(
-    "r",
-    { tipo: "portas", qtd: 2, sentidos: ["esquerda", "direita"], material: { cor: "Branco TX", espessura: 15 } },
-    { fundo: { espessura: 6 } }
-  );
+describe("box — overrides de instância (portas) e fundo global", () => {
+  const raiz = espaco("r", { tipo: "vazio" });
+  const portas = [grupoPortas({ tipo: "vaos", vaoIds: ["r"] }, { qtd: 2, material: { cor: "Branco TX", espessura: 15 } })];
 
   it("overridePortas troca a cor/espessura de TODAS as portas do módulo", () => {
-    const box: BoxModule = { ...caixaVazia("inferior", raiz), overridePortas: { cor: "Madeirado", espessura: 18 } };
+    const box: BoxModule = { ...caixaVazia("inferior", raiz, { portas }), overridePortas: { cor: "Madeirado", espessura: 18 } };
     const r = explodeBox(box);
-    const portas = r.pecas.filter((p) => p.nome === "Porta");
-    expect(portas.every((p) => p.cor === "Madeirado" && p.espessura_mm === 18)).toBe(true);
+    const p = r.pecas.filter((p) => p.nome === "Porta");
+    expect(p.every((p) => p.cor === "Madeirado" && p.espessura_mm === 18)).toBe(true);
   });
 
-  it("overrideTemFundo=false remove o fundo mesmo que o gabarito tenha definido", () => {
-    const box: BoxModule = { ...caixaVazia("inferior", raiz), overrideTemFundo: false };
+  it("temFundo=false não gera peça Fundo", () => {
+    const box = caixaVazia("inferior", raiz, { portas, temFundo: false });
     const r = explodeBox(box);
     expect(qtd(r, "Fundo")).toBe(0);
   });
 
-  it("overrideTemFundo=true injeta fundo (6mm) mesmo em vão sem fundo definido", () => {
-    const semFundo = espaco("r2", { tipo: "portas", qtd: 1, sentidos: ["direita"], material: CAIXA });
-    const box: BoxModule = { ...caixaVazia("inferior", semFundo), overrideTemFundo: true };
+  it("temFundo=true gera fundo (6mm) em todo vão-folha \"espaco\"", () => {
+    const box = caixaVazia("inferior", raiz, { portas, temFundo: true });
     const r = explodeBox(box);
     expect(qtd(r, "Fundo")).toBe(1);
     expect(peca(r, "Fundo")!.espessura_mm).toBe(6);
   });
+});
 
-  it("sem override, respeita o que foi salvo no gabarito (com fundo)", () => {
-    const r = explodeBox(caixaVazia("inferior", raiz));
-    expect(qtd(r, "Fundo")).toBe(1);
+describe("box — grupos de porta independentes da árvore", () => {
+  const raizDividida: BayNode = {
+    id: "r",
+    split: "vertical",
+    qtdDivisorias: 1,
+    children: [espaco("a", { tipo: "vazio" }), espaco("b", { tipo: "vazio" })],
+  };
+
+  it("caixa_inteira ignora a divisão interna: 1 grupo cobre a largura toda", () => {
+    const portas = [grupoPortas({ tipo: "caixa_inteira" }, { qtd: 2 })];
+    const r = explodeBox(caixaVazia("inferior", raizDividida, { portas }));
+    // largura interna = 800 - 2*15 = 770; 2 portas -> 770/2 - FOLGA_PORTA(3) = 382
+    expect(peca(r, "Porta")!.largura_mm).toBe(382);
+  });
+
+  it("alvo vãos: porta cobre só a união dos vãos selecionados", () => {
+    const portas = [grupoPortas({ tipo: "vaos", vaoIds: ["a"] }, { qtd: 1 })];
+    const r = explodeBox(caixaVazia("inferior", raizDividida, { portas }));
+    // vão "a": (770-15)/2 = 377,5 de largura útil, -3 de folga = 374,5 -> 375
+    expect(peca(r, "Porta")!.largura_mm).toBe(375);
+  });
+
+  it("correr gera kit_porta_correr, sem dobradiça/puxador", () => {
+    const portas = [grupoPortas({ tipo: "vaos", vaoIds: ["r"] }, { qtd: 2, tipoAbertura: "correr" })];
+    const r = explodeBox(caixaVazia("inferior", espaco("r", { tipo: "vazio" }), { portas }));
+    expect(ferr(r, "kit_porta_correr")).toBe(1);
+    expect(ferr(r, "dobradica_35")).toBe(0);
+    expect(ferr(r, "puxador")).toBe(0);
+  });
+
+  it("grupo alvo vãos sem correspondência na árvore não gera peça", () => {
+    const portas = [grupoPortas({ tipo: "vaos", vaoIds: ["inexistente"] }, { qtd: 1 })];
+    const r = explodeBox(caixaVazia("inferior", espaco("r", { tipo: "vazio" }), { portas }));
+    expect(nomes(r)).not.toContain("Porta");
   });
 });
 

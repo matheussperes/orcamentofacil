@@ -667,7 +667,7 @@ function ResumoModulo({
   return (
     <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
       <div style={{ width: 96, flexShrink: 0 }}>
-        <BoxCanvas box={box} selecionado={null} onSelecionar={() => {}} comercial />
+        <BoxCanvas box={box} comercial />
       </div>
       <div style={{ fontSize: 13, lineHeight: 1.6 }}>
         <div style={{ fontWeight: 600 }}>
@@ -919,7 +919,7 @@ function BoxModuloCard({
     <>
       <div style={{ display: "flex", gap: 12 }}>
         <div style={{ width: 180, flexShrink: 0 }}>
-          <BoxCanvas box={box} selecionado={null} onSelecionar={() => {}} comercial />
+          <BoxCanvas box={box} comercial />
         </div>
         <div style={{ flex: 1 }}>
           <div className="linha">
@@ -1021,13 +1021,9 @@ function BoxModuloCard({
               <div>
                 <label>Tem fundo</label>
                 <select
-                  value={box.overrideTemFundo === undefined ? "gabarito" : box.overrideTemFundo ? "sim" : "nao"}
-                  onChange={(e) => {
-                    const v = e.target.value;
-                    onAtualizar({ overrideTemFundo: v === "gabarito" ? undefined : v === "sim" });
-                  }}
+                  value={box.temFundo ? "sim" : "nao"}
+                  onChange={(e) => onAtualizar({ temFundo: e.target.value === "sim" })}
                 >
-                  <option value="gabarito">Padrão do gabarito</option>
                   <option value="sim">Sim (todos os vãos)</option>
                   <option value="nao">Não (nenhum vão)</option>
                 </select>

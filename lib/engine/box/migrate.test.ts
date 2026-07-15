@@ -7,9 +7,16 @@ import type { BayNode, BoxModule } from "./types";
 // (doc 13) ficam no localStorage do usuário no formato antigo. Sem migração,
 // isso quebra a aplicação (TypeError: Cannot read properties of undefined
 // (reading 'tipo')) ao tentar renderizar/calcular o preset.
+//
+// Nesta sessão, portas e fundo saíram do `content` por vão e viraram
+// entidades globais (`box.portas`/`box.temFundo`) — `migrarBayNode` só cuida
+// mais do FORMATO local do content (frente vazio/gaveta + prateleiras); a
+// extração de portas/fundo legados é feita por `migrarBoxModule` (que tem
+// acesso à árvore inteira e ao `box.tipo`, necessário pro mapeamento de
+// "basculante").
 
 describe("migrarBayNode — formatos antigos de conteúdo", () => {
-  it("migra 'portas' antigo (tipo direto) para o novo formato aninhado em frente", () => {
+  it("migra 'portas' antigo (tipo direto): o vão vira vazio (a porta é extraída à parte, ver migrarBoxModule)", () => {
     const antigo = {
       id: "r",
       split: "none",
@@ -19,10 +26,7 @@ describe("migrarBayNode — formatos antigos de conteúdo", () => {
     } as unknown as BayNode;
 
     const novo = migrarBayNode(antigo);
-    expect(novo.content).toMatchObject({
-      tipo: "espaco",
-      frente: { tipo: "portas", qtd: 2 },
-    });
+    expect(novo.content).toEqual({ tipo: "espaco", frente: { tipo: "vazio" } });
   });
 
   it("migra 'gaveta' antigo", () => {
@@ -47,13 +51,13 @@ describe("migrarBayNode — formatos antigos de conteúdo", () => {
     });
   });
 
-  it("migra 'fundo' antigo para frente vazia + fundo", () => {
+  it("migra 'fundo' antigo: o vão vira vazio (fundo agora é global via box.temFundo)", () => {
     const antigo = {
       id: "r", split: "none", qtdDivisorias: 0,
       content: { tipo: "fundo", espessura: 6 },
     } as unknown as BayNode;
     const novo = migrarBayNode(antigo);
-    expect(novo.content).toMatchObject({ tipo: "espaco", frente: { tipo: "vazio" }, fundo: { espessura: 6 } });
+    expect(novo.content).toEqual({ tipo: "espaco", frente: { tipo: "vazio" } });
   });
 
   it("não altera tamponamento (mesmo formato antes e depois)", () => {
@@ -68,12 +72,12 @@ describe("migrarBayNode — formatos antigos de conteúdo", () => {
   it("não altera conteúdo já no formato novo (idempotente)", () => {
     const node: BayNode = {
       id: "r", split: "none", qtdDivisorias: 0,
-      content: { tipo: "espaco", frente: { tipo: "portas", qtd: 2, sentidos: ["direita", "esquerda"], material: { cor: "Branco TX", espessura: 18 } } },
+      content: { tipo: "espaco", frente: { tipo: "gaveta", qtd: 2, profundidade: 500, interna: false } },
     };
     expect(migrarBayNode(node)).toEqual(node);
   });
 
-  it("migra recursivamente vãos divididos", () => {
+  it("migra recursivamente vãos divididos e define recuoFrontal/posicao default", () => {
     const antigo = {
       id: "r", split: "horizontal", qtdDivisorias: 1,
       children: [
@@ -82,12 +86,84 @@ describe("migrarBayNode — formatos antigos de conteúdo", () => {
       ],
     } as unknown as BayNode;
     const novo = migrarBayNode(antigo);
-    expect(novo.children![0].content).toMatchObject({ tipo: "espaco", frente: { tipo: "portas" } });
-    expect(novo.children![1].content).toMatchObject({ tipo: "espaco", fundo: { espessura: 6 } });
+    expect(novo.recuoFrontal).toBe(20);
+    expect(novo.posicao).toBe("centralizado");
+    expect(novo.children![0].content).toEqual({ tipo: "espaco", frente: { tipo: "vazio" } });
+    expect(novo.children![1].content).toEqual({ tipo: "espaco", frente: { tipo: "vazio" } });
   });
 });
 
-describe("migrarBoxModule — cenário real que quebrava a aplicação", () => {
+describe("migrarBoxModule — portas/fundo legados viram entidades globais", () => {
+  it("extrai porta presa a um vão-folha (formato antigo) para box.portas", () => {
+    const boxAntigo = {
+      id: "b1", nome: "X", tipo: "inferior",
+      largura: 800, altura: 720, profundidade: 550,
+      caixa: { cor: "Branco TX", espessura: 15 },
+      raiz: {
+        id: "r", split: "none", qtdDivisorias: 0,
+        content: { tipo: "portas", qtd: 2, sentidos: ["esquerda", "direita"], material: { cor: "Louro Freijó", espessura: 18 } },
+      },
+    } as unknown as BoxModule;
+
+    const migrado = migrarBoxModule(boxAntigo);
+    expect(migrado.portas).toHaveLength(1);
+    expect(migrado.portas[0]).toMatchObject({
+      alvo: { tipo: "vaos", vaoIds: ["r"] },
+      tipoAbertura: "abrir",
+      sentido: "esquerda",
+      qtd: 2,
+    });
+    expect(migrado.raiz.content).toEqual({ tipo: "espaco", frente: { tipo: "vazio" } });
+  });
+
+  it("mapeia 'basculante' pra basculante_aereo em módulo aéreo e basculante_pia nos demais", () => {
+    const raizComBasculante = (): BayNode => ({
+      id: "r", split: "none", qtdDivisorias: 0,
+      content: { tipo: "portas", qtd: 1, sentidos: ["basculante"], material: { cor: "Branco TX", espessura: 18 } } as never,
+    });
+    const aereo = migrarBoxModule({
+      id: "b1", nome: "X", tipo: "aereo", largura: 800, altura: 700, profundidade: 350,
+      caixa: { cor: "Branco TX", espessura: 15 }, raiz: raizComBasculante(),
+    } as unknown as BoxModule);
+    const inferior = migrarBoxModule({
+      id: "b2", nome: "Y", tipo: "inferior", largura: 800, altura: 720, profundidade: 550,
+      caixa: { cor: "Branco TX", espessura: 15 }, raiz: raizComBasculante(),
+    } as unknown as BoxModule);
+    expect(aereo.portas[0].sentido).toBe("basculante_aereo");
+    expect(inferior.portas[0].sentido).toBe("basculante_pia");
+  });
+
+  it("mapeia 'cava' (removida do modelo novo) pra 'direita'", () => {
+    const box = {
+      id: "b1", nome: "X", tipo: "inferior", largura: 800, altura: 720, profundidade: 550,
+      caixa: { cor: "Branco TX", espessura: 15 },
+      raiz: {
+        id: "r", split: "none", qtdDivisorias: 0,
+        content: { tipo: "portas", qtd: 1, sentidos: ["cava"], material: { cor: "Branco TX", espessura: 18 } },
+      },
+    } as unknown as BoxModule;
+    expect(migrarBoxModule(box).portas[0].sentido).toBe("direita");
+  });
+
+  it("temFundo: derivado de overrideTemFundo legado quando presente", () => {
+    const box = {
+      id: "b1", nome: "X", tipo: "inferior", largura: 800, altura: 720, profundidade: 550,
+      caixa: { cor: "Branco TX", espessura: 15 },
+      raiz: { id: "r", split: "none", qtdDivisorias: 0, content: { tipo: "vazio" } },
+      overrideTemFundo: false,
+    } as unknown as BoxModule;
+    expect(migrarBoxModule(box).temFundo).toBe(false);
+  });
+
+  it("temFundo: default true quando algum vão antigo tinha fundo e não há override", () => {
+    const box = {
+      id: "b1", nome: "X", tipo: "inferior", largura: 800, altura: 720, profundidade: 550,
+      caixa: { cor: "Branco TX", espessura: 15 },
+      raiz: { id: "r", split: "none", qtdDivisorias: 0, content: { tipo: "fundo", espessura: 6 } },
+    } as unknown as BoxModule;
+    expect(migrarBoxModule(box).temFundo).toBe(true);
+  });
+
   it("um preset salvo no formato antigo explode sem lançar exceção depois de migrado", () => {
     const boxAntigo = {
       id: "b1", nome: "Balcão salvo antes da refatoração", tipo: "inferior",

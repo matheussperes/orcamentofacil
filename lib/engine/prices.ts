@@ -47,6 +47,8 @@ export const PRECOS_REFERENCIA: PrecosReferencia = {
     suporte_fixacao_aereo: 6.0,
     parafuso_kit_modulo: 12.0,
     fita_led_m: 25.0,
+    pistao: 35.0,
+    kit_porta_correr: 90.0,
   },
   montagemPorM2: 90.0,
   freteFixo: 200.0,
