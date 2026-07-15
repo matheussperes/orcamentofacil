@@ -214,11 +214,69 @@ describe("box — overrides de instância (portas) e fundo global", () => {
     expect(qtd(r, "Fundo")).toBe(0);
   });
 
-  it("temFundo=true gera fundo (6mm) em todo vão-folha \"espaco\"", () => {
+  it("temFundo=true gera 1 fundo (6mm) do tamanho da caixa (não do vão)", () => {
     const box = caixaVazia("inferior", raiz, { portas, temFundo: true });
     const r = explodeBox(box);
     expect(qtd(r, "Fundo")).toBe(1);
     expect(peca(r, "Fundo")!.espessura_mm).toBe(6);
+  });
+});
+
+describe("box — fundo global (largura×altura da caixa, split por divisão vertical > 1800mm)", () => {
+  it("largura <= 1800mm: 1 fundo só, do tamanho largura×altura da caixa, mesmo com divisões", () => {
+    const raiz: BayNode = {
+      id: "r", split: "vertical", qtdDivisorias: 1,
+      children: [espaco("a", { tipo: "vazio" }), espaco("b", { tipo: "vazio" })],
+    };
+    const box = caixaVazia("inferior", raiz, { temFundo: true, largura: 1600, altura: 720 });
+    const r = explodeBox(box);
+    expect(qtd(r, "Fundo")).toBe(1);
+    const f = peca(r, "Fundo")!;
+    expect(f.largura_mm).toBe(1600);
+    expect(f.altura_mm).toBe(720);
+  });
+
+  it("largura > 1800mm e sem divisão vertical: continua 1 fundo só (oversized)", () => {
+    const box = caixaVazia("inferior", undefined, { temFundo: true, largura: 2100, altura: 2700 });
+    const r = explodeBox(box);
+    expect(qtd(r, "Fundo")).toBe(1);
+    const f = peca(r, "Fundo")!;
+    expect(f.largura_mm).toBe(2100);
+    expect(f.altura_mm).toBe(2700);
+  });
+
+  it("exemplo do usuário: 2700 altura × 2100 largura, 2 divisões verticais (3 vãos) -> 3 fundos de 2700×700", () => {
+    const raiz: BayNode = {
+      id: "r", split: "vertical", qtdDivisorias: 2,
+      children: [espaco("a", { tipo: "vazio" }), espaco("b", { tipo: "vazio" }), espaco("c", { tipo: "vazio" })],
+    };
+    const box = caixaVazia("torre", raiz, { temFundo: true, largura: 2100, altura: 2700 });
+    const r = explodeBox(box);
+    expect(qtd(r, "Fundo")).toBe(3);
+    const f = peca(r, "Fundo")!;
+    expect(f.largura_mm).toBe(700);
+    expect(f.altura_mm).toBe(2700);
+  });
+
+  it("ignora divisões horizontais: só a coluna vertical mais dividida conta", () => {
+    // Split horizontal no topo (2 filhos empilhados); só o filho de baixo
+    // tem 1 divisão vertical (2 colunas) — o de cima fica inteiro (1 coluna).
+    // "Ignorar horizontais" = usar o maior nº de colunas entre os filhos
+    // empilhados, não multiplicar pela quantidade de filhos horizontais.
+    const raiz: BayNode = {
+      id: "r", split: "horizontal", qtdDivisorias: 1,
+      children: [
+        espaco("cima", { tipo: "vazio" }),
+        {
+          id: "baixo", split: "vertical", qtdDivisorias: 1,
+          children: [espaco("baixo-a", { tipo: "vazio" }), espaco("baixo-b", { tipo: "vazio" })],
+        },
+      ],
+    };
+    const box = caixaVazia("torre", raiz, { temFundo: true, largura: 2000, altura: 2200 });
+    const r = explodeBox(box);
+    expect(qtd(r, "Fundo")).toBe(2);
+    expect(peca(r, "Fundo")!.largura_mm).toBe(1000);
   });
 });
 

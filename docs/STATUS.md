@@ -32,9 +32,14 @@ tela principal (produção).
 ### Laboratório (`/modulo`) — redesenhado nesta sessão
 - Cards sempre visíveis (Caixa, Divisões, Portas, Gavetas, Puxador) que agem
   sobre a seleção atual do canvas, em vez de um formulário condicional por vão
-  único. Duas funções de seleção novas no canvas: **Selecionar vãos**
-  (multi-seleção, usada por Divisões/Portas/Gavetas) e **Selecionar divisões**
-  (seleciona uma linha divisória específica pra excluir).
+  único. Duas funções de seleção novas no canvas: **Selecionar vãos** e
+  **Selecionar divisões** (seleciona uma linha divisória específica pra
+  excluir). O botão "Selecionar vãos" tem 2 estados: desativado (padrão)
+  clicar troca a seleção pra 1 vão só; ativado ("múltiplos") clicar
+  soma/remove vãos — usado por Divisões/Portas/Gavetas pra aplicar em vários
+  de uma vez. Embaixo do canvas: "Salvar este módulo" e "Resetar" (reseta a
+  caixa inteira pro estado inicial, com confirmação — não é mais "esvaziar
+  só o vão selecionado").
 - **Divisões**: tipo vertical/horizontal, quantidade, recuo frontal por grupo
   (`BayNode.recuoFrontal`, substitui a constante fixa de 20mm), posição
   centralizado/direita/esquerda com recuo lateral (divisão assimétrica — o
@@ -49,10 +54,15 @@ tela principal (produção).
   ou correr (direita/esquerda, ferragem `kit_porta_correr`). A opção antiga
   "cava" (sem puxador) saiu do modelo — puxador agora é config própria (ver
   abaixo). Sentido é único por grupo (não um por porta), mas grupos com 2+
-  portas direita/esquerda saem espelhados no desenho (ver Puxador).
-- **Fundo virou global** (`BoxModule.temFundo: boolean`, era
-  `overrideTemFundo` + `content.fundo` por vão) — aplicado a todo vão-folha
-  "espaco" quando ligado, espessura fixa 6mm.
+  portas direita/esquerda saem espelhados no desenho (ver Puxador). Se já
+  existe um grupo cobrindo a caixa inteira, "Aplicar em vãos selecionados"
+  fica bloqueado (evita porta atrás de porta).
+- **Fundo virou global e do tamanho da caixa** (`BoxModule.temFundo:
+  boolean`) — 1 peça só de largura×altura da caixa (não do vão) até
+  1800mm de largura; acima disso, cada divisão VERTICAL adicionada parte o
+  fundo em mais uma tira igual (todas com a altura cheia da caixa),
+  ignorando divisões horizontais (`contarColunasVerticais`/
+  `gerarFundoGlobal` em `explode.ts`).
 - **Puxador** (`BoxModule.puxador: "haste" | "perfil" | "sem_puxador"`) vale
   pra toda porta e frente de gaveta externa (gaveta interna/guarda-roupa
   nunca tem puxador visível, independente da config): "haste" gera 1
@@ -61,6 +71,10 @@ tela principal (produção).
   gera ferragem nem desenho. Sentido "direita"/"esquerda" com 2+ portas no
   mesmo grupo sai espelhado no desenho (painéis alternam o sentido oposto —
   não muda ferragem/peças, só a posição do puxador).
+- **Gavetas no canvas do laboratório** agora têm representação visual (linhas
+  divisórias + marca/perfil de puxador, igual às portas) em vez de só o
+  rótulo de texto — `desenharGavetaVisual` reaproveitada entre o modo
+  comercial e o modo laboratório em `BoxCanvas.tsx`.
 - `lib/engine/box/migrate.ts` migra presets salvos no formato antigo
   (localStorage) pro novo modelo, inclusive extraindo portas presas a vãos
   pro novo `box.portas` e mapeando sentidos antigos.

@@ -21,6 +21,7 @@ const GAVETA_CAIXOTE_H = 100;
 const GAVETA_FUNDO_ESP = 6;
 const AFASTADOR = 30;
 const FUNDO_ESP_PADRAO = 6; // espessura fixa do fundo quando box.temFundo = true
+const LARGURA_FUNDO_LIMITE = 1800; // mm — acima disso, cada divisão vertical parte o fundo
 
 export interface BoxResult {
   pecas: Peca[];
@@ -139,13 +140,11 @@ function aplicarConteudo(ctx: Ctx, node: BayNode, W: number, H: number, D: numbe
 
   // c.tipo === "espaco": frente (vazio/gaveta) + prateleiras são
   // independentes e combináveis — portas ficam fora daqui (ver
-  // aplicarGruposPortas), pois cobrem 1+ vãos ou a caixa inteira.
+  // aplicarGruposPortas), assim como o fundo (ver gerarFundoGlobal), pois
+  // ambos cobrem 1+ vãos ou a caixa inteira, não o vão-folha isolado.
   aplicarFrente(ctx, c.frente, W, H, D);
   if (c.prateleiras && c.prateleiras.qtd > 0) {
     push(ctx, "Prateleira", c.prateleiras.qtd, ctx.caixa, "prateleira", D - c.prateleiras.recuo, W - 2, 0, 1);
-  }
-  if (ctx.temFundo) {
-    push(ctx, "Fundo", 1, { cor: ctx.caixa.cor, espessura: FUNDO_ESP_PADRAO }, "fundo", H, W, 0, 0);
   }
 }
 
@@ -234,6 +233,37 @@ function aplicarGruposPortas(ctx: Ctx, box: BoxModule, interiorW: number, interi
   }
 }
 
+/**
+ * Nº de "colunas" verticais implícitas na árvore de vãos, usado só pra
+ * decidir em quantas tiras o fundo se divide. Divisões verticais SOMAM
+ * colunas (vãos lado a lado); divisões horizontais são ignoradas (usa o
+ * maior nº de colunas entre os filhos empilhados) — o fundo não acompanha
+ * cortes horizontais, só verticais.
+ */
+function contarColunasVerticais(node: BayNode): number {
+  if (node.split === "vertical" && node.qtdDivisorias > 0 && node.children) {
+    return node.children.reduce((soma, c) => soma + contarColunasVerticais(c), 0);
+  }
+  if (node.split === "horizontal" && node.qtdDivisorias > 0 && node.children) {
+    return Math.max(...node.children.map(contarColunasVerticais));
+  }
+  return 1;
+}
+
+/**
+ * Fundo como painel(éis) da caixa inteira (largura × altura do módulo, não
+ * do vão-folha): 1 peça só até `LARGURA_FUNDO_LIMITE`; acima disso, parte em
+ * tantas tiras iguais quantas forem as colunas verticais da árvore (cada
+ * divisão vertical adicionada gera mais uma tira), sempre com a altura
+ * inteira da caixa — divisões horizontais não afetam a contagem.
+ */
+function gerarFundoGlobal(ctx: Ctx, box: BoxModule) {
+  if (!ctx.temFundo) return;
+  const colunas = box.largura > LARGURA_FUNDO_LIMITE ? Math.max(1, contarColunasVerticais(box.raiz)) : 1;
+  const larguraPorPeca = box.largura / colunas;
+  push(ctx, "Fundo", colunas, { cor: ctx.caixa.cor, espessura: FUNDO_ESP_PADRAO }, "fundo", box.altura, larguraPorPeca, 0, 0);
+}
+
 /** Tamponamento ESTRUTURAL (gabarito): o vão inteiro vira um painel lateral. */
 function aplicarTamponamentoGabarito(
   ctx: Ctx,
@@ -307,6 +337,7 @@ export function explodeBox(box: BoxModule): BoxResult {
 
   explodeVao(ctx, box.raiz, interiorW, interiorH, interiorD);
   aplicarGruposPortas(ctx, box, interiorW, interiorH, t);
+  gerarFundoGlobal(ctx, box);
   gerarTamponamentoInstancia(ctx, box);
 
   const areaMdfM2 = round4(ctx.pecas.reduce((s, p) => s + p.area_m2, 0));

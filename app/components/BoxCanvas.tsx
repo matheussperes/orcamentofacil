@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import type { BayNode, BoxModule, GrupoPortas, TipoPuxador } from "@/lib/engine/box/types";
+import type { BayNode, BoxModule, FrenteConteudo, GrupoPortas, TipoPuxador } from "@/lib/engine/box/types";
 import {
   layoutDivisorias,
   layoutVaos,
@@ -62,6 +62,39 @@ function linha(ctx: CanvasRenderingContext2D, x1: number, y1: number, x2: number
   ctx.stroke();
 }
 
+/** Desenho de UMA frente de gaveta externa: linhas divisórias entre as
+ * frentes + marca/perfil de puxador (igual às portas) — reaproveitado no
+ * modo comercial e no modo laboratório (antes só tinha um rótulo de texto). */
+function desenharGavetaVisual(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  frente: Extract<FrenteConteudo, { tipo: "gaveta" }>,
+  tipoPuxador: TipoPuxador
+) {
+  const qtd = Math.max(1, frente.qtd);
+  ctx.strokeStyle = "rgba(28,36,48,0.45)";
+  ctx.lineWidth = 1;
+  for (let i = 1; i < qtd; i++) {
+    const gy = y + (h / qtd) * i;
+    linha(ctx, x + 3, gy, x + w - 3, gy);
+  }
+  if (!frente.interna && tipoPuxador !== "sem_puxador") {
+    ctx.fillStyle = "rgba(28,36,48,0.5)";
+    for (let i = 0; i < qtd; i++) {
+      const topoFrente = y + (h / qtd) * i;
+      if (tipoPuxador === "perfil") {
+        ctx.fillRect(x + 6, topoFrente + 3, w - 12, 3);
+      } else {
+        const centroY = topoFrente + h / qtd / 2;
+        ctx.fillRect(x + w / 2 - 8, centroY - 1.5, 16, 3);
+      }
+    }
+  }
+}
+
 /** Desenho "bonito" (modo comercial): recursa a árvore de vãos desenhando só
  * divisórias finas + indicador de gaveta/prateleira — sem bordas técnicas
  * nem texto. Portas não entram aqui (ver `desenharGrupoPortas`). */
@@ -113,23 +146,7 @@ function desenharConteudoBonito(
   ctx.lineWidth = 1;
 
   if (frente.tipo === "gaveta") {
-    const qtd = Math.max(1, frente.qtd);
-    for (let i = 1; i < qtd; i++) {
-      const gy = y + (h / qtd) * i;
-      linha(ctx, x + 3, gy, x + w - 3, gy);
-    }
-    if (!frente.interna && tipoPuxador !== "sem_puxador") {
-      ctx.fillStyle = "rgba(28,36,48,0.5)";
-      for (let i = 0; i < qtd; i++) {
-        const topoFrente = y + (h / qtd) * i;
-        if (tipoPuxador === "perfil") {
-          ctx.fillRect(x + 6, topoFrente + 3, w - 12, 3);
-        } else {
-          const gy = topoFrente + h / qtd / 2;
-          ctx.fillRect(x + w / 2 - 8, gy - 1.5, 16, 3);
-        }
-      }
-    }
+    desenharGavetaVisual(ctx, x, y, w, h, frente, tipoPuxador);
   }
 
   // Prateleiras internas: independentes da frente, sempre desenhadas se houver.
@@ -290,12 +307,26 @@ export function BoxCanvas({
         ctx.lineWidth = sel ? 2.5 : 1;
         ctx.strokeRect(x, y, w, h);
 
-        const rotulo = rotuloConteudo(r.node);
-        if (rotulo !== "vazio") {
-          ctx.fillStyle = "#1c2430";
-          ctx.font = "11px sans-serif";
-          ctx.textAlign = "center";
-          ctx.fillText(rotulo, x + w / 2, y + h / 2 + 4);
+        // Gaveta ganha representação visual (linhas + puxador), igual às
+        // portas — não só o texto. Outros conteúdos (prateleiras/vazio)
+        // continuam com o rótulo de texto.
+        const conteudo = r.node.content;
+        if (conteudo?.tipo === "espaco" && conteudo.frente.tipo === "gaveta") {
+          desenharGavetaVisual(ctx, x, y, w, h, conteudo.frente, box.puxador);
+          if (conteudo.prateleiras && conteudo.prateleiras.qtd > 0) {
+            ctx.fillStyle = "#1c2430";
+            ctx.font = "10px sans-serif";
+            ctx.textAlign = "center";
+            ctx.fillText(`${conteudo.prateleiras.qtd} prat.`, x + w / 2, y + h - 6);
+          }
+        } else {
+          const rotulo = rotuloConteudo(r.node);
+          if (rotulo !== "vazio") {
+            ctx.fillStyle = "#1c2430";
+            ctx.font = "11px sans-serif";
+            ctx.textAlign = "center";
+            ctx.fillText(rotulo, x + w / 2, y + h / 2 + 4);
+          }
         }
       }
 
