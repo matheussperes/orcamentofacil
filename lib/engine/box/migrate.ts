@@ -230,6 +230,9 @@ export function migrarBoxModule(box: BoxModule): BoxModule {
     raiz: migrarBayNode(box.raiz),
     portas: [...(box.portas ?? []), ...gruposMigrados],
     temFundo: box.temFundo ?? legado.overrideTemFundo ?? algumFundo,
+    // Antes desta config existir, todo puxador era uma haste física — "haste"
+    // preserva o comportamento visual/de ferragem que já estava salvo.
+    puxador: box.puxador ?? "haste",
     tamponamento: migrarTamponamento(box.tamponamento),
   };
 }

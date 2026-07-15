@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { explodeBox, calcularOrcamentoBox } from "./index";
-import { vaoVazio, larguraInstalacaoBox, type BayNode, type BoxModule, type FrenteConteudo, type GrupoPortas, type TamponamentoLado } from "./types";
+import { vaoVazio, larguraInstalacaoBox, type BayNode, type BoxModule, type FrenteConteudo, type GrupoPortas, type TamponamentoLado, type TipoPuxador } from "./types";
 import type { Peca } from "../types";
 
 const CAIXA = { cor: "Branco TX", espessura: 15 };
@@ -8,7 +8,14 @@ const CAIXA = { cor: "Branco TX", espessura: 15 };
 function caixaVazia(
   tipo: BoxModule["tipo"],
   raiz?: BayNode,
-  opts: { portas?: GrupoPortas[]; temFundo?: boolean; largura?: number; altura?: number; profundidade?: number } = {}
+  opts: {
+    portas?: GrupoPortas[];
+    temFundo?: boolean;
+    puxador?: TipoPuxador;
+    largura?: number;
+    altura?: number;
+    profundidade?: number;
+  } = {}
 ): BoxModule {
   return {
     id: "b1",
@@ -21,6 +28,7 @@ function caixaVazia(
     raiz: raiz ?? vaoVazio("r"),
     portas: opts.portas ?? [],
     temFundo: opts.temFundo ?? false,
+    puxador: opts.puxador ?? "haste",
   };
 }
 
@@ -236,18 +244,67 @@ describe("box — grupos de porta independentes da árvore", () => {
     expect(peca(r, "Porta")!.largura_mm).toBe(375);
   });
 
-  it("correr gera kit_porta_correr, sem dobradiça/puxador", () => {
+  it("correr gera kit_porta_correr, sem dobradiça (mas com puxador, padrão haste)", () => {
     const portas = [grupoPortas({ tipo: "vaos", vaoIds: ["r"] }, { qtd: 2, tipoAbertura: "correr" })];
     const r = explodeBox(caixaVazia("inferior", espaco("r", { tipo: "vazio" }), { portas }));
     expect(ferr(r, "kit_porta_correr")).toBe(1);
     expect(ferr(r, "dobradica_35")).toBe(0);
-    expect(ferr(r, "puxador")).toBe(0);
+    expect(ferr(r, "puxador")).toBe(2);
   });
 
   it("grupo alvo vãos sem correspondência na árvore não gera peça", () => {
     const portas = [grupoPortas({ tipo: "vaos", vaoIds: ["inexistente"] }, { qtd: 1 })];
     const r = explodeBox(caixaVazia("inferior", espaco("r", { tipo: "vazio" }), { portas }));
     expect(nomes(r)).not.toContain("Porta");
+  });
+});
+
+describe("box — puxador (haste/perfil/sem_puxador)", () => {
+  it("haste (padrão): 1 puxador por porta, nenhum perfil", () => {
+    const portas = [grupoPortas({ tipo: "vaos", vaoIds: ["r"] }, { qtd: 2, sentido: "direita" })];
+    const r = explodeBox(caixaVazia("inferior", espaco("r", { tipo: "vazio" }), { portas, puxador: "haste" }));
+    expect(ferr(r, "puxador")).toBe(2);
+    expect(ferr(r, "perfil_puxador_m")).toBe(0);
+  });
+
+  it("perfil: soma o comprimento da borda (altura da porta) em metros, sem puxador un.", () => {
+    const portas = [grupoPortas({ tipo: "vaos", vaoIds: ["r"] }, { qtd: 2, sentido: "direita" })];
+    const r = explodeBox(caixaVazia("inferior", espaco("r", { tipo: "vazio" }), { portas, puxador: "perfil" }));
+    const alturaPorta = peca(r, "Porta")!.altura_mm;
+    expect(ferr(r, "puxador")).toBe(0);
+    expect(ferr(r, "perfil_puxador_m")).toBeCloseTo((alturaPorta * 2) / 1000, 2);
+  });
+
+  it("perfil na basculante usa a largura da porta (borda horizontal), não a altura", () => {
+    const portas = [grupoPortas({ tipo: "vaos", vaoIds: ["r"] }, { qtd: 1, sentido: "basculante_pia" })];
+    const r = explodeBox(caixaVazia("inferior", espaco("r", { tipo: "vazio" }), { portas, puxador: "perfil" }));
+    const p = peca(r, "Porta")!;
+    expect(ferr(r, "perfil_puxador_m")).toBeCloseTo(p.largura_mm / 1000, 2);
+  });
+
+  it("sem_puxador: nenhuma ferragem de puxador, em porta nem em gaveta externa", () => {
+    const portas = [grupoPortas({ tipo: "vaos", vaoIds: ["r"] }, { qtd: 2, sentido: "direita" })];
+    const raizGaveta = espaco("g", { tipo: "gaveta", qtd: 2, profundidade: 500, interna: false, corFrente: "Madeirado", espessuraFrente: 18 });
+    const rPortas = explodeBox(caixaVazia("inferior", espaco("r", { tipo: "vazio" }), { portas, puxador: "sem_puxador" }));
+    const rGaveta = explodeBox(caixaVazia("inferior", raizGaveta, { puxador: "sem_puxador" }));
+    expect(ferr(rPortas, "puxador")).toBe(0);
+    expect(ferr(rPortas, "perfil_puxador_m")).toBe(0);
+    expect(ferr(rGaveta, "puxador")).toBe(0);
+    expect(ferr(rGaveta, "perfil_puxador_m")).toBe(0);
+  });
+
+  it("gaveta externa com perfil: comprimento = largura da frente, por gaveta", () => {
+    const raizGaveta = espaco("g", { tipo: "gaveta", qtd: 2, profundidade: 500, interna: false, corFrente: "Madeirado", espessuraFrente: 18 });
+    const r = explodeBox(caixaVazia("inferior", raizGaveta, { puxador: "perfil" }));
+    const frente = peca(r, "Frente Gaveta Externa")!;
+    expect(ferr(r, "perfil_puxador_m")).toBeCloseTo((frente.largura_mm * 2) / 1000, 2);
+  });
+
+  it("gaveta interna (guarda-roupa) nunca gera ferragem de puxador, independente da config", () => {
+    const raizInterna = espaco("g", { tipo: "gaveta", qtd: 2, profundidade: 500, interna: true });
+    const r = explodeBox(caixaVazia("inferior", raizInterna, { puxador: "haste" }));
+    expect(ferr(r, "puxador")).toBe(0);
+    expect(ferr(r, "perfil_puxador_m")).toBe(0);
   });
 });
 

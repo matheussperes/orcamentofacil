@@ -47,13 +47,20 @@ tela principal (produção).
   (`retanguloVaos` em `tree.ts`), sobrepondo prateleiras/gavetas que ficam
   por baixo. Tipo abrir (sentidos: basculante pia/aéreo, direita, esquerda)
   ou correr (direita/esquerda, ferragem `kit_porta_correr`). A opção antiga
-  "cava" (sem puxador) saiu do modelo. **Limitação conhecida**: o sentido é
-  único por grupo — um grupo com qtd=2 não produz um par espelhado
-  (abre-para-fora clássico), todas as portas do grupo abrem pro mesmo lado.
+  "cava" (sem puxador) saiu do modelo — puxador agora é config própria (ver
+  abaixo). Sentido é único por grupo (não um por porta), mas grupos com 2+
+  portas direita/esquerda saem espelhados no desenho (ver Puxador).
 - **Fundo virou global** (`BoxModule.temFundo: boolean`, era
   `overrideTemFundo` + `content.fundo` por vão) — aplicado a todo vão-folha
-  "espaco" quando ligado, espessura fixa 6mm. Campo "Puxador" na Caixa é só
-  placeholder por ora (`box.puxadorPadrao`), sem efeito no motor.
+  "espaco" quando ligado, espessura fixa 6mm.
+- **Puxador** (`BoxModule.puxador: "haste" | "perfil" | "sem_puxador"`) vale
+  pra toda porta e frente de gaveta externa (gaveta interna/guarda-roupa
+  nunca tem puxador visível, independente da config): "haste" gera 1
+  ferragem `puxador` (un.) por frente; "perfil" gera `perfil_puxador_m`
+  (metros, comprimento da borda onde o puxador ficaria); "sem_puxador" não
+  gera ferragem nem desenho. Sentido "direita"/"esquerda" com 2+ portas no
+  mesmo grupo sai espelhado no desenho (painéis alternam o sentido oposto —
+  não muda ferragem/peças, só a posição do puxador).
 - `lib/engine/box/migrate.ts` migra presets salvos no formato antigo
   (localStorage) pro novo modelo, inclusive extraindo portas presas a vãos
   pro novo `box.portas` e mapeando sentidos antigos.

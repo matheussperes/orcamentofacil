@@ -119,6 +119,7 @@ function presetsSeed(): Omit<BoxPreset, "id">[] {
         largura: 800, altura: 720, profundidade: 550,
         caixa: { cor: "Branco TX", espessura: 15 },
         temFundo: true,
+        puxador: "haste",
         // 1 prateleira interna + porta cobrindo o vão inteiro — mostra que
         // não precisam dividir o vão para coexistir.
         raiz: espaco("raiz-1", { tipo: "vazio" }, { prateleiras: { qtd: 1, recuo: 20 } }),
@@ -133,6 +134,7 @@ function presetsSeed(): Omit<BoxPreset, "id">[] {
         largura: 450, altura: 720, profundidade: 550,
         caixa: { cor: "Branco TX", espessura: 15 },
         temFundo: false,
+        puxador: "haste",
         raiz: espaco("raiz-2", {
           tipo: "gaveta", qtd: 4, profundidade: 500, interna: false,
           corFrente: "Louro Freijó", espessuraFrente: 18,
@@ -148,6 +150,7 @@ function presetsSeed(): Omit<BoxPreset, "id">[] {
         largura: 800, altura: 700, profundidade: 350,
         caixa: { cor: "Branco TX", espessura: 15 },
         temFundo: true,
+        puxador: "haste",
         raiz: espaco("raiz-3", { tipo: "vazio" }, { prateleiras: { qtd: 1, recuo: 20 } }),
         portas: [portas("raiz-3", { qtd: 2, sentido: "direita", material: { cor: "Louro Freijó", espessura: 18 } })],
       },
@@ -160,6 +163,7 @@ function presetsSeed(): Omit<BoxPreset, "id">[] {
         largura: 700, altura: 2200, profundidade: 600,
         caixa: { cor: "Branco TX", espessura: 15 },
         temFundo: true,
+        puxador: "haste",
         raiz: {
           id: "raiz-4", split: "horizontal", qtdDivisorias: 1, recuoFrontal: 20, posicao: "centralizado",
           children: [
@@ -181,6 +185,7 @@ function presetsSeed(): Omit<BoxPreset, "id">[] {
         largura: 900, altura: 2400, profundidade: 600,
         caixa: { cor: "Branco TX", espessura: 15 },
         temFundo: true,
+        puxador: "haste",
         raiz: espaco("raiz-5", { tipo: "vazio" }, { prateleiras: { qtd: 3, recuo: 20 } }),
         portas: [portas("raiz-5", { qtd: 2, sentido: "direita", material: { cor: "Branco TX", espessura: 18 } })],
       },
@@ -193,6 +198,7 @@ function presetsSeed(): Omit<BoxPreset, "id">[] {
         largura: 900, altura: 2400, profundidade: 600,
         caixa: { cor: "Branco TX", espessura: 15 },
         temFundo: true,
+        puxador: "haste",
         raiz: {
           id: "raiz-6", split: "horizontal", qtdDivisorias: 1, recuoFrontal: 20, posicao: "centralizado",
           children: [

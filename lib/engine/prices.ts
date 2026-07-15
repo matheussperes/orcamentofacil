@@ -49,6 +49,7 @@ export const PRECOS_REFERENCIA: PrecosReferencia = {
     fita_led_m: 25.0,
     pistao: 35.0,
     kit_porta_correr: 90.0,
+    perfil_puxador_m: 45.0,
   },
   montagemPorM2: 90.0,
   freteFixo: 200.0,

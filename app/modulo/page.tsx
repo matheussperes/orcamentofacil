@@ -51,6 +51,7 @@ function caixaInicial(cor: string, categoria: string): BoxModule {
     raiz: vaoVazio("raiz"),
     portas: [],
     temFundo: true,
+    puxador: "haste",
   };
 }
 
@@ -280,8 +281,8 @@ export default function EditorModulo() {
           />
 
           <PuxadorCard
-            tipo={box.puxadorPadrao?.tipo ?? "externa"}
-            onChange={(tipo) => setBoxCampo({ puxadorPadrao: { tipo } })}
+            tipo={box.puxador}
+            onChange={(tipo) => setBoxCampo({ puxador: tipo })}
           />
 
           <div className="card">

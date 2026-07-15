@@ -24,6 +24,7 @@ const boxInferior: BoxModule = {
   raiz: vaoVazio("r"),
   portas: [],
   temFundo: false,
+  puxador: "haste",
 };
 
 const itemTemplate: ModuloOrcamento = {

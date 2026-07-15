@@ -76,6 +76,13 @@ export interface GrupoPortas {
   material: BoxMaterial;
 }
 
+// Puxador: config única por caixa, usada em toda porta (grupos de porta) e
+// em toda frente de gaveta externa. "haste" = puxador físico numa posição da
+// frente (ferragem "puxador", un.); "perfil" = perfil contínuo na borda onde
+// ficaria o puxador (ferragem "perfil_puxador_m", por metro); "sem_puxador" =
+// frente lisa, sem ferragem de puxador.
+export type TipoPuxador = "haste" | "perfil" | "sem_puxador";
+
 // Tamponamento de INSTÂNCIA (comercial/instalação) — diferente do
 // `BayContent` "tamponamento" (que é estrutural, parte do gabarito). Decidido:
 // o painel é colado POR FORA da carcaça já pronta, somando à largura de
@@ -106,7 +113,7 @@ export interface BoxModule {
   raiz: BayNode;
   portas: GrupoPortas[]; // grupos de porta, independentes da árvore de vãos
   temFundo: boolean; // aplica fundo (espessura fixa) em todos os vãos-folha "espaco"
-  puxadorPadrao?: { tipo: string }; // placeholder, sem efeito no motor por ora
+  puxador: TipoPuxador; // haste | perfil | sem_puxador — vale pra portas e gaveta externa
   tamponamento?: TamponamentoInstancia; // override de instância (doc 12, Etapa 3)
   overridePortas?: BoxMaterial; // override de instância: cor/espessura de TODAS as portas
 }

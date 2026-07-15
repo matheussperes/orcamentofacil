@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import type { BayNode, BoxModule, GrupoPortas } from "@/lib/engine/box/types";
+import type { BayNode, BoxModule, GrupoPortas, TipoPuxador } from "@/lib/engine/box/types";
 import {
   layoutDivisorias,
   layoutVaos,
@@ -72,7 +72,8 @@ function desenharConteudoBonito(
   y: number,
   w: number,
   h: number,
-  tPx: number
+  tPx: number,
+  tipoPuxador: TipoPuxador
 ) {
   if (node.split !== "none" && node.qtdDivisorias > 0 && node.children) {
     const bays = node.qtdDivisorias + 1;
@@ -82,7 +83,7 @@ function desenharConteudoBonito(
       const childW = (w - node.qtdDivisorias * tPx) / bays;
       let cx = x;
       node.children.forEach((child, i) => {
-        desenharConteudoBonito(ctx, child, cx, y, childW, h, tPx);
+        desenharConteudoBonito(ctx, child, cx, y, childW, h, tPx, tipoPuxador);
         cx += childW;
         if (i < node.children!.length - 1) {
           linha(ctx, cx + tPx / 2, y, cx + tPx / 2, y + h);
@@ -93,7 +94,7 @@ function desenharConteudoBonito(
       const childH = (h - node.qtdDivisorias * tPx) / bays;
       let cy = y;
       node.children.forEach((child, i) => {
-        desenharConteudoBonito(ctx, child, x, cy, w, childH, tPx);
+        desenharConteudoBonito(ctx, child, x, cy, w, childH, tPx, tipoPuxador);
         cy += childH;
         if (i < node.children!.length - 1) {
           linha(ctx, x, cy + tPx / 2, x + w, cy + tPx / 2);
@@ -117,10 +118,17 @@ function desenharConteudoBonito(
       const gy = y + (h / qtd) * i;
       linha(ctx, x + 3, gy, x + w - 3, gy);
     }
-    ctx.fillStyle = "rgba(28,36,48,0.5)";
-    for (let i = 0; i < qtd; i++) {
-      const gy = y + (h / qtd) * (i + 0.5);
-      ctx.fillRect(x + w / 2 - 8, gy - 1.5, 16, 3);
+    if (!frente.interna && tipoPuxador !== "sem_puxador") {
+      ctx.fillStyle = "rgba(28,36,48,0.5)";
+      for (let i = 0; i < qtd; i++) {
+        const topoFrente = y + (h / qtd) * i;
+        if (tipoPuxador === "perfil") {
+          ctx.fillRect(x + 6, topoFrente + 3, w - 12, 3);
+        } else {
+          const gy = topoFrente + h / qtd / 2;
+          ctx.fillRect(x + w / 2 - 8, gy - 1.5, 16, 3);
+        }
+      }
     }
   }
 
@@ -134,53 +142,70 @@ function desenharConteudoBonito(
   }
 }
 
-/** Marca de puxador de UM painel de porta, posicionada conforme o sentido
- * (ver descrições em PortasCard) — todos os painéis de um mesmo grupo usam a
- * mesma posição (sentido é único por grupo, não um por porta). */
+/** Sentido EFETIVO de um painel dentro de um grupo de portas: pares
+ * direita/esquerda (abrir não-basculante e correr) saem espelhados — painéis
+ * de índice ímpar usam o sentido oposto ao escolhido, pra abrir/puxar
+ * simetricamente (como um par clássico de portas de balcão). Basculante não
+ * tem par "oposto" com esse sentido, então não espelha. */
+function sentidoEfetivo(grupo: GrupoPortas, indice: number): GrupoPortas["sentido"] {
+  if (grupo.sentido !== "direita" && grupo.sentido !== "esquerda") return grupo.sentido;
+  if (indice % 2 === 0) return grupo.sentido;
+  return grupo.sentido === "direita" ? "esquerda" : "direita";
+}
+
+/** Marca (ou perfil) de puxador de UM painel, posicionada conforme o sentido
+ * (ver descrições em PortasCard). "haste" desenha uma marca curta na posição
+ * do puxador; "perfil" estende essa marca pra borda inteira; "sem_puxador"
+ * não desenha nada. */
 function desenharPuxador(
   ctx: CanvasRenderingContext2D,
   x: number,
   y: number,
   w: number,
   h: number,
-  grupo: GrupoPortas
+  tipoAbertura: GrupoPortas["tipoAbertura"],
+  sentido: GrupoPortas["sentido"],
+  tipoPuxador: TipoPuxador
 ) {
+  if (tipoPuxador === "sem_puxador") return;
   ctx.fillStyle = "rgba(28,36,48,0.6)";
   const espessura = 3;
   const comp = 16;
   const margem = 3;
+  const perfil = tipoPuxador === "perfil";
 
-  if (grupo.tipoAbertura === "correr") {
-    if (grupo.sentido === "direita") {
-      ctx.fillRect(x + w - espessura - margem, y + h / 2 - comp / 2, espessura, comp);
-    } else {
-      ctx.fillRect(x + margem, y + h / 2 - comp / 2, espessura, comp);
-    }
+  if (tipoAbertura === "correr") {
+    const naDireita = sentido === "direita";
+    const x0 = naDireita ? x + w - espessura - margem : x + margem;
+    if (perfil) ctx.fillRect(x0, y + margem, espessura, h - margem * 2);
+    else ctx.fillRect(x0, y + h / 2 - comp / 2, espessura, comp);
     return;
   }
 
-  switch (grupo.sentido) {
-    case "basculante_pia": // abre pra baixo, puxador centralizado no topo
-      ctx.fillRect(x + w / 2 - comp / 2, y + margem, comp, espessura);
-      break;
-    case "basculante_aereo": // abre pra cima, puxador centralizado na base
-      ctx.fillRect(x + w / 2 - comp / 2, y + h - espessura - margem, comp, espessura);
-      break;
-    case "direita": // abre pra direita, puxador no topo esquerdo
-      ctx.fillRect(x + margem, y + margem, espessura, comp);
-      break;
-    case "esquerda": // abre pra esquerda, puxador no topo direito
-      ctx.fillRect(x + w - espessura - margem, y + margem, espessura, comp);
-      break;
+  if (sentido === "basculante_pia" || sentido === "basculante_aereo") {
+    const noTopo = sentido === "basculante_pia"; // abre pra baixo -> puxador no topo
+    const y0 = noTopo ? y + margem : y + h - espessura - margem;
+    if (perfil) ctx.fillRect(x + margem, y0, w - margem * 2, espessura);
+    else ctx.fillRect(x + w / 2 - comp / 2, y0, comp, espessura);
+    return;
   }
+
+  // "direita": abre pra direita, puxador no topo esquerdo. "esquerda": abre
+  // pra esquerda, puxador no topo direito.
+  const naDireita = sentido === "esquerda";
+  const x0 = naDireita ? x + w - espessura - margem : x + margem;
+  if (perfil) ctx.fillRect(x0, y + margem, espessura, h - margem * 2);
+  else ctx.fillRect(x0, y + margem, espessura, comp);
 }
 
 /** Desenha um grupo de porta (retângulo já em px) — linhas divisórias entre
- * os painéis + marca de puxador em cada um. */
+ * os painéis + marca/perfil de puxador em cada um (espelhado quando o par é
+ * direita/esquerda, ver `sentidoEfetivo`). */
 function desenharGrupoPortas(
   ctx: CanvasRenderingContext2D,
   rect: { x: number; y: number; w: number; h: number },
-  grupo: GrupoPortas
+  grupo: GrupoPortas,
+  tipoPuxador: TipoPuxador
 ) {
   const { x, y, w, h } = rect;
   const qtd = Math.max(1, grupo.qtd);
@@ -194,7 +219,7 @@ function desenharGrupoPortas(
     linha(ctx, px, y + 2, px, y + h - 2);
   }
   for (let i = 0; i < qtd; i++) {
-    desenharPuxador(ctx, x + larguraPainel * i, y, larguraPainel, h, grupo);
+    desenharPuxador(ctx, x + larguraPainel * i, y, larguraPainel, h, grupo.tipoAbertura, sentidoEfetivo(grupo, i), tipoPuxador);
   }
 }
 
@@ -248,7 +273,8 @@ export function BoxCanvas({
         py(g.interiorTop),
         g.interiorW * g.scale,
         g.interiorH * g.scale,
-        t * g.scale
+        t * g.scale,
+        box.puxador
       );
     } else {
       // Vãos-folha (modo laboratório): bordas técnicas + rótulo do conteúdo.
@@ -301,7 +327,8 @@ export function BoxCanvas({
       desenharGrupoPortas(
         ctx,
         { x: px(rectMm.x), y: py(rectMm.y), w: rectMm.w * g.scale, h: rectMm.h * g.scale },
-        grupo
+        grupo,
+        box.puxador
       );
     }
 

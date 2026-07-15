@@ -1,5 +1,5 @@
 import type { ItemQtd, Peca } from "../types";
-import type { BayNode, BoxMaterial, BoxModule } from "./types";
+import type { BayNode, BoxMaterial, BoxModule, TipoPuxador } from "./types";
 import { retanguloVaos, tamanhosFilhos } from "./tree";
 
 // Explosão geométrica recursiva da caixa (V3). Funções puras: dado um BoxModule,
@@ -35,11 +35,21 @@ interface Ctx {
   caixa: BoxMaterial;
   altura: number; // altura total do módulo (p/ tamponamento lateral)
   temFundo: boolean;
+  puxador: TipoPuxador;
   overridePortas?: BoxMaterial;
 }
 
 function addFerragem(ctx: Ctx, item: string, q: number) {
   if (q > 0) ctx.ferragens.set(item, (ctx.ferragens.get(item) ?? 0) + q);
+}
+
+/** Adiciona a ferragem de puxador de UMA frente, conforme `ctx.puxador`:
+ * "haste" = 1 puxador (un.); "perfil" = `comprimentoMm` de perfil (m);
+ * "sem_puxador" = nada. `comprimentoMm` é o comprimento da borda onde o
+ * perfil correria (largura pra basculante/gaveta, altura pros demais). */
+function addPuxador(ctx: Ctx, comprimentoMm: number) {
+  if (ctx.puxador === "haste") addFerragem(ctx, "puxador", 1);
+  else if (ctx.puxador === "perfil") addFerragem(ctx, "perfil_puxador_m", round4(comprimentoMm / 1000));
 }
 
 function push(
@@ -164,7 +174,8 @@ function aplicarFrente(
           espessura: frente.espessuraFrente ?? 18,
         };
         push(ctx, "Frente Gaveta Externa", frente.qtd, material, "frente", alturaFrente, larguraFrente, 2, 2);
-        addFerragem(ctx, "puxador", frente.qtd);
+        // Perfil de gaveta corre ao longo da borda superior da frente (largura).
+        for (let i = 0; i < frente.qtd; i++) addPuxador(ctx, larguraFrente);
       }
       // Caixote da gaveta (comum às duas).
       push(ctx, "Lateral de Gaveta", frente.qtd * 2, ctx.caixa, "caixa", GAVETA_LATERAL_H, frente.profundidade, 0, 1);
@@ -200,12 +211,17 @@ function aplicarGruposPortas(ctx: Ctx, box: BoxModule, interiorW: number, interi
     const alturaPorta = H - FOLGA_PORTA_V;
     push(ctx, "Porta", grupo.qtd, material, "frente", alturaPorta, larguraPorta, 2, 2);
 
+    const basculante = grupo.sentido === "basculante_pia" || grupo.sentido === "basculante_aereo";
+    // Perfil corre na borda onde o puxador ficaria: horizontal (largura) na
+    // basculante (topo/base), vertical (altura) nas demais (inclui correr).
+    const comprimentoPerfil = basculante ? larguraPorta : alturaPorta;
+
     if (grupo.tipoAbertura === "correr") {
       addFerragem(ctx, "kit_porta_correr", 1);
+      for (let i = 0; i < grupo.qtd; i++) addPuxador(ctx, comprimentoPerfil);
       continue;
     }
 
-    const basculante = grupo.sentido === "basculante_pia" || grupo.sentido === "basculante_aereo";
     for (let i = 0; i < grupo.qtd; i++) {
       if (basculante) {
         addFerragem(ctx, "pistao", 1);
@@ -213,7 +229,7 @@ function aplicarGruposPortas(ctx: Ctx, box: BoxModule, interiorW: number, interi
       } else {
         addFerragem(ctx, "dobradica_35", Math.max(2, Math.ceil(alturaPorta / 450)));
       }
-      addFerragem(ctx, "puxador", 1);
+      addPuxador(ctx, comprimentoPerfil);
     }
   }
 }
@@ -276,6 +292,7 @@ export function explodeBox(box: BoxModule): BoxResult {
     caixa: box.caixa,
     altura: box.altura,
     temFundo: box.temFundo,
+    puxador: box.puxador,
     overridePortas: box.overridePortas,
   };
   const t = box.caixa.espessura;

@@ -41,6 +41,7 @@ const NOMES_FERRAGENS: Record<string, { nome: string; unidade: string }> = {
   fita_led_m: { nome: "Fita LED", unidade: "m" },
   pistao: { nome: "Pistão a gás (basculante)", unidade: "un" },
   kit_porta_correr: { nome: "Kit porta de correr (trilho + roldanas)", unidade: "kit" },
+  perfil_puxador_m: { nome: "Perfil puxador (alumínio)", unidade: "m" },
 };
 
 // Catálogo padrão (Nível 1 do onboarding, doc 07): já vem preenchido.
