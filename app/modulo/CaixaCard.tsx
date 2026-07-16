@@ -1,21 +1,30 @@
 "use client";
 
 import type { BoxModule, CarcassType } from "@/lib/engine/box/types";
+import { SecaoHeader } from "./SecaoHeader";
 
 export function CaixaCard({
   box,
   cores,
   categorias,
   onChange,
+  aberta,
+  onAbrir,
+  onSalvar,
 }: {
   box: BoxModule;
   cores: string[];
   categorias: string[];
   onChange: (patch: Partial<BoxModule>) => void;
+  aberta: boolean;
+  onAbrir: () => void;
+  onSalvar: () => void;
 }) {
   return (
     <div className="card">
-      <h2>Caixa</h2>
+      <SecaoHeader titulo="Caixa" aberta={aberta} onAbrir={onAbrir} />
+      {aberta && (
+        <>
       <div className="campos">
         <div>
           <label>Nome</label>
@@ -76,6 +85,11 @@ export function CaixaCard({
           </select>
         </div>
       </div>
+      <div className="acoes" style={{ display: "flex", gap: 8, marginTop: 12 }}>
+        <button className="primary" onClick={onSalvar}>Salvar</button>
+      </div>
+        </>
+      )}
     </div>
   );
 }

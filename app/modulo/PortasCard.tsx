@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { Catalogo } from "@/lib/catalog";
 import { espessurasDaCor } from "@/lib/catalog";
-import type { SentidoAbrir, SentidoCorrer } from "@/lib/engine/box/types";
+import type { GrupoPortas, SentidoAbrir, SentidoCorrer } from "@/lib/engine/box/types";
+import { SecaoHeader } from "./SecaoHeader";
 
 export interface ConfigPortas {
   tipoAbertura: "abrir" | "correr";
@@ -28,26 +29,51 @@ export function PortasCard({
   vaosSelecionados,
   cores,
   catalogo,
-  temPortaCaixaInteira,
-  onAplicarCaixaInteira,
+  modoSelecaoPortas,
+  onSelecionarModoPortas,
+  grupoEmEdicao,
   onAplicarVaosSelecionados,
-  onExcluir,
+  onSalvarEdicao,
+  onExcluirGrupo,
+  onCancelarEdicao,
+  onExcluirPorVaos,
+  aberta,
+  onAbrir,
+  onSalvar,
 }: {
   vaosSelecionados: string[];
   cores: string[];
   catalogo: Catalogo | null;
-  /** Já existe um grupo de porta cobrindo a caixa inteira — bloqueia adicionar
-   * portas em vãos internos (evita porta espremida atrás de outra porta). */
-  temPortaCaixaInteira: boolean;
-  onAplicarCaixaInteira: (cfg: ConfigPortas) => void;
+  /** true quando o canvas está no modo "Selecionar portas" (destaca o botão). */
+  modoSelecaoPortas: boolean;
+  onSelecionarModoPortas: () => void;
+  /** Grupo de porta selecionado no canvas (modo "Selecionar portas") pra editar/excluir. */
+  grupoEmEdicao: GrupoPortas | null;
   onAplicarVaosSelecionados: (cfg: ConfigPortas) => void;
-  onExcluir: () => void;
+  onSalvarEdicao: (id: string, cfg: ConfigPortas) => void;
+  onExcluirGrupo: (id: string) => void;
+  onCancelarEdicao: () => void;
+  onExcluirPorVaos: () => void;
+  aberta: boolean;
+  onAbrir: () => void;
+  onSalvar: () => void;
 }) {
   const [tipoAbertura, setTipoAbertura] = useState<"abrir" | "correr">("abrir");
   const [sentido, setSentido] = useState<SentidoAbrir | SentidoCorrer>("direita");
   const [qtd, setQtd] = useState(2);
   const [cor, setCor] = useState(cores[0] ?? "Branco TX");
   const [espessura, setEspessura] = useState(18);
+
+  // Vão selecionou um grupo existente (modo "Selecionar portas") -> carrega a
+  // config dele no formulário pra edição.
+  useEffect(() => {
+    if (!grupoEmEdicao) return;
+    setTipoAbertura(grupoEmEdicao.tipoAbertura);
+    setSentido(grupoEmEdicao.sentido);
+    setQtd(grupoEmEdicao.qtd);
+    setCor(grupoEmEdicao.material.cor);
+    setEspessura(grupoEmEdicao.material.espessura);
+  }, [grupoEmEdicao]);
 
   const opcoesSentido = tipoAbertura === "abrir" ? SENTIDOS_ABRIR : SENTIDOS_CORRER;
 
@@ -63,56 +89,87 @@ export function PortasCard({
 
   return (
     <div className="card">
-      <h2>Portas</h2>
-      <div className="campos">
-        <div>
-          <label>Tipos</label>
-          <select value={tipoAbertura} onChange={(e) => trocarTipoAbertura(e.target.value as "abrir" | "correr")}>
-            <option value="abrir">Abrir</option>
-            <option value="correr">Correr</option>
-          </select>
-        </div>
-        <div>
-          <label>Sentido</label>
-          <select value={sentido} onChange={(e) => setSentido(e.target.value as SentidoAbrir | SentidoCorrer)}>
-            {opcoesSentido.map((o) => (
-              <option key={o.value} value={o.value}>{o.label}</option>
-            ))}
-          </select>
-        </div>
-      </div>
-      <div className="campos" style={{ marginTop: 8 }}>
-        <div>
-          <label>Quantidade</label>
-          <input type="number" min={1} value={qtd} onChange={(e) => setQtd(Number(e.target.value))} />
-        </div>
-        <div>
-          <label>Cor</label>
-          <select value={cor} onChange={(e) => setCor(e.target.value)}>
-            {cores.map((c) => <option key={c} value={c}>{c}</option>)}
-          </select>
-        </div>
-        <div>
-          <label>Espessura</label>
-          <select value={espessura} onChange={(e) => setEspessura(Number(e.target.value))}>
-            {(catalogo ? espessurasDaCor(catalogo, cor) : [15, 18]).map((esp) => (
-              <option key={esp} value={esp}>{esp} mm</option>
-            ))}
-          </select>
-        </div>
-      </div>
-      <div className="acoes" style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap" }}>
-        <button onClick={() => onAplicarCaixaInteira(cfg())}>Aplicar na caixa inteira</button>
-        <button
-          className="primary"
-          disabled={vaosSelecionados.length === 0 || temPortaCaixaInteira}
-          title={temPortaCaixaInteira ? "Já existe uma porta cobrindo a caixa inteira — exclua-a antes de adicionar portas em vãos internos." : undefined}
-          onClick={() => onAplicarVaosSelecionados(cfg())}
-        >
-          Aplicar em vãos selecionados
-        </button>
-        <button className="danger" onClick={onExcluir}>Excluir Portas</button>
-      </div>
+      <SecaoHeader titulo="Portas" aberta={aberta} onAbrir={onAbrir} />
+      {aberta && (
+        <>
+          <div className="acoes" style={{ display: "flex", gap: 8, marginBottom: 10 }}>
+            <button className={modoSelecaoPortas ? "primary" : "ghost"} onClick={onSelecionarModoPortas}>
+              Selecionar portas
+            </button>
+          </div>
+
+          {grupoEmEdicao && (
+            <p className="muted" style={{ fontSize: 12, marginTop: -4 }}>
+              Editando a porta selecionada no desenho.
+            </p>
+          )}
+
+          <div className="campos">
+            <div>
+              <label>Tipos</label>
+              <select value={tipoAbertura} onChange={(e) => trocarTipoAbertura(e.target.value as "abrir" | "correr")}>
+                <option value="abrir">Abrir</option>
+                <option value="correr">Correr</option>
+              </select>
+            </div>
+            <div>
+              <label>Sentido</label>
+              <select value={sentido} onChange={(e) => setSentido(e.target.value as SentidoAbrir | SentidoCorrer)}>
+                {opcoesSentido.map((o) => (
+                  <option key={o.value} value={o.value}>{o.label}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <div className="campos" style={{ marginTop: 8 }}>
+            <div>
+              <label>Quantidade</label>
+              <input type="number" min={1} value={qtd} onChange={(e) => setQtd(Number(e.target.value))} />
+            </div>
+            <div>
+              <label>Cor</label>
+              <select value={cor} onChange={(e) => setCor(e.target.value)}>
+                {cores.map((c) => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
+            <div>
+              <label>Espessura</label>
+              <select value={espessura} onChange={(e) => setEspessura(Number(e.target.value))}>
+                {(catalogo ? espessurasDaCor(catalogo, cor) : [15, 18]).map((esp) => (
+                  <option key={esp} value={esp}>{esp} mm</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="acoes" style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap" }}>
+            {grupoEmEdicao ? (
+              <>
+                <button className="primary" onClick={() => onSalvarEdicao(grupoEmEdicao.id, cfg())}>
+                  Salvar alterações
+                </button>
+                <button className="danger" onClick={() => onExcluirGrupo(grupoEmEdicao.id)}>Excluir</button>
+                <button className="ghost" onClick={onCancelarEdicao}>Cancelar</button>
+              </>
+            ) : (
+              <>
+                <button
+                  className="primary"
+                  disabled={vaosSelecionados.length === 0}
+                  onClick={() => onAplicarVaosSelecionados(cfg())}
+                >
+                  Aplicar em vãos selecionados
+                </button>
+                <button className="danger" onClick={onExcluirPorVaos}>Excluir Portas</button>
+              </>
+            )}
+          </div>
+
+          <div className="acoes" style={{ display: "flex", gap: 8, marginTop: 12 }}>
+            <button className="primary" onClick={onSalvar}>Salvar</button>
+          </div>
+        </>
+      )}
     </div>
   );
 }

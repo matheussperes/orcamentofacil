@@ -234,18 +234,17 @@ function aplicarGruposPortas(ctx: Ctx, box: BoxModule, interiorW: number, interi
 }
 
 /**
- * Nº de "colunas" verticais implícitas na árvore de vãos, usado só pra
- * decidir em quantas tiras o fundo se divide. Divisões verticais SOMAM
- * colunas (vãos lado a lado); divisões horizontais são ignoradas (usa o
- * maior nº de colunas entre os filhos empilhados) — o fundo não acompanha
- * cortes horizontais, só verticais.
+ * Nº de "colunas" verticais que atravessam a altura INTEIRA da caixa, usado
+ * só pra decidir em quantas tiras o fundo se divide. Só soma através de
+ * divisões verticais aninhadas (cada uma continua atravessando a altura
+ * inteira, só fica mais estreita). Qualquer divisão horizontal no caminho —
+ * ou uma folha — quebra essa continuidade: o que estiver dentro dela (por
+ * mais dividido que esteja) nunca atravessa a caixa inteira, então conta
+ * como 1 coluna só, sem propagar a fragmentação interna pra fora.
  */
 function contarColunasVerticais(node: BayNode): number {
   if (node.split === "vertical" && node.qtdDivisorias > 0 && node.children) {
     return node.children.reduce((soma, c) => soma + contarColunasVerticais(c), 0);
-  }
-  if (node.split === "horizontal" && node.qtdDivisorias > 0 && node.children) {
-    return Math.max(...node.children.map(contarColunasVerticais));
   }
   return 1;
 }

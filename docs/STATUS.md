@@ -1,19 +1,22 @@
 # Status Atual, Decisões, Pendências e Próximos Passos
 
-> Atualizado em 2026-07-15. Este arquivo é o ponto de partida de qualquer sessão
+> Atualizado em 2026-07-16. Este arquivo é o ponto de partida de qualquer sessão
 > nova — leia antes de assumir o que já existe. Complementa `docs/PRD-PIPELINE.md`
 > (visão de produto) com o estado real do código.
 
 ## 1. Onde estamos agora (resumo de uma linha)
 
-O editor de módulo (`/modulo`) foi redesenhado nesta sessão a partir de um
-desenho do usuário: cards sempre visíveis (Caixa/Divisões/Portas/Gavetas/
-Puxador) que agem sobre seleção de vãos/divisórias no canvas, em vez do
-formulário condicional por vão único de antes. Portas viraram uma entidade
-independente da árvore de vãos (cobrem 1+ vãos ou a caixa inteira). O motor V1
-segue coexistindo (não foi tocado) — ver mapa de dependências na seção 7.
-Próximo passo combinado com o usuário: voltar pra como os módulos aparecem na
-tela principal (produção).
+O editor de módulo (`/modulo`) foi redesenhado a partir de um desenho do
+usuário: cards colapsáveis em sequência (Caixa → Divisões → Portas → Gavetas
+→ Puxador — accordion, cada um com botão "Salvar" que avança pro próximo) que
+agem sobre seleção de vãos/divisórias/portas/gavetas no canvas. Portas são uma
+entidade independente da árvore de vãos (cobrem 1+ vãos selecionados — a opção
+de cobrir a caixa inteira foi removida, só existe 1 jeito de inserir). Nova
+página `/biblioteca` administra categorias e os módulos cadastrados, com
+caminho de volta pro editor (`/modulo?preset=ID`) que agora ATUALIZA o preset
+original em vez de duplicar. O motor V1 segue coexistindo (não foi tocado) —
+ver mapa de dependências na seção 7. Próximo passo combinado com o usuário:
+voltar pra como os módulos aparecem na tela principal (produção).
 
 ## 2. O que está construído e funcionando
 
@@ -30,39 +33,42 @@ tela principal (produção).
   duplicação de lista que existia antes ("Frankenstein").
 
 ### Laboratório (`/modulo`) — redesenhado nesta sessão
-- Cards sempre visíveis (Caixa, Divisões, Portas, Gavetas, Puxador) que agem
-  sobre a seleção atual do canvas, em vez de um formulário condicional por vão
-  único. Duas funções de seleção novas no canvas: **Selecionar vãos** e
-  **Selecionar divisões** (seleciona uma linha divisória específica pra
-  excluir). O botão "Selecionar vãos" tem 2 estados: desativado (padrão)
-  clicar troca a seleção pra 1 vão só; ativado ("múltiplos") clicar
-  soma/remove vãos — usado por Divisões/Portas/Gavetas pra aplicar em vários
-  de uma vez. Embaixo do canvas: "Salvar este módulo" e "Resetar" (reseta a
-  caixa inteira pro estado inicial, com confirmação — não é mais "esvaziar
-  só o vão selecionado").
+- **Accordion de 5 sessões** (Caixa → Divisões → Portas → Gavetas → Puxador,
+  `SecaoHeader.tsx`): só uma aberta por vez; cada card tem um botão "Salvar"
+  que colapsa a sessão atual e abre a próxima (ordem fixa). Clicar no título
+  de uma sessão colapsada ("editar") reabre ela pra voltar e ajustar.
+- **4 modos de seleção no canvas** (`BoxCanvas`, prop `modoSelecao`):
+  "Selecionar vãos" (na sessão Vãos, 2 estados — desativado troca a seleção
+  pra 1 vão só, ativado "múltiplos" soma/remove, usado por Divisões/Portas/
+  Gavetas pra aplicar em vários de uma vez), "Selecionar divisões" (dentro da
+  sessão Divisões — seleciona uma linha divisória pra excluir, funde os 2
+  vãos que ela separava), "Selecionar portas" (dentro da sessão Portas —
+  seleciona um grupo de porta existente, carrega a config no formulário pra
+  editar/excluir) e "Selecionar gaveta" (dentro da sessão Gavetas — mesma
+  ideia, mas seleciona o vão com o conjunto de gavetas).
+- **Portas**: entidade independente da árvore (`BoxModule.portas:
+  GrupoPortas[]`) — só uma forma de inserir (selecionar vão(s) e aplicar; a
+  opção de aplicar na caixa inteira ignorando a divisão foi removida, criava
+  ambiguidade com portas em vãos internos) e uma de editar/excluir
+  (selecionar o grupo no desenho). Tipo abrir (basculante pia/aéreo, direita,
+  esquerda) ou correr (direita/esquerda, ferragem `kit_porta_correr`).
+  Sentido é único por grupo, mas grupos com 2+ portas direita/esquerda saem
+  espelhados no desenho.
 - **Divisões**: tipo vertical/horizontal, quantidade, recuo frontal por grupo
-  (`BayNode.recuoFrontal`, substitui a constante fixa de 20mm), posição
-  centralizado/direita/esquerda com recuo lateral (divisão assimétrica — o
-  vão da ponta fica com a medida do recuo lateral, os demais dividem o
-  resto). Excluir uma divisória funde os 2 vãos que ela separava num vão
-  vazio (`excluirDivisoria` em `tree.ts`).
-- **Portas viraram uma entidade independente da árvore de vãos**
-  (`BoxModule.portas: GrupoPortas[]`, em `lib/engine/box/types.ts`): cada
-  grupo cobre a caixa inteira ou a união de vãos selecionados
-  (`retanguloVaos` em `tree.ts`), sobrepondo prateleiras/gavetas que ficam
-  por baixo. Tipo abrir (sentidos: basculante pia/aéreo, direita, esquerda)
-  ou correr (direita/esquerda, ferragem `kit_porta_correr`). A opção antiga
-  "cava" (sem puxador) saiu do modelo — puxador agora é config própria (ver
-  abaixo). Sentido é único por grupo (não um por porta), mas grupos com 2+
-  portas direita/esquerda saem espelhados no desenho (ver Puxador). Se já
-  existe um grupo cobrindo a caixa inteira, "Aplicar em vãos selecionados"
-  fica bloqueado (evita porta atrás de porta).
-- **Fundo virou global e do tamanho da caixa** (`BoxModule.temFundo:
-  boolean`) — 1 peça só de largura×altura da caixa (não do vão) até
-  1800mm de largura; acima disso, cada divisão VERTICAL adicionada parte o
-  fundo em mais uma tira igual (todas com a altura cheia da caixa),
-  ignorando divisões horizontais (`contarColunasVerticais`/
-  `gerarFundoGlobal` em `explode.ts`).
+  (`BayNode.recuoFrontal`), posição centralizado/direita/esquerda com recuo
+  lateral (divisão assimétrica).
+- Embaixo do canvas: "Salvar este módulo" (cria ou atualiza o preset, ver
+  Biblioteca), "Limpar" (esvazia divisões/portas/gavetas, MANTÉM a Caixa) e
+  "Resetar" (volta tudo ao estado inicial, inclusive a Caixa, com
+  confirmação).
+- **Fundo é global e do tamanho da caixa** (`BoxModule.temFundo: boolean`) —
+  1 peça só de largura×altura da caixa (não do vão) até 1800mm de largura;
+  acima disso, cada divisão VERTICAL que atravessa a altura INTEIRA da caixa
+  soma mais uma tira igual (`contarColunasVerticais`/`gerarFundoGlobal` em
+  `explode.ts`). Bugfix registrado: uma divisão vertical aninhada dentro de
+  uma divisão horizontal (não atravessa a altura toda) NÃO conta — só soma
+  através de splits verticais encadeados, qualquer horizontal no caminho
+  vira 1 coluna e não propaga a fragmentação interna.
 - **Puxador** (`BoxModule.puxador: "haste" | "perfil" | "sem_puxador"`) vale
   pra toda porta e frente de gaveta externa (gaveta interna/guarda-roupa
   nunca tem puxador visível, independente da config): "haste" gera 1
@@ -80,9 +86,21 @@ tela principal (produção).
   pro novo `box.portas` e mapeando sentidos antigos.
 - Custo ao vivo, lista técnica de peças, plano de corte visual (Canvas 2D, escala
   1:10, uma chapa por grupo cor×espessura).
-- Salvar como preset numa categoria continua existindo; **o card de listar/
-  aplicar/excluir presets saiu desta tela** (decisão do usuário — vai repensar
-  como chamar módulos existentes para edição, ainda não decidido).
+- "Salvar este módulo": se veio da Biblioteca (`/modulo?preset=ID`) ou já
+  salvou uma vez nesta sessão, **atualiza** o preset original
+  (`atualizarPreset`) em vez de duplicar; senão cria um novo e passa a
+  rastreá-lo (próximos saves na mesma sessão também atualizam).
+
+### Biblioteca de módulos (`/biblioteca`) — nova nesta sessão
+Administra o que saiu do card removido do `/modulo`: lista/filtra os presets
+por categoria e tipo (tipo é só filtro — Aéreo/Inferior/Torre continuam fixos
+no motor), renomeia, troca categoria, exclui, e "Abrir no editor" reabre o
+preset em `/modulo?preset=ID` pra edição in-place. Categorias: as 8 padrão
+são fixas; extras criadas pelo usuário podem ser renomeadas/removidas
+(`lib/categorias.ts` — `renomearCategoria`/`removerCategoria`, só afetam
+extras; renomear propaga pros presets que usavam o nome antigo pra não
+ficarem órfãos; remover é bloqueado se algum preset ainda estiver na
+categoria).
 
 ### Produção (página principal `/`)
 - Assistente **Ambiente → Tipo → Modelo** (`NovoModuloWizard`) lê presets salvos

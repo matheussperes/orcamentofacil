@@ -68,6 +68,41 @@ export function removerPreset(id: string): void {
   window.localStorage.setItem(CHAVE, JSON.stringify(presets));
 }
 
+export function buscarPreset(id: string): BoxPreset | undefined {
+  return listarPresets().find((p) => p.id === id);
+}
+
+/** Atualiza um preset existente EM VEZ de criar um novo — usado quando o
+ * módulo foi reaberto no laboratório a partir da Biblioteca (edita a
+ * engenharia de um módulo já cadastrado, sem duplicar). Não faz nada se o id
+ * não existir (preset apagado enquanto era editado, por exemplo). */
+export function atualizarPreset(
+  id: string,
+  patch: { nome: string; categoria: string; box: BoxModule }
+): void {
+  const presets = listarPresets();
+  const i = presets.findIndex((p) => p.id === id);
+  if (i === -1) return;
+  presets[i] = { ...presets[i], nome: patch.nome, categoria: patch.categoria, box: patch.box };
+  window.localStorage.setItem(CHAVE, JSON.stringify(presets));
+}
+
+export function renomearPreset(id: string, nome: string): void {
+  const presets = listarPresets();
+  const i = presets.findIndex((p) => p.id === id);
+  if (i === -1 || !nome.trim()) return;
+  presets[i] = { ...presets[i], nome: nome.trim(), box: { ...presets[i].box, nome: nome.trim() } };
+  window.localStorage.setItem(CHAVE, JSON.stringify(presets));
+}
+
+export function moverPresetDeCategoria(id: string, categoria: string): void {
+  const presets = listarPresets();
+  const i = presets.findIndex((p) => p.id === id);
+  if (i === -1 || !categoria.trim()) return;
+  presets[i] = { ...presets[i], categoria, box: { ...presets[i].box, categoria } };
+  window.localStorage.setItem(CHAVE, JSON.stringify(presets));
+}
+
 /** Vão-folha "espaço": frente (vazio/gaveta) + prateleiras são independentes
  * e combináveis. Portas não entram aqui — são um `GrupoPortas` à parte (ver
  * `portas()`), e fundo é global (`box.temFundo`). */

@@ -240,10 +240,26 @@ function desenharGrupoPortas(
   }
 }
 
+/** Retângulo (mm) coberto por um grupo de porta — caixa inteira ou a união
+ * dos vãos alvo. Reaproveitado pro desenho e pro hit-test de clique. */
+function retanguloDoGrupo(
+  box: BoxModule,
+  grupo: GrupoPortas,
+  g: Geo,
+  t: number
+): { x: number; y: number; w: number; h: number } | null {
+  if (grupo.alvo.tipo === "caixa_inteira") {
+    return { x: t, y: g.interiorTop, w: g.interiorW, h: g.interiorH };
+  }
+  return retanguloVaos(box.raiz, new Set(grupo.alvo.vaoIds), t, g.interiorTop, g.interiorW, g.interiorH, t);
+}
+
 export interface DivisaoSelecionada {
   parentId: string;
   indice: number;
 }
+
+export type ModoSelecao = "vaos" | "divisoes" | "portas" | "gavetas";
 
 export function BoxCanvas({
   box,
@@ -253,15 +269,25 @@ export function BoxCanvas({
   onToggleVao,
   divisaoSelecionada = null,
   onSelecionarDivisoria,
+  portaSelecionada = null,
+  onSelecionarPorta,
+  vaoGavetaSelecionado = null,
+  onSelecionarVaoGaveta,
 }: {
   box: BoxModule;
   /** Modo bonito para cards do orçamento — sem bordas/rótulos técnicos, não interativo. */
   comercial?: boolean;
-  modoSelecao?: "vaos" | "divisoes";
+  modoSelecao?: ModoSelecao;
   vaosSelecionados?: string[];
   onToggleVao?: (id: string) => void;
   divisaoSelecionada?: DivisaoSelecionada | null;
   onSelecionarDivisoria?: (sel: DivisaoSelecionada) => void;
+  /** Modo "portas": seleciona um GRUPO de porta existente (pra editar/excluir). */
+  portaSelecionada?: string | null;
+  onSelecionarPorta?: (id: string) => void;
+  /** Modo "gavetas": seleciona o VÃO cujo conteúdo de gaveta vai editar/excluir. */
+  vaoGavetaSelecionado?: string | null;
+  onSelecionarVaoGaveta?: (id: string) => void;
 }) {
   const ref = useRef<HTMLCanvasElement>(null);
 
@@ -300,7 +326,9 @@ export function BoxCanvas({
         const y = py(r.y);
         const w = r.w * g.scale;
         const h = r.h * g.scale;
-        const sel = modoSelecao === "vaos" && vaosSelecionados.includes(r.id);
+        const sel =
+          (modoSelecao === "vaos" && vaosSelecionados.includes(r.id)) ||
+          (modoSelecao === "gavetas" && vaoGavetaSelecionado === r.id);
         ctx.fillStyle = sel ? "rgba(79,140,255,0.28)" : "#ffffff";
         ctx.fillRect(x, y, w, h);
         ctx.strokeStyle = sel ? "#4f8cff" : "#94a3b8";
@@ -348,19 +376,16 @@ export function BoxCanvas({
     // Grupos de porta: independentes da árvore, desenhados por cima dos vãos
     // (cobrem 1+ vãos selecionados no laboratório, ou a caixa inteira).
     for (const grupo of box.portas) {
-      let rectMm: { x: number; y: number; w: number; h: number } | null;
-      if (grupo.alvo.tipo === "caixa_inteira") {
-        rectMm = { x: t, y: g.interiorTop, w: g.interiorW, h: g.interiorH };
-      } else {
-        rectMm = retanguloVaos(box.raiz, new Set(grupo.alvo.vaoIds), t, g.interiorTop, g.interiorW, g.interiorH, t);
-      }
+      const rectMm = retanguloDoGrupo(box, grupo, g, t);
       if (!rectMm) continue;
-      desenharGrupoPortas(
-        ctx,
-        { x: px(rectMm.x), y: py(rectMm.y), w: rectMm.w * g.scale, h: rectMm.h * g.scale },
-        grupo,
-        box.puxador
-      );
+      const rectPx = { x: px(rectMm.x), y: py(rectMm.y), w: rectMm.w * g.scale, h: rectMm.h * g.scale };
+      desenharGrupoPortas(ctx, rectPx, grupo, box.puxador);
+      // Modo "Selecionar Portas": destaca o grupo selecionado por cima.
+      if (!comercial && modoSelecao === "portas" && portaSelecionada === grupo.id) {
+        ctx.strokeStyle = "#4f8cff";
+        ctx.lineWidth = 3;
+        ctx.strokeRect(rectPx.x + 2, rectPx.y + 2, rectPx.w - 4, rectPx.h - 4);
+      }
     }
 
     // Tamponamento de instância: tiras coloridas por fora da carcaça, com a
@@ -385,7 +410,7 @@ export function BoxCanvas({
         ctx.fillRect(px(0), py(0) + box.altura * g.scale, box.largura * g.scale, faixa);
       }
     }
-  }, [box, comercial, modoSelecao, vaosSelecionados, divisaoSelecionada]);
+  }, [box, comercial, modoSelecao, vaosSelecionados, divisaoSelecionada, portaSelecionada, vaoGavetaSelecionado]);
 
   function clique(e: React.MouseEvent<HTMLCanvasElement>) {
     if (comercial) return; // preview comercial não é interativo
@@ -407,6 +432,34 @@ export function BoxCanvas({
         const h = d.h * g.scale;
         if (cx >= x - PAD && cx <= x + w + PAD && cy >= y - PAD && cy <= y + h + PAD) {
           onSelecionarDivisoria?.({ parentId: d.parentId, indice: d.indice });
+          return;
+        }
+      }
+      return;
+    }
+
+    if (modoSelecao === "portas") {
+      for (const grupo of box.portas) {
+        const rectMm = retanguloDoGrupo(box, grupo, g, t);
+        if (!rectMm) continue;
+        const x = g.ox + rectMm.x * g.scale;
+        const y = g.oy + rectMm.y * g.scale;
+        const w = rectMm.w * g.scale;
+        const h = rectMm.h * g.scale;
+        if (cx >= x && cx <= x + w && cy >= y && cy <= y + h) {
+          onSelecionarPorta?.(grupo.id);
+          return;
+        }
+      }
+      return;
+    }
+
+    if (modoSelecao === "gavetas") {
+      for (const r of g.rects) {
+        const x = g.ox + r.x * g.scale;
+        const y = g.oy + r.y * g.scale;
+        if (cx >= x && cx <= x + r.w * g.scale && cy >= y && cy <= y + r.h * g.scale) {
+          onSelecionarVaoGaveta?.(r.id);
           return;
         }
       }
