@@ -34,3 +34,25 @@ export function adicionarCategoria(nome: string): void {
   extras.push(limpo);
   window.localStorage.setItem(CHAVE, JSON.stringify(extras));
 }
+
+/** As 8 categorias padrão são fixas (não editáveis/removíveis) — só as
+ * criadas pelo usuário (extras) podem ser renomeadas/removidas aqui. */
+export function ehCategoriaPadrao(nome: string): boolean {
+  return CATEGORIAS_PADRAO.includes(nome);
+}
+
+export function renomearCategoria(antigo: string, novo: string): void {
+  const limpo = novo.trim();
+  if (!limpo || typeof window === "undefined" || ehCategoriaPadrao(antigo)) return;
+  const extras: string[] = JSON.parse(window.localStorage.getItem(CHAVE) ?? "[]");
+  const i = extras.indexOf(antigo);
+  if (i === -1) return;
+  extras[i] = limpo;
+  window.localStorage.setItem(CHAVE, JSON.stringify(extras));
+}
+
+export function removerCategoria(nome: string): void {
+  if (typeof window === "undefined" || ehCategoriaPadrao(nome)) return;
+  const extras: string[] = JSON.parse(window.localStorage.getItem(CHAVE) ?? "[]");
+  window.localStorage.setItem(CHAVE, JSON.stringify(extras.filter((c) => c !== nome)));
+}

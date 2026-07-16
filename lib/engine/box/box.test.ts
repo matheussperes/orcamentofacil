@@ -258,11 +258,11 @@ describe("box — fundo global (largura×altura da caixa, split por divisão ver
     expect(f.altura_mm).toBe(2700);
   });
 
-  it("ignora divisões horizontais: só a coluna vertical mais dividida conta", () => {
+  it("bugfix: divisão vertical dentro de uma divisão horizontal NÃO divide o fundo (não atravessa a altura inteira)", () => {
     // Split horizontal no topo (2 filhos empilhados); só o filho de baixo
-    // tem 1 divisão vertical (2 colunas) — o de cima fica inteiro (1 coluna).
-    // "Ignorar horizontais" = usar o maior nº de colunas entre os filhos
-    // empilhados, não multiplicar pela quantidade de filhos horizontais.
+    // tem 1 divisão vertical (2 colunas). Essa divisória vertical só vai da
+    // base até a divisória horizontal, não do chão ao teto da caixa — não
+    // conta pra fragmentar o fundo.
     const raiz: BayNode = {
       id: "r", split: "horizontal", qtdDivisorias: 1,
       children: [
@@ -270,6 +270,28 @@ describe("box — fundo global (largura×altura da caixa, split por divisão ver
         {
           id: "baixo", split: "vertical", qtdDivisorias: 1,
           children: [espaco("baixo-a", { tipo: "vazio" }), espaco("baixo-b", { tipo: "vazio" })],
+        },
+      ],
+    };
+    const box = caixaVazia("torre", raiz, { temFundo: true, largura: 2000, altura: 2200 });
+    const r = explodeBox(box);
+    expect(qtd(r, "Fundo")).toBe(1);
+    const f = peca(r, "Fundo")!;
+    expect(f.largura_mm).toBe(2000);
+    expect(f.altura_mm).toBe(2200);
+  });
+
+  it("só a divisão vertical de altura inteira (na raiz) fragmenta o fundo, mesmo com mais divisões dentro de um dos lados", () => {
+    // Raiz vertical (2 colunas, atravessa a altura inteira) -> 2 fundos.
+    // A coluna "b" ainda é dividida horizontalmente por dentro, mas isso não
+    // soma nenhuma coluna extra (seção anterior já cobre esse caso).
+    const raiz: BayNode = {
+      id: "r", split: "vertical", qtdDivisorias: 1,
+      children: [
+        espaco("a", { tipo: "vazio" }),
+        {
+          id: "b", split: "horizontal", qtdDivisorias: 1,
+          children: [espaco("b-cima", { tipo: "vazio" }), espaco("b-baixo", { tipo: "vazio" })],
         },
       ],
     };

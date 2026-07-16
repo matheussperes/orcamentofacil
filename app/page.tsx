@@ -315,6 +315,7 @@ export default function Home() {
         <p>
           Motor paramétrico de orçamento — do módulo ao preço em segundos.{" "}
           <a href="/modulo">Editor de módulo (V3)</a> ·{" "}
+          <a href="/biblioteca">Biblioteca de módulos</a> ·{" "}
           <a href="/configuracoes/materiais">Materiais</a> ·{" "}
           <a href="/configuracoes/engenharia">Engenharia</a>
         </p>
