@@ -42,6 +42,7 @@ import { planoDeCorte } from "@/lib/engine/box/cutting";
 import { ModulePreview } from "./components/ModulePreview";
 import { BoxCanvas } from "./components/BoxCanvas";
 import { PlanoCorteCanvas } from "./components/PlanoCorteCanvas";
+import { Button } from "@/components/ui/button";
 import { LayoutVisualizer, type LayoutModulo } from "./components/LayoutVisualizer";
 
 interface TemplateMeta {
@@ -322,9 +323,9 @@ export default function Home() {
       </header>
 
       <div className="toolbar">
-        <button className="primary" onClick={calcular} disabled={carregando}>
+        <Button variant="primary" onClick={calcular} disabled={carregando}>
           {carregando ? "Calculando…" : "Criar orçamento"}
-        </button>
+        </Button>
         <button className="ghost" onClick={() => setItens(PRESET_COZINHA.map(clonarItem))}>
           Recarregar preset &quot;Cozinha em L&quot; (demo legado)
         </button>

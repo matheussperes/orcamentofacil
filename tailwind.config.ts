@@ -111,6 +111,17 @@ const config: Config = {
         md: "0 4px 6px -1px rgba(15,23,42,0.08), 0 2px 4px -2px rgba(15,23,42,0.04)",
         lg: "0 10px 15px -3px rgba(15,23,42,0.1), 0 4px 6px -4px rgba(15,23,42,0.05)",
       },
+      // Seção 6.1 — duração de transição do Button (120ms). Registrada como
+      // token nomeado (não arbitrário) porque `tailwindcss-animate` também
+      // registra um utilitário `duration-*` (mapeado para `animationDuration`)
+      // que colide com o `duration-*` nativo do Tailwind (`transitionDuration`)
+      // quando usado com valor arbitrário (`duration-[120ms]`) — o build acusa
+      // "class is ambiguous and matches multiple utilities" e a classe não
+      // gera CSS nenhum. Com o valor nomeado abaixo, `duration-120` deixa de
+      // ser ambíguo.
+      transitionDuration: {
+        "120": "120ms",
+      },
       // Seção 7 — Breakpoints
       screens: {
         sm: "480px",
