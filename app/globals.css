@@ -1,29 +1,73 @@
-/*
- * Task 5.1 (setup Tailwind + shadcn/ui): diretivas Tailwind ativadas aqui,
- * ANTES do tema escuro legado abaixo, de propósito — o Preflight do Tailwind
- * (`@tailwind base`) usa seletores de baixo nível (`button`, `html, body`,
- * `a`, etc.) com a mesma especificidade das regras legadas; por vir depois no
- * arquivo, o CSS legado continua vencendo a cascata e nada quebra
- * visualmente. A migração real dos tokens para `@layer base` com as CSS
- * variables do shadcn (Design-System Seção 2.4) e a remoção deste tema
- * escuro é escopo da Task 5.2 — aqui o objetivo é só provar que o Tailwind
- * está ativo e compilando.
- */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --bg: #0f1115;
-  --panel: #171a21;
-  --panel-2: #1f232c;
-  --border: #2a2f3a;
-  --text: #e7e9ee;
-  --muted: #9aa3b2;
-  --accent: #4f8cff;
-  --green: #2fbf71;
-  --red: #ef4d5a;
-  --amber: #e0a83b;
+/*
+ * Task 5.2 (fundação de tokens): CSS variables semânticas do shadcn/ui
+ * (Design-System Seção 2.4).
+ *
+ * Decisão de formato: HSL (não hex). `tailwind.config.ts` (Task 5.1) já
+ * mapeia background/foreground/primary/secondary/destructive/muted/popover/
+ * card/border/input/ring como `hsl(var(--x))` — formato convencional do
+ * shadcn/ui. Reescrever esse arquivo para hex puro exigiria também reabrir e
+ * reescrever `tailwind.config.ts` (trocar `hsl(var(--x))` por `var(--x)` em
+ * ~11 entradas) sem nenhum ganho: os valores finais renderizados são
+ * idênticos aos hex desta seção, só expressos em HSL. Por isso mantivemos
+ * HSL nas variáveis abaixo — cada uma comentada com o hex de origem em
+ * `docs/Design-System.md` Seção 2 para auditoria.
+ *
+ * `--secondary(-foreground)`, `--card-foreground` e `--popover-foreground`
+ * não têm mapeamento explícito na tabela da Seção 2.4 do Design-System (só o
+ * mínimo foi documentado ali). Foram derivados aqui a partir da mesma escala
+ * `cinza` (secondary = cinza-100, *-foreground = cinza-900) para que
+ * primitivos shadcn futuros (Card, Popover, etc. — Stages 6-9) não quebrem
+ * por variável ausente. Reportado ao Maestro para formalizar na Seção 2.4 se
+ * necessário.
+ */
+@layer base {
+  :root {
+    --background: 0 0% 100%; /* cinza-0 #FFFFFF */
+    --foreground: 222.2 47.4% 11.2%; /* cinza-900 #0F172A */
+    --card: 0 0% 100%; /* cinza-0 #FFFFFF */
+    --card-foreground: 222.2 47.4% 11.2%; /* cinza-900 #0F172A (derivado) */
+    --popover: 0 0% 100%; /* cinza-0 #FFFFFF */
+    --popover-foreground: 222.2 47.4% 11.2%; /* cinza-900 #0F172A (derivado) */
+    --primary: 221.2 83.2% 53.3%; /* accent #2563EB */
+    --primary-foreground: 0 0% 100%; /* cinza-0 #FFFFFF */
+    --secondary: 210 40% 96.1%; /* cinza-100 #F1F5F9 (derivado) */
+    --secondary-foreground: 222.2 47.4% 11.2%; /* cinza-900 #0F172A (derivado) */
+    --muted: 210 40% 98%; /* cinza-50 #F8FAFC */
+    --muted-foreground: 215.4 16.3% 46.9%; /* cinza-500 #64748B */
+    --destructive: 0 72.2% 50.6%; /* erro #DC2626 */
+    --destructive-foreground: 0 0% 100%; /* cinza-0 #FFFFFF */
+    --border: 214.3 31.8% 91.4%; /* cinza-200 #E2E8F0 */
+    --input: 214.3 31.8% 91.4%; /* cinza-200 #E2E8F0 */
+    --ring: 221.2 83.2% 53.3%; /* accent #2563EB (anel de foco) */
+    --radius: 0.75rem; /* Seção 5 — 12px = rounded-lg */
+
+    /*
+     * Variáveis do tema legado, renomeadas de --bg/--panel/--panel-2/
+     * --border/--text/--muted/--accent/--green/--red/--amber para
+     * --legacy-* porque os nomes --border e --muted colidiam com as
+     * variáveis semânticas do shadcn acima (mesmo arquivo, mesmo :root —
+     * shadcn exige exatamente esses nomes). Os VALORES foram atualizados da
+     * paleta escura antiga para os hex claros equivalentes do Design System
+     * (Seção 1: "o tema escuro atual é substituído pelos tokens claros"),
+     * para que `.card`/`.modulo`/`.kpi`/etc. (ainda não convertidos para
+     * Tailwind — Stages 6-9) herdem o tema claro sem editar as próprias
+     * regras, e continuem legíveis coexistindo com o Tailwind.
+     */
+    --legacy-bg: #ffffff; /* cinza-0 (tema escuro legado removido na Task 5.2) */
+    --legacy-panel: #ffffff; /* cinza-0 */
+    --legacy-panel-2: #f8fafc; /* cinza-50 */
+    --legacy-border: #e2e8f0; /* cinza-200 */
+    --legacy-text: #0f172a; /* cinza-900 */
+    --legacy-muted: #64748b; /* cinza-500 */
+    --legacy-accent: #2563eb; /* accent */
+    --legacy-green: #16a34a; /* sucesso */
+    --legacy-red: #dc2626; /* erro */
+    --legacy-amber: #d97706; /* aviso */
+  }
 }
 
 * {
@@ -32,17 +76,15 @@
 
 html,
 body {
+  @apply bg-cinza-0 text-cinza-900;
   margin: 0;
   padding: 0;
-  background: var(--bg);
-  color: var(--text);
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   font-size: 15px;
   line-height: 1.5;
 }
 
 a {
-  color: var(--accent);
+  color: var(--legacy-accent);
 }
 
 .wrap {
@@ -56,7 +98,7 @@ header.top h1 {
   margin: 0 0 4px;
 }
 header.top p {
-  color: var(--muted);
+  color: var(--legacy-muted);
   margin: 0 0 20px;
 }
 
@@ -72,8 +114,8 @@ header.top p {
 }
 
 .card {
-  background: var(--panel);
-  border: 1px solid var(--border);
+  background: var(--legacy-panel);
+  border: 1px solid var(--legacy-border);
   border-radius: 12px;
   padding: 16px;
   margin-bottom: 16px;
@@ -82,7 +124,7 @@ header.top p {
   font-size: 15px;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: var(--muted);
+  color: var(--legacy-muted);
   margin: 0 0 12px;
 }
 
@@ -94,20 +136,20 @@ header.top p {
 }
 
 button {
-  background: var(--panel-2);
-  color: var(--text);
-  border: 1px solid var(--border);
+  background: var(--legacy-panel-2);
+  color: var(--legacy-text);
+  border: 1px solid var(--legacy-border);
   border-radius: 8px;
   padding: 8px 12px;
   cursor: pointer;
   font-size: 14px;
 }
 button:hover {
-  border-color: var(--accent);
+  border-color: var(--legacy-accent);
 }
 button.primary {
-  background: var(--accent);
-  border-color: var(--accent);
+  background: var(--legacy-accent);
+  border-color: var(--legacy-accent);
   color: #fff;
   font-weight: 600;
 }
@@ -115,16 +157,16 @@ button.ghost {
   background: transparent;
 }
 button.danger:hover {
-  border-color: var(--red);
-  color: var(--red);
+  border-color: var(--legacy-red);
+  color: var(--legacy-red);
 }
 
 .modulo {
-  border: 1px solid var(--border);
+  border: 1px solid var(--legacy-border);
   border-radius: 10px;
   padding: 12px;
   margin-bottom: 10px;
-  background: var(--panel-2);
+  background: var(--legacy-panel-2);
 }
 .modulo .linha {
   display: flex;
@@ -150,16 +192,16 @@ button.danger:hover {
 }
 label {
   font-size: 12px;
-  color: var(--muted);
+  color: var(--legacy-muted);
   display: block;
 }
 input,
 select {
   width: 100%;
-  background: var(--bg);
-  border: 1px solid var(--border);
+  background: var(--legacy-bg);
+  border: 1px solid var(--legacy-border);
   border-radius: 6px;
-  color: var(--text);
+  color: var(--legacy-text);
   padding: 6px 8px;
   font-size: 14px;
 }
@@ -170,14 +212,14 @@ select {
   gap: 10px;
 }
 .kpi {
-  background: var(--panel-2);
-  border: 1px solid var(--border);
+  background: var(--legacy-panel-2);
+  border: 1px solid var(--legacy-border);
   border-radius: 10px;
   padding: 12px;
 }
 .kpi .rot {
   font-size: 12px;
-  color: var(--muted);
+  color: var(--legacy-muted);
 }
 .kpi .val {
   font-size: 20px;
@@ -185,7 +227,7 @@ select {
   margin-top: 2px;
 }
 .kpi.destaque .val {
-  color: var(--green);
+  color: var(--legacy-green);
 }
 
 table {
@@ -197,10 +239,10 @@ th,
 td {
   text-align: left;
   padding: 6px 8px;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--legacy-border);
 }
 th {
-  color: var(--muted);
+  color: var(--legacy-muted);
   font-weight: 600;
 }
 td.num,
@@ -227,30 +269,30 @@ th.num {
 }
 
 .aviso {
-  border-left: 3px solid var(--amber);
-  background: rgba(224, 168, 59, 0.08);
+  border-left: 3px solid var(--legacy-amber);
+  background: rgba(217, 119, 6, 0.08);
   padding: 8px 10px;
   border-radius: 4px;
   font-size: 13px;
   margin-bottom: 6px;
 }
 .aviso.erro {
-  border-color: var(--red);
-  background: rgba(239, 77, 90, 0.08);
+  border-color: var(--legacy-red);
+  background: rgba(220, 38, 38, 0.08);
 }
 
 .muted {
-  color: var(--muted);
+  color: var(--legacy-muted);
 }
 .tempo {
   font-size: 12px;
-  color: var(--muted);
+  color: var(--legacy-muted);
   margin-top: 8px;
 }
 .footer {
   margin-top: 40px;
-  color: var(--muted);
+  color: var(--legacy-muted);
   font-size: 13px;
-  border-top: 1px solid var(--border);
+  border-top: 1px solid var(--legacy-border);
   padding-top: 16px;
 }

@@ -4,31 +4,30 @@ import { cva, type VariantProps } from "class-variance-authority"
 
 import { cn } from "@/lib/utils"
 
+// Task 5.2 — variantes redefinidas por docs/Design-System.md Seção 6.1
+// (substituem default/destructive/outline/secondary/link/lg do shadcn
+// stock): primary/ghost/danger + tamanhos default/sm/icon.
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-corpo font-medium transition-colors duration-120 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-subtle focus-visible:ring-offset-0 focus-visible:border-accent disabled:pointer-events-none disabled:cursor-not-allowed [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
   {
     variants: {
       variant: {
-        default:
-          "bg-primary text-primary-foreground shadow hover:bg-primary/90",
-        destructive:
-          "bg-destructive text-destructive-foreground shadow-sm hover:bg-destructive/90",
-        outline:
-          "border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground",
-        secondary:
-          "bg-secondary text-secondary-foreground shadow-sm hover:bg-secondary/80",
-        ghost: "hover:bg-accent hover:text-accent-foreground",
-        link: "text-primary underline-offset-4 hover:underline",
+        primary:
+          "bg-accent text-cinza-0 hover:bg-accent-hover active:bg-accent-active disabled:bg-cinza-200 disabled:text-cinza-400",
+        ghost:
+          "bg-transparent border border-cinza-300 text-cinza-700 hover:bg-cinza-100 disabled:text-cinza-400 disabled:border-cinza-200",
+        danger:
+          "bg-transparent border border-cinza-300 text-cinza-700 hover:border-erro hover:text-erro hover:bg-erro-subtle disabled:text-cinza-400 disabled:border-cinza-200",
+        iconActive: "bg-accent-subtle border border-accent-border text-accent",
       },
       size: {
-        default: "h-9 px-4 py-2",
-        sm: "h-8 rounded-md px-3 text-xs",
-        lg: "h-10 rounded-md px-8",
-        icon: "h-9 w-9",
+        default: "h-9 px-[14px]",
+        sm: "h-7 px-[10px] text-corpo-pequeno",
+        icon: "h-8 w-8 rounded-md p-0",
       },
     },
     defaultVariants: {
-      variant: "default",
+      variant: "primary",
       size: "default",
     },
   }
