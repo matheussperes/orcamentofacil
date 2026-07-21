@@ -465,7 +465,7 @@ conforme reescrito em `docs/Design-System.md` v2.
 > marceneiro usa no dia a dia para montar orçamentos. Depende da Task 5.1.
 
 ### Task 6.1 — Cabeçalho e barra de ações de `app/page.tsx`
-- **Status**: ⏱️ Planejado
+- **Status**: ✅ Concluído (2026-07-21, mesclada em `feature/6.1-header-producao`, aprovada por Code Auditor + UX Auditor — `html { font-size: 15px }` legado corrigido para 16px nesta task, confirmado que `Button` agora renderiza os 36px exatos do Design System; zero overflow em 375px/1280px)
 - **Modelo Recomendado**: Sonnet
 - **Prioridade**: 🔴 Alta
 - **Executor sugerido**: Frontend Engineer
