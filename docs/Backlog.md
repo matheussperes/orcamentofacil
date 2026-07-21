@@ -434,7 +434,7 @@ conforme reescrito em `docs/Design-System.md` v2.
   - [ ] `npx shadcn@latest add button` roda com sucesso (prova de que o CLI está configurado), gerando `components/ui/button.tsx`.
 
 ### Task 5.2 — Fundação de tokens em `globals.css` + prova de conceito
-- **Status**: ⏱️ Planejado
+- **Status**: ✅ Concluído (2026-07-21, mesclada em `feature/5.2-fundacao-tokens`, aprovada por Code Auditor + UX Auditor — CSS variables em HSL, Inter carregada, botão "Criar orçamento" convertido para `Button` shadcn. **Nota técnica não-bloqueante para Stage 6+**: `html { font-size: 15px }` é resquício do CSS legado pré-existente — todo componente `h-*`/`text-*` do Tailwind é calculado em `rem` a partir desse valor, não de 16px. Confirmar/normalizar antes ou durante a Task 6.1, para as alturas em px do Design-System (Seção 6.1: botão 36px) baterem exatamente.)
 - **Modelo Recomendado**: Sonnet
 - **Prioridade**: 🔴 Crítica (bloqueia Stages 6–9)
 - **Executor sugerido**: Frontend Engineer
