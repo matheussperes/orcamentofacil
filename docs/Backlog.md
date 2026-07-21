@@ -357,13 +357,363 @@ não dependem dessa decisão e podem iniciar imediatamente.
 
 ---
 
+## Épico — Refatoração Visual da Jornada do Cliente (Stages 5–9)
+
+> Gerado pelo Solution Architect em 2026-07-21, a pedido do operador, a
+> partir das 3 respostas de direcionamento (estilo SaaS moderno/clean tipo
+> Linear/Notion; usuário-alvo marceneiro/lojista profissional com
+> **prioridade desktop**; escopo Produção → Editor de Módulo → Biblioteca →
+> Proposta, nesta ordem). Contrato de valores visuais: `docs/Design-System.md`
+> — nenhuma task abaixo deve introduzir cor/espaçamento/raio fora do que está
+> lá. Todas as tasks seguem para Code Auditor **e** UX Auditor (visual) antes
+> do merge, como já é o padrão do pipeline — não repetido em cada task
+> individualmente abaixo.
+
+### ✅ Decisão registrada — Migração para Tailwind + shadcn/ui (2026-07-21)
+
+O operador decidiu **migrar a camada de apresentação para Tailwind CSS +
+shadcn/ui** (a v1 deste épico assumia CSS puro; a "pergunta em aberto" foi
+respondida). Isso alinha o projeto ao próprio framework .maestro — o persona
+`frontend-engineer.md` já define Tailwind + shadcn/ui como stack obrigatória.
+Consequências (ver `docs/Design-System.md` v2, Seções 8 e 9):
+
+- A **Stage 5 deixa de ser "trocar tokens em `globals.css`"** e passa a ser o
+  **setup completo de Tailwind + shadcn/ui + fundação de tokens** (instalar
+  dependências, criar `tailwind.config.ts`/`postcss.config.js`/
+  `components.json`/`lib/utils.ts`, migrar `globals.css` para as diretivas
+  Tailwind + CSS variables do shadcn com os hex da paleta, carregar Inter).
+  Continua sendo **bloqueador único** das Stages 6–9.
+- As **Stages 6–9 convertem página por página** de `style={{}}` inline para
+  classes utilitárias Tailwind + componentes shadcn instalados via CLI
+  (`npx shadcn@latest add …`), preservando 100% do comportamento (rotas,
+  handlers, estado React, lógica de cálculo). Cada task segue para Code
+  Auditor **e** UX Auditor antes do merge — a conversão incremental por página
+  é justamente o que reduz o risco de regressão num produto já funcional.
+- `app/proposta/proposta.css` é a **única exceção que permanece CSS**
+  (documento de impressão A4 com `@media print`) — ver Task 9.1 e
+  Design-System Seção 6.11.
+
+Onde as tasks abaixo dizem "tokens" / "conforme Design-System Seção X",
+leia-se agora "utilitários Tailwind / componente shadcn correspondente",
+conforme reescrito em `docs/Design-System.md` v2.
+
+---
+
+## Pipeline Stage 5 — Setup Tailwind + shadcn/ui (fundação, bloqueador único)
+
+> Pré-requisito de todas as demais tasks deste épico. Instala a stack nova,
+> cria os arquivos de configuração, migra `app/globals.css` (compartilhado por
+> `/`, `/modulo`, `/biblioteca`; `/proposta` usa CSS próprio, ver Task 9.1) e
+> prova que build/lint/testes seguem verdes ANTES de qualquer conversão de
+> página. Fatiada em 2 tasks (5.1 setup + 5.2 fundação/POC) para que o Code
+> Auditor valide o ambiente antes de tokens.
+
+### Task 5.1 — Instalar e configurar Tailwind + shadcn/ui
+- **Status**: ⏱️ Planejado
+- **Modelo Recomendado**: Sonnet
+- **Prioridade**: 🔴 Crítica (bloqueia 5.2 e Stages 6–9)
+- **Executor sugerido**: Frontend Engineer
+- **Descrição objetiva**: Instalar as dependências listadas em
+  `docs/Design-System.md` Seção 9 (`tailwindcss`, `postcss`, `autoprefixer`
+  como devDeps; `class-variance-authority`, `clsx`, `tailwind-merge`,
+  `lucide-react`, `tailwindcss-animate` como deps — confirmar versões
+  compatíveis com Next 14.2.x / React 18). Criar `tailwind.config.ts` com
+  `content` cobrindo `app/**` e `components/**` e o `theme.extend` completo dos
+  tokens do Design-System (cores Seção 2, fontSize Seção 3, spacing Seção 4,
+  borderRadius/boxShadow Seção 5, screens Seção 7) + plugin
+  `tailwindcss-animate`. Criar `postcss.config.js`, `lib/utils.ts` (`cn()` com
+  clsx + tailwind-merge) e inicializar o shadcn (`npx shadcn@latest init` →
+  `components.json`, confirmando o alias `@/*` já presente em `tsconfig.json`).
+  **Não converter nenhuma página ainda** — só deixar a stack instalada e
+  compilando.
+- **Critérios de aceitação verificáveis**:
+  - [ ] `tailwind.config.ts`, `postcss.config.js`, `components.json` e `lib/utils.ts` existem e `npm run build` compila sem erro com Tailwind ativo.
+  - [ ] `theme.extend` reproduz exatamente os hex/px de `docs/Design-System.md` Seções 2–7 (nenhum valor divergente da paleta documentada).
+  - [ ] `npm run lint` (config `.eslintrc.json` da Task 2.1) e `npm run typecheck` passam.
+  - [ ] `npm run test` (86 testes) passa sem alteração — nenhuma lógica tocada.
+  - [ ] `npx shadcn@latest add button` roda com sucesso (prova de que o CLI está configurado), gerando `components/ui/button.tsx`.
+
+### Task 5.2 — Fundação de tokens em `globals.css` + prova de conceito
+- **Status**: ⏱️ Planejado
+- **Modelo Recomendado**: Sonnet
+- **Prioridade**: 🔴 Crítica (bloqueia Stages 6–9)
+- **Executor sugerido**: Frontend Engineer
+- **Descrição objetiva**: Depende da Task 5.1. Substituir o tema escuro de
+  `app/globals.css:1-12` pelas diretivas `@tailwind base/components/utilities`
+  + `@layer base` com as CSS variables semânticas do shadcn (Design-System
+  Seção 2.4) apontando para os hex da paleta clara; `html, body` com fundo
+  `cinza-0` e texto `cinza-900`. Carregar Inter via `next/font/google` em
+  `app/layout.tsx` (expondo `--font-inter`, `font-sans` no `<body>`).
+  Converter **um** componente pequeno de ponta a ponta como prova de conceito
+  (sugestão: o cabeçalho/toolbar de `app/page.tsx` OU o botão primário) para
+  classes Tailwind + `Button` do shadcn, confirmando que o pipeline visual
+  funciona antes das Stages 6–9. As classes CSS legadas (`.card`, `.modulo`
+  etc.) que ainda forem usadas por páginas não convertidas podem coexistir
+  temporariamente (removidas conforme cada página migra nas Stages 6–9).
+- **Critérios de aceitação verificáveis**:
+  - [ ] `app/globals.css` não contém mais hex do tema escuro antigo (`#0f1115`, `#171a21`, `#1f232c`, `#2a2f3a`, `#4f8cff`) — `grep` vazio.
+  - [ ] `app/layout.tsx` carrega Inter via `next/font/google`; aba Network confirma fonte servida pelo próprio domínio (não `fonts.googleapis.com`).
+  - [ ] O componente escolhido como POC renderiza via Tailwind/shadcn com os tokens corretos (inspeção visual + ausência de `style={{}}` inline nele).
+  - [ ] `npm run build`/`lint`/`typecheck`/`test` passam.
+  - [ ] Nenhuma página existente fica visualmente quebrada (tema claro aplicado; páginas ainda não convertidas continuam legíveis com as classes legadas coexistindo).
+
+---
+
+## Pipeline Stage 6 — Refatoração Visual: Produção (Fluxo Principal)
+
+> Maior prioridade do escopo (definida pelo operador) — é a tela que o
+> marceneiro usa no dia a dia para montar orçamentos. Depende da Task 5.1.
+
+### Task 6.1 — Cabeçalho e barra de ações de `app/page.tsx`
+- **Status**: ⏱️ Planejado
+- **Modelo Recomendado**: Sonnet
+- **Prioridade**: 🔴 Alta
+- **Executor sugerido**: Frontend Engineer
+- **Descrição objetiva**: `app/page.tsx:311-331` (`<header className="top">`
+  + `.toolbar`) hoje é um `<h1>`/`<p>` simples com links de texto separados
+  por "·" e dois botões soltos (`Criar orçamento`, `Recarregar preset`).
+  Reestruturar como um cabeçalho de produto (título `display` 28px/700 +
+  navegação secundária com espaçamento `--gap-lg` entre itens, não mais
+  separada por caractere "·" literal) e uma barra de ações com hierarquia
+  clara entre a ação primária ("Criar orçamento", botão `.primary`) e a
+  secundária ("Recarregar preset…", rebaixada a `.ghost` — já é `.ghost`
+  hoje, só precisa herdar o novo token). Nenhuma mudança de comportamento/
+  rota, só de apresentação.
+- **Critérios de aceitação verificáveis**:
+  - [ ] Header usa os tokens `display`/`titulo-secao` de `docs/Design-System.md` Seção 3, sem tamanho de fonte hardcoded fora da escala.
+  - [ ] Navegação secundária (`/modulo`, `/biblioteca`, `/configuracoes/*`) não usa mais "·" como separador visual — usa espaçamento (`--gap-lg`) ou divisor sutil (`--cinza-200`).
+  - [ ] Em largura < 768px, a navegação secundária quebra linha (`flex-wrap: wrap`) sem cortar nenhum link.
+  - [ ] `npm run build`/`npm run test` passam; nenhuma rota ou handler de clique foi alterado.
+
+### Task 6.2 — Stepper visual do `NovoModuloWizard` (Ambiente → Tipo → Modelo)
+- **Status**: ⏱️ Planejado
+- **Modelo Recomendado**: Sonnet
+- **Prioridade**: 🔴 Alta
+- **Executor sugerido**: Frontend Engineer
+- **Descrição objetiva**: `NovoModuloWizard` (`app/page.tsx:803-899`) hoje
+  mostra "1. Ambiente"/"2. Tipo"/"3. Modelo" como texto de label acima de
+  cada `<select>`, sem indicador visual de progresso. Implementar o stepper
+  horizontal especificado em `docs/Design-System.md` Seção 6.5 (círculos
+  conectados, estados pendente/atual/concluída) acima dos três campos,
+  com fallback compacto (rótulo "Passo N de 3" + barra fina) abaixo de
+  768px. O estado "concluída" reflete `ambiente`/`tipo` já preenchidos
+  (props já existentes no componente — não precisa de novo estado React).
+  Manter o fluxo de 3 selects como está; só adiciona a camada visual de
+  progresso por cima.
+- **Critérios de aceitação verificáveis**:
+  - [ ] Estados do stepper (pendente/atual/concluída) usam exatamente as cores/raios da Seção 6.5 do Design System.
+  - [ ] Selecionar um ambiente marca a etapa 1 como "concluída" e avança o destaque para a etapa 2, sem re-render quebrado (testar manualmente o fluxo completo Ambiente→Tipo→Modelo).
+  - [ ] Abaixo de 768px, o stepper completo não aparece — só a versão compacta (texto + barra), confirmando ausência de overflow horizontal.
+  - [ ] Caso `presets.length === 0` (estado vazio já tratado em `app/page.tsx:820-830`), o stepper não aparece — o aviso de "nenhum módulo cadastrado" continua como está.
+
+### Task 6.3 — Card de módulo expandido (`BoxModuloCard` / `TemplateModuloCard`)
+- **Status**: ⏱️ Planejado
+- **Modelo Recomendado**: Sonnet
+- **Prioridade**: 🟡 Média
+- **Executor sugerido**: Frontend Engineer
+- **Descrição objetiva**: `BoxModuloCard` (`app/page.tsx:904-1085`) e
+  `TemplateModuloCard` (`app/page.tsx:693-799`) reestilizados conforme
+  `docs/Design-System.md` Seção 6.3 (estado expandido): preview + campos
+  principais (largura/altura/profundidade/cor/espessura) em grid com
+  `--gap-sm`, botão "Outras configurações" (`app/page.tsx:1011-1014`)
+  reestilizado como toggle secundário (não botão cheio), e o bloco de
+  `TamponamentoConfig`/`MaterialModulo` com divisores `--cinza-200` entre
+  seções ao invés das bordas atuais `var(--border)` (token antigo). Não
+  altera nenhuma lógica de estado (`onAtualizar`, `outrasAbertas` etc.).
+- **Critérios de aceitação verificáveis**:
+  - [ ] Nenhuma referência a `var(--border)`/`var(--panel-2)` (tokens do tema antigo) permanece nestes dois componentes — todas as bordas usam `--cinza-200`/`--cinza-300`.
+  - [ ] "Outras configurações" e "+ Personalizar cor das portas" seguem o padrão de botão secundário (ghost) da Seção 6.1, visualmente distintos do botão primário "Salvar".
+  - [ ] Card expandido segue o padding/raio/sombra da Seção 6.3 (`--gap-lg`, `--radius-lg`, `--shadow-xs`).
+  - [ ] Testar manualmente: abrir/fechar "Outras configurações", trocar cor/espessura de porta e tamponamento por lado continuam funcionando sem erro no console.
+
+### Task 6.4 — Card de módulo colapsado (`ResumoModulo`) e ações (Salvar/Duplicar/Excluir)
+- **Status**: ⏱️ Planejado
+- **Modelo Recomendado**: Sonnet
+- **Prioridade**: 🟡 Média
+- **Executor sugerido**: Frontend Engineer
+- **Descrição objetiva**: `ResumoModulo` (`app/page.tsx:625-690`) e a linha
+  de ações abaixo de cada módulo (`app/page.tsx:421-435`) reestilizados
+  conforme `docs/Design-System.md` Seção 6.3 (estado colapsado): fundo
+  `--cinza-50`, hover indicando que o card inteiro é clicável para
+  "Editar" (hoje só o botão "Editar" reage — avaliar se o clique no card
+  também deve reabrir, mantendo o botão como alternativa explícita, sem
+  remover o botão). Botões Salvar/Duplicar/Excluir seguem a hierarquia
+  primary/ghost/danger da Seção 6.1, com `flex-wrap: wrap` abaixo de 768px.
+- **Critérios de aceitação verificáveis**:
+  - [ ] Estado colapsado usa fundo `--cinza-50` e padding `--gap-md`, distinto visualmente do card expandido (`--cinza-0`/`--gap-lg`).
+  - [ ] Botão "Excluir" usa a variante danger da Seção 6.1 (borda/texto neutro em repouso, vermelho só no hover) — não vermelho sólido permanente.
+  - [ ] Em <768px, a linha de ações (Salvar/Duplicar/Excluir) quebra em múltiplas linhas sem cortar texto de nenhum botão.
+  - [ ] Comportamento de expandir/colapsar (`minimizar`/`expandir` em `app/page.tsx`) não foi alterado — só a apresentação.
+
+### Task 6.5 — Painel de resultado (Simulação comercial, KPIs, insumos, plano de corte)
+- **Status**: ⏱️ Planejado
+- **Modelo Recomendado**: Sonnet
+- **Prioridade**: 🟡 Média
+- **Executor sugerido**: Frontend Engineer
+- **Descrição objetiva**: Coluna direita de `app/page.tsx:442-613` (cards
+  "Simulação comercial", "Resultado" com KPIs, "Pré-orçamento de insumos",
+  "Plano de corte"). Aplicar Seção 6.8 (KPI) — especialmente o `.kpi.destaque`
+  do preço final passando de `--green` para `--accent` — e Seção 6.9
+  (tabela) a `montarLinhasInsumos`/`engine.globais`. O slider de margem/
+  desconto (`Slider`, `app/page.tsx:1286-1313`) ganha trilho/thumb na cor
+  `--accent` no lugar do estilo nativo do navegador sem estilização atual.
+  Botão "Gerar proposta (PDF)" permanece como ação primária de destaque no
+  fim do painel.
+- **Critérios de aceitação verificáveis**:
+  - [ ] `.kpi.destaque` usa `--accent` (não mais `--green`) no valor e `--accent-subtle`/`--accent-border` no fundo/borda do tile.
+  - [ ] Tabelas de insumos e elementos contínuos seguem o cabeçalho/linha/hover da Seção 6.9.
+  - [ ] Sliders de margem/desconto têm indicação visual clara de valor atual (trilho preenchido até o thumb em `--accent`), testado nos extremos min/max.
+  - [ ] KPI com `abaixoDaMargemMinima` (borda vermelha condicional, `app/page.tsx:484`) usa `--erro` (não mais `var(--red)`) e continua aparecendo condicionalmente.
+
+---
+
+## Pipeline Stage 7 — Refatoração Visual: Editor de Módulo (Laboratório `/modulo`)
+
+> Segunda prioridade do escopo. Depende da Task 5.1. O laboratório é a fonte
+> da verdade da engenharia (ver `docs/STATUS.md` Seção 3) — a task não pode
+> alterar nenhum comportamento de seleção/cálculo, só a apresentação do
+> accordion e do canvas.
+
+### Task 7.1 — Accordion shell (`SecaoHeader` + 5 cards de seção)
+- **Status**: ⏱️ Planejado
+- **Modelo Recomendado**: Sonnet
+- **Prioridade**: 🔴 Alta
+- **Executor sugerido**: Frontend Engineer
+- **Descrição objetiva**: `SecaoHeader.tsx` e o cabeçalho dos 5 cards
+  (`CaixaCard.tsx`, `DivisoesCard.tsx`, `PortasCard.tsx`, `GavetasCard.tsx`,
+  `PuxadorCard.tsx`) reestilizados conforme `docs/Design-System.md` Seção
+  6.4: estado "aberta" com header 16px/600 e borda inferior separando do
+  corpo; estado "colapsada" com fundo `--cinza-50`, texto 14px/500
+  `--cinza-600` e badge "editar" em `--accent` com ícone de lápis (SVG
+  inline, sem lib de ícone). Adicionar o indicador de progresso da Seção
+  6.5 acima da pilha de 5 cards, refletindo `secaoAberta`/`ORDEM_SECOES`
+  (`app/modulo/page.tsx:73-74`) sem novo estado React — é só leitura do que
+  já existe. Reduzir o gap entre os 5 cards para `--gap-sm` (reforça que são
+  etapas de um fluxo, não painéis independentes — distinto do gap padrão
+  entre cards de `--gap-lg`).
+- **Critérios de aceitação verificáveis**:
+  - [ ] Estados "aberta"/"colapsada" do header seguem exatamente os valores da Seção 6.4 (cores, tipografia, cursor).
+  - [ ] Stepper acima dos 5 cards mostra a etapa atual sincronizada com `secaoAberta` em tempo real ao clicar "Salvar" em cada card (avança) e "editar" num card anterior (volta o destaque).
+  - [ ] Gap entre os 5 cards do accordion é `--gap-sm` (8px), distinto do `--gap-lg` usado entre cards independentes nas demais páginas.
+  - [ ] Fluxo completo Caixa→Divisões→Portas→Gavetas→Puxador testado manualmente sem regressão de comportamento (avançar/reabrir seções continua funcionando).
+
+### Task 7.2 — Canvas de seleção (`BoxCanvas` modo laboratório + toolbar de modos)
+- **Status**: ⏱️ Planejado
+- **Modelo Recomendado**: Sonnet
+- **Prioridade**: 🔴 Alta
+- **Executor sugerido**: Frontend Engineer
+- **Descrição objetiva**: `BoxCanvas.tsx` (modo laboratório, usado em
+  `app/modulo/page.tsx:505-516`) e a toolbar de botões "Selecionar vãos/
+  divisões/portas/gavetas" (`app/modulo/page.tsx:497-504` + os botões
+  equivalentes dentro de `DivisoesCard`/`PortasCard`/`GavetasCard`)
+  reestilizados conforme Seção 6.6 (contêiner do canvas) e 6.1 ("botão de
+  ícone", estado ativo/selecionado em `--accent-subtle`). Estados de vão
+  hover/selecionado no canvas passam a usar `--accent`/`--accent-subtle` no
+  lugar do `var(--accent)` antigo (mesmo conceito, valor de token
+  atualizado). É puramente visual — nenhuma lógica de `onToggleVao`/
+  `modoSelecao`/`vaosSelecionados` muda.
+- **Critérios de aceitação verificáveis**:
+  - [ ] Contêiner do canvas usa fundo `--cinza-50`, borda `--cinza-200`, `--radius-md`, `max-width: 100%` — testar em viewport de 375px de largura sem overflow horizontal.
+  - [ ] Botão "Selecionar vãos" (e equivalentes de divisões/portas/gavetas) no estado ativo usa fundo `--accent-subtle` + borda `--accent-border`, distinto visualmente do estado inativo.
+  - [ ] Vão hover (tracejado) e vão selecionado (sólido + fundo tintado) no canvas usam os valores exatos da Seção 6.6.
+  - [ ] Os 4 modos de seleção (vãos único/múltiplo, divisões, portas, gavetas) testados manualmente sem regressão — clique continua selecionando/desselecionando corretamente.
+
+### Task 7.3 — Painel direito do editor (Custo ao vivo, Peças, Plano de corte)
+- **Status**: ⏱️ Planejado
+- **Modelo Recomendado**: Sonnet
+- **Prioridade**: 🟢 Normal
+- **Executor sugerido**: Frontend Engineer
+- **Descrição objetiva**: Cards da coluna direita de `app/modulo/page.tsx:
+  494-581` ("Custo ao vivo" com KPIs, "Peças" com tabela técnica, "Plano de
+  corte" com `PlanoCorteCanvas`). Aplicar as mesmas Seções 6.8/6.9/6.6 já
+  usadas nas Tasks 6.5/7.2, garantindo consistência visual entre produção e
+  laboratório (mesmo componente de KPI e tabela, tokens idênticos). Sem
+  mudança de dados exibidos.
+- **Critérios de aceitação verificáveis**:
+  - [ ] KPIs "Preço final"/"Custo direto" seguem exatamente o mesmo estilo da Task 6.5 (mesma classe/tokens, não uma variante paralela).
+  - [ ] Tabela de peças técnicas segue a Seção 6.9 (cabeçalho, hover, colunas numéricas alinhadas à direita).
+  - [ ] `PlanoCorteCanvas` mantém `max-width: 100%` e legibilidade em escala 1:10 testada em viewport de 1280px e 768px.
+  - [ ] `npm run test` (86 testes) passa sem alteração — task não toca `lib/engine/box/cutting.ts` nem nenhuma lógica de cálculo.
+
+---
+
+## Pipeline Stage 8 — Refatoração Visual: Biblioteca (`/biblioteca`)
+
+> Terceira prioridade do escopo. Depende da Task 5.1. Página só de tabelas/
+> formulário simples — menor complexidade visual das quatro áreas.
+
+### Task 8.1 — Tabelas de categorias e módulos cadastrados
+- **Status**: ⏱️ Planejado
+- **Modelo Recomendado**: Sonnet
+- **Prioridade**: 🟢 Normal
+- **Executor sugerido**: Frontend Engineer
+- **Descrição objetiva**: `app/biblioteca/page.tsx` inteiro (101–219):
+  tabela de categorias/ambientes com ações inline (Renomear/Excluir,
+  variante pequena da Seção 6.1), formulário de nova categoria, filtros de
+  categoria/tipo e tabela de módulos cadastrados com ação "Abrir no editor".
+  Aplicar Seção 6.9 (tabela) e 6.7 (campos de filtro/input). O botão
+  "Abrir no editor" (link + botão aninhado, `app/biblioteca/page.tsx:208`)
+  vira um único botão/link estilizado, sem alterar a navegação
+  (`/modulo?preset=ID`).
+- **Critérios de aceitação verificáveis**:
+  - [ ] As duas tabelas (categorias, módulos) seguem a Seção 6.9 (cabeçalho `--cinza-50`, hover de linha, alinhamento numérico onde aplicável).
+  - [ ] Filtros de categoria/tipo (`<select>`) seguem a Seção 6.7 (altura, borda, foco).
+  - [ ] Ações "Renomear"/"Excluir" usam a variante pequena de botão (28px) da Seção 6.1; "Excluir" segue a variante danger (neutro em repouso, vermelho só no hover).
+  - [ ] Fluxo completo testado manualmente: criar categoria, renomear, trocar categoria de um preset, excluir categoria vazia, tentar excluir categoria em uso (deve continuar bloqueando com o alerta existente) — nenhuma regressão de comportamento.
+  - [ ] Em <768px, nenhuma tabela gera overflow horizontal do `body` — scroll fica contido no próprio wrapper da tabela.
+
+---
+
+## Pipeline Stage 9 — Refatoração Visual: Proposta (documento final ao cliente)
+
+> Quarta prioridade na ordem pedida pelo operador, mas o próprio operador
+> observou que é "provavelmente o mais importante para causar boa
+> impressão" — é o único artefato deste produto que o marceneiro entrega
+> diretamente ao cliente final dele. Depende apenas da leitura de
+> `docs/Design-System.md` (não depende da Task 5.1, pois `proposta.css` é
+> isolado de `globals.css` por design — ver `docs/STATUS.md`/comentário no
+> topo do arquivo).
+
+### Task 9.1 — Migrar `proposta.css` para os tokens do Design System
+- **Status**: ⏱️ Planejado
+- **Modelo Recomendado**: Sonnet
+- **Prioridade**: 🟡 Alta
+- **Executor sugerido**: Frontend Engineer
+- **Descrição objetiva**: `app/proposta/proposta.css` (167 linhas) hoje
+  tem uma paleta hardcoded própria (`#1c2430`, `#64748b`, `#94a3b8`,
+  `#e2e8f0`, `#2563eb`, `#f1f5ff`, etc.) que por coincidência já é muito
+  próxima da paleta nova — substituir cada valor pelo token equivalente da
+  Seção 2/6.11 do Design System (mapeamento exato já listado lá), sem
+  alterar a estrutura HTML de `app/proposta/page.tsx` nem o comportamento de
+  impressão (`@media print`, `window.print()`). Aplicar a fonte Inter
+  (carregada globalmente na Task 5.1 via `next/font`) também neste
+  documento, e revisar a hierarquia tipográfica da capa (`.capa h1`, hoje
+  30px sem token definido) para usar o token `display` (28px/700) da Seção
+  3 — ajuste de 2px, decisão consciente de manter consistência com o resto
+  do produto em vez de um valor solto só para a proposta.
+- **Critérios de aceitação verificáveis**:
+  - [ ] Nenhum valor hex de cor permanece hardcoded em `proposta.css` — todos correspondem a um token de `docs/Design-System.md` (mapeamento da Seção 6.11).
+  - [ ] `.capa h1` usa o token `display` (28px/700), não mais 30px solto.
+  - [ ] `window.print()` gerando PDF via "Salvar em PDF" do navegador continua produzindo layout correto em papel A4 (testar manualmente: capa, tabela de composição, rodapé sem cortes entre páginas).
+  - [ ] Estado vazio (`.proposta-vazia`, sem dados em `sessionStorage`) também migra para os tokens novos (hoje usa `#cbd5e1`/`#4f8cff` do tema escuro antigo, órfãos desde sempre nesse arquivo claro).
+  - [ ] Testar manualmente o fluxo completo: calcular orçamento em `/`, clicar "Gerar proposta (PDF)", conferir visual da proposta em nova aba e o botão "Imprimir/Salvar em PDF".
+
+---
+
 ## Resumo por Stage
 
 | Stage | Tasks | Prioridade dominante |
 |---|---|---|
-| 1 — Segurança: Crítico | 1.1, 1.2, 1.3 (bloqueada), 1.4 | 🔴 Crítica |
-| 2 — Qualidade: Tooling | 2.1, 2.2 | 🔴 Crítica / 🟡 Alta (bloqueador de processo) |
+| 1 — Segurança: Crítico | 1.1 ✅, 1.2 ✅, 1.3 ✅, 1.4 ✅ | 🔴 Crítica (concluída) |
+| 2 — Qualidade: Tooling | 2.1 ✅, 2.2 | 🔴 Crítica / 🟡 Alta (bloqueador de processo) |
 | 3 — Segurança: Média/Baixa | 3.1, 3.2, 3.3, 3.4, 3.5 | 🟡 Média / 🔵 Baixa |
 | 4 — Dependências | 4.1, 4.2 | 🟡 Alta / 🟢 Normal (avaliação, não execução) |
+| 5 — Visual: Setup Tailwind + shadcn/ui | 5.1, 5.2 | 🔴 Crítica (bloqueador das Stages 6–9) |
+| 6 — Visual: Produção | 6.1, 6.2, 6.3, 6.4, 6.5 | 🔴 Alta / 🟡 Média |
+| 7 — Visual: Editor de Módulo | 7.1, 7.2, 7.3 | 🔴 Alta / 🟢 Normal |
+| 8 — Visual: Biblioteca | 8.1 | 🟢 Normal |
+| 9 — Visual: Proposta | 9.1 | 🟡 Alta |
 
-**Total: 13 tasks em 4 Pipeline Stages.**
+**Total: 26 tasks em 9 Pipeline Stages** (13 de correção/dívida técnica —
+Stage 1 e Task 2.1 já concluídas — + 13 do épico de refatoração visual da
+jornada do cliente, agora sobre Tailwind + shadcn/ui).
