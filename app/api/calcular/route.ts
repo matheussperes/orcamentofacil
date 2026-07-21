@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getSession } from "@/lib/auth";
 import { calcularEngine } from "@/lib/engine/engine";
 import { calcularPreco, type ParametrosComerciais } from "@/lib/engine/pricing";
 import {
@@ -12,6 +13,10 @@ import type {
   ModuloTemplate,
   ParametrosFabrica,
 } from "@/lib/engine/types";
+import {
+  TemplatesValidationError,
+  validarTemplatesBody,
+} from "@/lib/validation/templates";
 
 interface RequestBody {
   ambiente?: { tipo?: string; materiais?: Partial<EngineInput["ambiente"]["materiais"]> };
@@ -23,7 +28,18 @@ interface RequestBody {
 
 // POST /api/calcular — roda o motor de engenharia + pipeline financeiro.
 // Núcleo do produto (docs 04 e 05). Alvo de performance: < 2s.
+//
+// Task 1.3 (docs/Backlog.md): rota passou a exigir sessão autenticada —
+// mesmo padrão de /api/clientes e /api/orcamentos (lib/auth.ts,
+// middleware.ts). Decisão do operador: a superfície de fórmulas livres
+// (`templates` no body, avaliadas via expr-eval — ver Task 1.2) não fica
+// mais acessível a visitante anônimo.
 export async function POST(req: Request) {
+  const session = await getSession();
+  if (!session) {
+    return NextResponse.json({ erro: "Não autenticado." }, { status: 401 });
+  }
+
   const inicio = Date.now();
   let body: RequestBody;
   try {
@@ -37,6 +53,15 @@ export async function POST(req: Request) {
       { erro: "Informe ao menos um módulo em 'modulos'." },
       { status: 400 }
     );
+  }
+
+  try {
+    validarTemplatesBody(body.templates);
+  } catch (e) {
+    if (e instanceof TemplatesValidationError) {
+      return NextResponse.json({ erro: e.message }, { status: 400 });
+    }
+    throw e;
   }
 
   const input: EngineInput = {
