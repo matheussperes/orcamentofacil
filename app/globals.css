@@ -1,3 +1,18 @@
+/*
+ * Task 5.1 (setup Tailwind + shadcn/ui): diretivas Tailwind ativadas aqui,
+ * ANTES do tema escuro legado abaixo, de propósito — o Preflight do Tailwind
+ * (`@tailwind base`) usa seletores de baixo nível (`button`, `html, body`,
+ * `a`, etc.) com a mesma especificidade das regras legadas; por vir depois no
+ * arquivo, o CSS legado continua vencendo a cascata e nada quebra
+ * visualmente. A migração real dos tokens para `@layer base` com as CSS
+ * variables do shadcn (Design-System Seção 2.4) e a remoção deste tema
+ * escuro é escopo da Task 5.2 — aqui o objetivo é só provar que o Tailwind
+ * está ativo e compilando.
+ */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 :root {
   --bg: #0f1115;
   --panel: #171a21;
