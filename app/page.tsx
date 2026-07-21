@@ -311,24 +311,47 @@ export default function Home() {
 
   return (
     <div className="wrap">
-      <header className="top">
-        <h1>Budget Planner AI</h1>
-        <p>
-          Motor paramétrico de orçamento — do módulo ao preço em segundos.{" "}
-          <a href="/modulo">Editor de módulo (V3)</a> ·{" "}
-          <a href="/biblioteca">Biblioteca de módulos</a> ·{" "}
-          <a href="/configuracoes/materiais">Materiais</a> ·{" "}
-          <a href="/configuracoes/engenharia">Engenharia</a>
+      <header className="mb-6">
+        <h1 className="text-display font-bold text-cinza-900">Budget Planner AI</h1>
+        <p className="mt-1 text-corpo text-cinza-500">
+          Motor paramétrico de orçamento — do módulo ao preço em segundos.
         </p>
+        <nav className="mt-4 flex flex-wrap items-center gap-4 text-corpo">
+          <a href="/modulo" className="text-accent hover:text-accent-hover hover:underline">
+            Editor de módulo (V3)
+          </a>
+          <a
+            href="/biblioteca"
+            className="text-accent hover:text-accent-hover hover:underline"
+          >
+            Biblioteca de módulos
+          </a>
+          <a
+            href="/configuracoes/materiais"
+            className="text-accent hover:text-accent-hover hover:underline"
+          >
+            Materiais
+          </a>
+          <a
+            href="/configuracoes/engenharia"
+            className="text-accent hover:text-accent-hover hover:underline"
+          >
+            Engenharia
+          </a>
+        </nav>
       </header>
 
-      <div className="toolbar">
+      <div className="mb-4 flex flex-wrap gap-3">
         <Button variant="primary" onClick={calcular} disabled={carregando}>
           {carregando ? "Calculando…" : "Criar orçamento"}
         </Button>
-        <button className="ghost" onClick={() => setItens(PRESET_COZINHA.map(clonarItem))}>
+        <Button
+          variant="ghost"
+          className="max-sm:h-auto max-sm:whitespace-normal max-sm:py-2 max-sm:text-left"
+          onClick={() => setItens(PRESET_COZINHA.map(clonarItem))}
+        >
           Recarregar preset &quot;Cozinha em L&quot; (demo legado)
-        </button>
+        </Button>
       </div>
 
       {erro && <div className="aviso erro">{erro}</div>}
