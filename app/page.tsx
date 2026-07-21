@@ -326,7 +326,7 @@ export default function Home() {
           {carregando ? "Calculando…" : "Criar orçamento"}
         </button>
         <button className="ghost" onClick={() => setItens(PRESET_COZINHA.map(clonarItem))}>
-          Recarregar preset "Cozinha em L" (demo legado)
+          Recarregar preset &quot;Cozinha em L&quot; (demo legado)
         </button>
       </div>
 

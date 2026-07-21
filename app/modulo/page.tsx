@@ -118,7 +118,10 @@ export default function EditorModulo() {
     }));
   }, []);
 
-  const cores = catalogo ? coresDisponiveis(catalogo) : ["Branco TX", "Louro Freijó"];
+  const cores = useMemo(
+    () => (catalogo ? coresDisponiveis(catalogo) : ["Branco TX", "Louro Freijó"]),
+    [catalogo]
+  );
 
   // Custo ao vivo (reaproveita todo o pipeline).
   const resultado = useMemo(() => {
@@ -131,7 +134,7 @@ export default function EditorModulo() {
     return { engine, financeiro, insumos };
   }, [box, catalogo]);
 
-  const pecas = resultado.engine.porModulo[0]?.pecas ?? [];
+  const pecas = useMemo(() => resultado.engine.porModulo[0]?.pecas ?? [], [resultado]);
   const grupos = useMemo(() => planoDeCorte(pecas), [pecas]);
 
   // Grupo de porta / vão com gaveta atualmente selecionado no canvas, pra
@@ -381,7 +384,7 @@ export default function EditorModulo() {
         </p>
         {presetEditando && (
           <p className="muted" style={{ fontSize: 12, marginTop: -12 }}>
-            Editando um módulo já cadastrado — "Salvar este módulo" atualiza esse preset (não cria um novo).
+            Editando um módulo já cadastrado — &quot;Salvar este módulo&quot; atualiza esse preset (não cria um novo).
           </p>
         )}
       </header>
