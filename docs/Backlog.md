@@ -409,7 +409,7 @@ conforme reescrito em `docs/Design-System.md` v2.
 > Auditor valide o ambiente antes de tokens.
 
 ### Task 5.1 — Instalar e configurar Tailwind + shadcn/ui
-- **Status**: ⏱️ Planejado
+- **Status**: ✅ Concluído (2026-07-21, mesclada em `feature/5.1-setup-tailwind-shadcn`, aprovada por Code Auditor — Tailwind v3.4.19, shadcn `Button` provado via CLI; `app/globals.css` recebeu só as diretivas `@tailwind`, tema legado intacto; carregamento de Inter e CSS variables reais ficam para a Task 5.2, conforme os critérios de aceitação já definiam)
 - **Modelo Recomendado**: Sonnet
 - **Prioridade**: 🔴 Crítica (bloqueia 5.2 e Stages 6–9)
 - **Executor sugerido**: Frontend Engineer
