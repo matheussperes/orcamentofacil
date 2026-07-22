@@ -43,6 +43,7 @@ import { ModulePreview } from "./components/ModulePreview";
 import { BoxCanvas } from "./components/BoxCanvas";
 import { PlanoCorteCanvas } from "./components/PlanoCorteCanvas";
 import { Button } from "@/components/ui/button";
+import { Stepper } from "@/components/ui/stepper";
 import { LayoutVisualizer, type LayoutModulo } from "./components/LayoutVisualizer";
 
 interface TemplateMeta {
@@ -876,6 +877,11 @@ function NovoModuloWizard({
           Cancelar
         </button>
       </div>
+      <Stepper
+        steps={["Ambiente", "Tipo", "Modelo"]}
+        currentStep={!ambiente ? 0 : !tipo ? 1 : 2}
+        className="mt-2"
+      />
       <div className="campos" style={{ marginTop: 8 }}>
         <div>
           <label>1. Ambiente</label>
