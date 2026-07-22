@@ -527,7 +527,7 @@ conforme reescrito em `docs/Design-System.md` v2.
   - [ ] Testar manualmente: abrir/fechar "Outras configurações", trocar cor/espessura de porta e tamponamento por lado continuam funcionando sem erro no console.
 
 ### Task 6.4 — Card de módulo colapsado (`ResumoModulo`) e ações (Salvar/Duplicar/Excluir)
-- **Status**: ⏱️ Planejado
+- **Status**: ✅ Concluído (2026-07-22, mesclada em `feature/6.4-card-modulo-colapsado`, aprovada por Code Auditor + UX Auditor — card inteiro clicável para reabrir (com `stopPropagation` nos botões de ação), botão "Excluir" confirmado em `cinza-700` em repouso (não vermelho fixo). **Bug retroativo corrigido em `components/ui/button.tsx`**: ordem das chaves do `cva` (`variant` antes de `size`) fazia o `twMerge` descartar a cor de texto em botões `size="sm"` — afetava silenciosamente os botões ghost/danger pequenos já mesclados nas Tasks 6.1–6.3; corrigido sem mudar nenhum token. Ressalva: hover do `danger` não foi confirmável dinamicamente pela ferramenta de automação (limitação da ferramenta, não do CSS — análise estática de especificidade/ordem confirma que deve funcionar); recomenda-se checagem manual com mouse real em algum momento)
 - **Modelo Recomendado**: Sonnet
 - **Prioridade**: 🟡 Média
 - **Executor sugerido**: Frontend Engineer
