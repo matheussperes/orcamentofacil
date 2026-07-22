@@ -71,7 +71,13 @@ export function GavetasCard({
   }
 
   return (
-    <div className="card">
+    <div
+      className={
+        aberta
+          ? "rounded-lg border border-cinza-200 bg-cinza-0 p-4 shadow-xs"
+          : "cursor-pointer rounded-lg border border-cinza-200 bg-cinza-50 p-3 hover:bg-cinza-100"
+      }
+    >
       <SecaoHeader titulo="Gavetas" aberta={aberta} onAbrir={onAbrir} />
       {aberta && (
         <>
