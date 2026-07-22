@@ -44,6 +44,7 @@ import { BoxCanvas } from "./components/BoxCanvas";
 import { PlanoCorteCanvas } from "./components/PlanoCorteCanvas";
 import { Button } from "@/components/ui/button";
 import { Stepper } from "@/components/ui/stepper";
+import { cn } from "@/lib/utils";
 import { LayoutVisualizer, type LayoutModulo } from "./components/LayoutVisualizer";
 
 interface TemplateMeta {
@@ -504,25 +505,35 @@ export default function Home() {
           {financeiro && (
             <div className="card">
               <h2>Resultado</h2>
-              <div className="kpis">
-                <div className="kpi destaque">
-                  <div className="rot">Preço final</div>
-                  <div className="val">{brl(financeiro.precoComDesconto)}</div>
+              <div className="grid grid-cols-2 gap-2">
+                <div className="rounded-lg border border-accent-border bg-accent-subtle p-3">
+                  <div className="text-legenda text-cinza-500">Preço final</div>
+                  <div className="text-valor-destaque text-accent tabular-nums">
+                    {brl(financeiro.precoComDesconto)}
+                  </div>
                 </div>
-                <div className="kpi">
-                  <div className="rot">Custo direto</div>
-                  <div className="val">{brl(financeiro.custoDireto)}</div>
+                <div className="rounded-lg border border-cinza-200 bg-cinza-0 p-3">
+                  <div className="text-legenda text-cinza-500">Custo direto</div>
+                  <div className="text-valor-destaque text-cinza-900 tabular-nums">
+                    {brl(financeiro.custoDireto)}
+                  </div>
                 </div>
-                <div className="kpi">
-                  <div className="rot">Lucro bruto</div>
-                  <div className="val">{brl(financeiro.lucroBruto)}</div>
+                <div className="rounded-lg border border-cinza-200 bg-cinza-0 p-3">
+                  <div className="text-legenda text-cinza-500">Lucro bruto</div>
+                  <div className="text-valor-destaque text-cinza-900 tabular-nums">
+                    {brl(financeiro.lucroBruto)}
+                  </div>
                 </div>
                 <div
-                  className="kpi"
-                  style={financeiro.abaixoDaMargemMinima ? { borderColor: "var(--red)" } : {}}
+                  className={cn(
+                    "rounded-lg border bg-cinza-0 p-3",
+                    financeiro.abaixoDaMargemMinima ? "border-erro" : "border-cinza-200"
+                  )}
                 >
-                  <div className="rot">Margem efetiva</div>
-                  <div className="val">{pct(financeiro.margemEfetiva)}</div>
+                  <div className="text-legenda text-cinza-500">Margem efetiva</div>
+                  <div className="text-valor-destaque text-cinza-900 tabular-nums">
+                    {pct(financeiro.margemEfetiva)}
+                  </div>
                 </div>
               </div>
               {financeiro.avisos.map((a, i) => (
@@ -535,13 +546,13 @@ export default function Home() {
                   Engenharia calculada em {tempoMs}ms (alvo &lt; 2000ms).
                 </div>
               )}
-              <button
-                className="primary"
-                style={{ marginTop: 12, width: "100%" }}
+              <Button
+                variant="primary"
+                className="mt-3 w-full"
                 onClick={() => gerarProposta(financeiro)}
               >
                 Gerar proposta (PDF)
-              </button>
+              </Button>
             </div>
           )}
 
@@ -549,58 +560,88 @@ export default function Home() {
           {engine && insumos && (
             <div className="card">
               <h2>Pré-orçamento de insumos</h2>
-              <table>
-                <thead>
-                  <tr>
-                    <th>Item</th>
-                    <th>Categoria</th>
-                    <th>Qtd</th>
-                    <th className="num">Custo unit.</th>
-                    <th className="num">Total</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {insumos.linhas.map((l, i) => (
-                    <tr key={i}>
-                      <td>{l.item}</td>
-                      <td className="muted">{l.categoria}</td>
-                      <td>{l.qtd}</td>
-                      <td className="num">{brl(l.unit)}</td>
-                      <td className="num">{brl(l.total)}</td>
-                    </tr>
-                  ))}
-                  <tr>
-                    <td colSpan={4}>
-                      <strong>Subtotal (custo direto)</strong>
-                    </td>
-                    <td className="num">
-                      <strong>{brl(insumos.subtotal)}</strong>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-
-              {engine.globais.length > 0 && (
-                <table style={{ marginTop: 12 }}>
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse">
                   <thead>
-                    <tr>
-                      <th>Elemento contínuo</th>
-                      <th className="num">Comp. (m)</th>
-                      <th className="num">Cobre</th>
+                    <tr className="border-b border-cinza-200 bg-cinza-50">
+                      <th className="px-[10px] py-2 text-left text-legenda font-semibold uppercase tracking-[0.03em] text-cinza-500">
+                        Item
+                      </th>
+                      <th className="px-[10px] py-2 text-left text-legenda font-semibold uppercase tracking-[0.03em] text-cinza-500">
+                        Categoria
+                      </th>
+                      <th className="px-[10px] py-2 text-left text-legenda font-semibold uppercase tracking-[0.03em] text-cinza-500">
+                        Qtd
+                      </th>
+                      <th className="px-[10px] py-2 text-right text-legenda font-semibold uppercase tracking-[0.03em] text-cinza-500">
+                        Custo unit.
+                      </th>
+                      <th className="px-[10px] py-2 text-right text-legenda font-semibold uppercase tracking-[0.03em] text-cinza-500">
+                        Total
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
-                    {engine.globais.map((g, i) => (
-                      <tr key={i}>
-                        <td>
-                          {g.tipo === "tampo" ? "Tampo" : "Rodapé"} · parede {g.parede}
+                    {insumos.linhas.map((l, i) => (
+                      <tr key={i} className="border-b border-cinza-100 hover:bg-cinza-50">
+                        <td className="px-[10px] py-2 text-corpo-pequeno">{l.item}</td>
+                        <td className="px-[10px] py-2 text-corpo-pequeno text-cinza-500">
+                          {l.categoria}
                         </td>
-                        <td className="num">{(g.comprimento_mm / 1000).toFixed(2)}</td>
-                        <td className="num">{g.modulos} mód.</td>
+                        <td className="px-[10px] py-2 text-corpo-pequeno">{l.qtd}</td>
+                        <td className="px-[10px] py-2 text-right text-corpo-pequeno tabular-nums">
+                          {brl(l.unit)}
+                        </td>
+                        <td className="px-[10px] py-2 text-right text-corpo-pequeno tabular-nums">
+                          {brl(l.total)}
+                        </td>
                       </tr>
                     ))}
+                    <tr className="border-t-2 border-cinza-300 bg-cinza-50 font-bold">
+                      <td className="px-[10px] py-2 text-corpo-pequeno" colSpan={4}>
+                        Subtotal (custo direto)
+                      </td>
+                      <td className="px-[10px] py-2 text-right text-corpo-pequeno tabular-nums">
+                        {brl(insumos.subtotal)}
+                      </td>
+                    </tr>
                   </tbody>
                 </table>
+              </div>
+
+              {engine.globais.length > 0 && (
+                <div className="mt-3 overflow-x-auto">
+                  <table className="w-full border-collapse">
+                    <thead>
+                      <tr className="border-b border-cinza-200 bg-cinza-50">
+                        <th className="px-[10px] py-2 text-left text-legenda font-semibold uppercase tracking-[0.03em] text-cinza-500">
+                          Elemento contínuo
+                        </th>
+                        <th className="px-[10px] py-2 text-right text-legenda font-semibold uppercase tracking-[0.03em] text-cinza-500">
+                          Comp. (m)
+                        </th>
+                        <th className="px-[10px] py-2 text-right text-legenda font-semibold uppercase tracking-[0.03em] text-cinza-500">
+                          Cobre
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {engine.globais.map((g, i) => (
+                        <tr key={i} className="border-b border-cinza-100 hover:bg-cinza-50">
+                          <td className="px-[10px] py-2 text-corpo-pequeno">
+                            {g.tipo === "tampo" ? "Tampo" : "Rodapé"} · parede {g.parede}
+                          </td>
+                          <td className="px-[10px] py-2 text-right text-corpo-pequeno tabular-nums">
+                            {(g.comprimento_mm / 1000).toFixed(2)}
+                          </td>
+                          <td className="px-[10px] py-2 text-right text-corpo-pequeno tabular-nums">
+                            {g.modulos} mód.
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               )}
 
               {engine.warnings.length > 0 && (
@@ -1343,6 +1384,12 @@ function Slider({
   max: number;
   onChange: (v: number) => void;
 }) {
+  // Progresso do trilho preenchido (Design-System.md Seção 0/6 — trilho/thumb
+  // em `--accent`). Tailwind não estiliza os pseudo-elementos nativos de
+  // `input[type=range]` (::-webkit-slider-thumb/::-moz-range-thumb) sem
+  // plugin, então o preenchimento visual usa a variável CSS `--range-progress`
+  // consumida pelas regras em `app/globals.css` (`.slider-row input[type="range"]`).
+  const progresso = max > min ? ((valor - min) / (max - min)) * 100 : 0;
   return (
     <div className="slider-row">
       <label style={{ width: 70 }}>{rotulo}</label>
@@ -1353,6 +1400,7 @@ function Slider({
         step={0.01}
         value={valor}
         onChange={(e) => onChange(Number(e.target.value))}
+        style={{ "--range-progress": `${progresso}%` } as React.CSSProperties}
       />
       <span className="v">{(valor * 100).toFixed(0)}%</span>
     </div>
