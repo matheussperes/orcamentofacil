@@ -11,15 +11,16 @@ const buttonVariants = cva(
   "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-corpo font-medium transition-colors duration-120 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-subtle focus-visible:ring-offset-0 focus-visible:border-accent disabled:pointer-events-none disabled:cursor-not-allowed [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
   {
     variants: {
-      // `size` é declarado antes de `variant` de propósito: o cva concatena
-      // as classes na ordem das chaves do objeto `variants` (não na ordem dos
-      // argumentos passados ao componente), e o `cn`/`twMerge` mantém apenas
-      // a última classe de uma mesma "família" quando há conflito. Com
-      // `variant` depois de `size`, a cor de texto do variant (ex.:
-      // `text-cinza-700` do `danger`/`ghost`) prevalece sobre o token de
-      // fonte do size (`text-corpo-pequeno` do `sm`) — caso contrário o
-      // twMerge descartava silenciosamente a cor do texto em repouso sempre
-      // que `size="sm"` era combinado com `ghost`/`danger`.
+      // Histórico (Task 6.4): `size` foi declarado antes de `variant` como
+      // workaround — com `tailwind-merge` sem configuração customizada,
+      // `text-corpo-pequeno` (do `sm`) e `text-cinza-700` (do `danger`/
+      // `ghost`) eram tratados como conflitantes entre si (mesmo "grupo"),
+      // e essa ordem garantia que a cor sobrevivesse à custa do tamanho de
+      // fonte. A Task 7.1b corrigiu a causa raiz em `lib/utils.ts`
+      // (`extendTailwindMerge` registra os tokens de `fontSize` num
+      // classGroup próprio, separado de `text-color`) — `text-corpo`/
+      // `text-corpo-pequeno` e a cor do `variant` agora coexistem
+      // corretamente independente da ordem das chaves aqui.
       size: {
         default: "h-9 px-[14px]",
         sm: "h-7 px-[10px] text-corpo-pequeno",
