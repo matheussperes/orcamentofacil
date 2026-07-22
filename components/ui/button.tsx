@@ -11,6 +11,20 @@ const buttonVariants = cva(
   "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-corpo font-medium transition-colors duration-120 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-subtle focus-visible:ring-offset-0 focus-visible:border-accent disabled:pointer-events-none disabled:cursor-not-allowed [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
   {
     variants: {
+      // `size` é declarado antes de `variant` de propósito: o cva concatena
+      // as classes na ordem das chaves do objeto `variants` (não na ordem dos
+      // argumentos passados ao componente), e o `cn`/`twMerge` mantém apenas
+      // a última classe de uma mesma "família" quando há conflito. Com
+      // `variant` depois de `size`, a cor de texto do variant (ex.:
+      // `text-cinza-700` do `danger`/`ghost`) prevalece sobre o token de
+      // fonte do size (`text-corpo-pequeno` do `sm`) — caso contrário o
+      // twMerge descartava silenciosamente a cor do texto em repouso sempre
+      // que `size="sm"` era combinado com `ghost`/`danger`.
+      size: {
+        default: "h-9 px-[14px]",
+        sm: "h-7 px-[10px] text-corpo-pequeno",
+        icon: "h-8 w-8 rounded-md p-0",
+      },
       variant: {
         primary:
           "bg-accent text-cinza-0 hover:bg-accent-hover active:bg-accent-active disabled:bg-cinza-200 disabled:text-cinza-400",
@@ -19,11 +33,6 @@ const buttonVariants = cva(
         danger:
           "bg-transparent border border-cinza-300 text-cinza-700 hover:border-erro hover:text-erro hover:bg-erro-subtle disabled:text-cinza-400 disabled:border-cinza-200",
         iconActive: "bg-accent-subtle border border-accent-border text-accent",
-      },
-      size: {
-        default: "h-9 px-[14px]",
-        sm: "h-7 px-[10px] text-corpo-pequeno",
-        icon: "h-8 w-8 rounded-md p-0",
       },
     },
     defaultVariants: {
