@@ -28,6 +28,7 @@ import { atualizarPreset, buscarPreset, salvarPreset, seedPresetsPadrao } from "
 import { listarCategorias } from "@/lib/categorias";
 import { planoDeCorte } from "@/lib/engine/box/cutting";
 import { PlanoCorteCanvas } from "../components/PlanoCorteCanvas";
+import { Stepper } from "@/components/ui/stepper";
 import { CaixaCard } from "./CaixaCard";
 import { DivisoesCard, type ConfigDivisao } from "./DivisoesCard";
 import { PortasCard, type ConfigPortas } from "./PortasCard";
@@ -72,6 +73,15 @@ interface DivisaoSel {
 
 type Secao = "caixa" | "divisoes" | "portas" | "gavetas" | "puxador";
 const ORDEM_SECOES: Secao[] = ["caixa", "divisoes", "portas", "gavetas", "puxador"];
+// Task 7.1 — rótulos do Stepper (Design-System Seção 6.5), na mesma ordem de
+// ORDEM_SECOES. Mesmo texto usado no `titulo` de cada SecaoHeader.
+const ROTULOS_SECOES: Record<Secao, string> = {
+  caixa: "Caixa",
+  divisoes: "Divisões",
+  portas: "Portas",
+  gavetas: "Gavetas",
+  puxador: "Puxador",
+};
 
 export default function EditorModulo() {
   const [catalogo, setCatalogo] = useState<Catalogo | null>(null);
@@ -133,6 +143,13 @@ export default function EditorModulo() {
       : null;
     return { engine, financeiro, insumos };
   }, [box, catalogo]);
+
+  // Task 7.1 — Stepper (Seção 6.5) é só leitura de `secaoAberta`/ORDEM_SECOES,
+  // nenhum estado novo. Quando `secaoAberta` é null (Puxador acabou de ser
+  // salvo, nenhuma seção aberta), mantém a última etapa em destaque.
+  const stepperIndex = secaoAberta
+    ? ORDEM_SECOES.indexOf(secaoAberta)
+    : ORDEM_SECOES.length - 1;
 
   const pecas = useMemo(() => resultado.engine.porModulo[0]?.pecas ?? [], [resultado]);
   const grupos = useMemo(() => planoDeCorte(pecas), [pecas]);
@@ -392,69 +409,82 @@ export default function EditorModulo() {
       <div className="grid">
         {/* Esquerda: configuração da caixa + divisões + conteúdo */}
         <div>
-          <CaixaCard
-            box={box}
-            cores={cores}
-            categorias={categorias}
-            onChange={setBoxCampo}
-            aberta={secaoAberta === "caixa"}
-            onAbrir={() => setSecaoAberta("caixa")}
-            onSalvar={() => avancarSecao("caixa")}
+          {/* Task 7.1 — Stepper (Seção 6.5) acima da pilha do accordion,
+              refletindo secaoAberta/ORDEM_SECOES (só leitura, sem novo estado). */}
+          <Stepper
+            steps={ORDEM_SECOES.map((s) => ROTULOS_SECOES[s])}
+            currentStep={stepperIndex}
+            className="mb-4"
           />
 
-          <DivisoesCard
-            vaosSelecionados={vaosSelecionados}
-            divisaoSelecionada={divisaoSelecionada}
-            modoSelecaoDivisoes={modoSelecao === "divisoes"}
-            onSelecionarModoDivisoes={clicarSelecionarDivisoes}
-            onAplicar={aplicarDivisoes}
-            onExcluir={excluirDivisao}
-            aberta={secaoAberta === "divisoes"}
-            onAbrir={() => setSecaoAberta("divisoes")}
-            onSalvar={() => avancarSecao("divisoes")}
-          />
+          {/* Os 5 cards do accordion usam gap-sm (8px) entre si — reforça que
+              são etapas de um fluxo, distinto do gap-lg de cards independentes
+              (ver "Plano de corte" abaixo, fora do accordion). */}
+          <div className="mb-4 flex flex-col gap-2">
+            <CaixaCard
+              box={box}
+              cores={cores}
+              categorias={categorias}
+              onChange={setBoxCampo}
+              aberta={secaoAberta === "caixa"}
+              onAbrir={() => setSecaoAberta("caixa")}
+              onSalvar={() => avancarSecao("caixa")}
+            />
 
-          <PortasCard
-            vaosSelecionados={vaosSelecionados}
-            cores={cores}
-            catalogo={catalogo}
-            modoSelecaoPortas={modoSelecao === "portas"}
-            onSelecionarModoPortas={clicarSelecionarPortas}
-            grupoEmEdicao={grupoPortaEmEdicao}
-            onAplicarVaosSelecionados={aplicarPortasVaosSelecionados}
-            onSalvarEdicao={salvarEdicaoPorta}
-            onExcluirGrupo={excluirGrupoPorta}
-            onCancelarEdicao={() => setPortaSelecionada(null)}
-            onExcluirPorVaos={excluirPortas}
-            aberta={secaoAberta === "portas"}
-            onAbrir={() => setSecaoAberta("portas")}
-            onSalvar={() => avancarSecao("portas")}
-          />
+            <DivisoesCard
+              vaosSelecionados={vaosSelecionados}
+              divisaoSelecionada={divisaoSelecionada}
+              modoSelecaoDivisoes={modoSelecao === "divisoes"}
+              onSelecionarModoDivisoes={clicarSelecionarDivisoes}
+              onAplicar={aplicarDivisoes}
+              onExcluir={excluirDivisao}
+              aberta={secaoAberta === "divisoes"}
+              onAbrir={() => setSecaoAberta("divisoes")}
+              onSalvar={() => avancarSecao("divisoes")}
+            />
 
-          <GavetasCard
-            vaosSelecionados={vaosSelecionados}
-            cores={cores}
-            catalogo={catalogo}
-            modoSelecaoGavetas={modoSelecao === "gavetas"}
-            onSelecionarModoGavetas={clicarSelecionarGavetas}
-            gavetaEmEdicao={gavetaEmEdicao}
-            onAplicar={aplicarGavetas}
-            onSalvarEdicao={salvarEdicaoGaveta}
-            onExcluirEdicao={excluirEdicaoGaveta}
-            onCancelarEdicao={() => setVaoGavetaSelecionado(null)}
-            onExcluir={excluirGavetas}
-            aberta={secaoAberta === "gavetas"}
-            onAbrir={() => setSecaoAberta("gavetas")}
-            onSalvar={() => avancarSecao("gavetas")}
-          />
+            <PortasCard
+              vaosSelecionados={vaosSelecionados}
+              cores={cores}
+              catalogo={catalogo}
+              modoSelecaoPortas={modoSelecao === "portas"}
+              onSelecionarModoPortas={clicarSelecionarPortas}
+              grupoEmEdicao={grupoPortaEmEdicao}
+              onAplicarVaosSelecionados={aplicarPortasVaosSelecionados}
+              onSalvarEdicao={salvarEdicaoPorta}
+              onExcluirGrupo={excluirGrupoPorta}
+              onCancelarEdicao={() => setPortaSelecionada(null)}
+              onExcluirPorVaos={excluirPortas}
+              aberta={secaoAberta === "portas"}
+              onAbrir={() => setSecaoAberta("portas")}
+              onSalvar={() => avancarSecao("portas")}
+            />
 
-          <PuxadorCard
-            tipo={box.puxador}
-            onChange={(tipo) => setBoxCampo({ puxador: tipo })}
-            aberta={secaoAberta === "puxador"}
-            onAbrir={() => setSecaoAberta("puxador")}
-            onSalvar={() => avancarSecao("puxador")}
-          />
+            <GavetasCard
+              vaosSelecionados={vaosSelecionados}
+              cores={cores}
+              catalogo={catalogo}
+              modoSelecaoGavetas={modoSelecao === "gavetas"}
+              onSelecionarModoGavetas={clicarSelecionarGavetas}
+              gavetaEmEdicao={gavetaEmEdicao}
+              onAplicar={aplicarGavetas}
+              onSalvarEdicao={salvarEdicaoGaveta}
+              onExcluirEdicao={excluirEdicaoGaveta}
+              onCancelarEdicao={() => setVaoGavetaSelecionado(null)}
+              onExcluir={excluirGavetas}
+              aberta={secaoAberta === "gavetas"}
+              onAbrir={() => setSecaoAberta("gavetas")}
+              onSalvar={() => avancarSecao("gavetas")}
+            />
+
+            <PuxadorCard
+              tipo={box.puxador}
+              onChange={(tipo) => setBoxCampo({ puxador: tipo })}
+              aberta={secaoAberta === "puxador"}
+              onAbrir={() => setSecaoAberta("puxador")}
+              onSalvar={() => avancarSecao("puxador")}
+            />
+          </div>
 
           <div className="card">
             <h2>Plano de corte</h2>
