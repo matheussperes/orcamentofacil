@@ -420,7 +420,14 @@ export default function Home() {
               const id = idDoItem(it);
               const min = minimizados.has(id);
               return (
-                <div className="modulo" key={id}>
+                <div
+                  className={
+                    min
+                      ? "modulo"
+                      : "mb-2 rounded-lg border border-cinza-200 bg-cinza-0 p-4 shadow-xs"
+                  }
+                  key={id}
+                >
                   {min ? (
                     <ResumoModulo it={it} templates={templates} />
                   ) : it.origem === "template" ? (
@@ -735,7 +742,7 @@ function TemplateModuloCard({
   const meta = templates.find((t) => t.codigo === modulo.templateCodigo);
   return (
     <>
-      <div style={{ display: "flex", gap: 12 }}>
+      <div className="flex gap-3">
         <ModulePreview
           modulo={{
             largura_mm: modulo.largura_mm,
@@ -744,10 +751,10 @@ function TemplateModuloCard({
             corExterno: modulo.configMaterial?.externo.acabamento,
           }}
         />
-        <div style={{ flex: 1 }}>
-          <div className="linha">
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
             <select
-              className="nome"
+              className="min-w-0 flex-1 text-titulo-card font-semibold"
               value={modulo.templateCodigo}
               onChange={(e) => {
                 const t = templates.find((x) => x.codigo === e.target.value);
@@ -764,9 +771,9 @@ function TemplateModuloCard({
               ))}
             </select>
             <select
+              className="w-16"
               value={modulo.parede ?? "A"}
               onChange={(e) => onAtualizar({ parede: e.target.value })}
-              style={{ width: 60 }}
             >
               {Object.keys(paredes).map((p) => (
                 <option key={p} value={p}>
@@ -775,8 +782,8 @@ function TemplateModuloCard({
               ))}
             </select>
           </div>
-          <div className="campos" style={{ marginTop: 8 }}>
-            <div>
+          <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-5">
+            <div className="min-w-0">
               <label>Largura</label>
               <input
                 type="number"
@@ -784,7 +791,7 @@ function TemplateModuloCard({
                 onChange={(e) => onAtualizar({ largura_mm: Number(e.target.value) })}
               />
             </div>
-            <div>
+            <div className="min-w-0">
               <label>Altura</label>
               <input
                 type="number"
@@ -792,7 +799,7 @@ function TemplateModuloCard({
                 onChange={(e) => onAtualizar({ altura_mm: Number(e.target.value) })}
               />
             </div>
-            <div>
+            <div className="min-w-0">
               <label>Prof.</label>
               <input
                 type="number"
@@ -801,7 +808,7 @@ function TemplateModuloCard({
               />
             </div>
             {Object.keys(meta?.config_padrao ?? modulo.config ?? {}).map((chave) => (
-              <div key={chave}>
+              <div key={chave} className="min-w-0">
                 <label>{chave.replace("CONFIG_QTD_", "").replace("CONFIG_", "")}</label>
                 <input
                   type="number"
@@ -948,22 +955,22 @@ function BoxModuloCard({
 
   return (
     <>
-      <div style={{ display: "flex", gap: 12 }}>
-        <div style={{ width: 180, flexShrink: 0 }}>
+      <div className="flex gap-3">
+        <div className="w-[180px] shrink-0">
           <BoxCanvas box={box} comercial />
         </div>
-        <div style={{ flex: 1 }}>
-          <div className="linha">
-            <span className="nome">
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="min-w-0 flex-1 text-titulo-card font-semibold">
               {box.nome}{" "}
-              <span className="muted" style={{ fontSize: 12 }}>
+              <span className="muted text-legenda">
                 ({box.tipo})
               </span>
             </span>
             <select
+              className="w-16"
               value={box.parede ?? "A"}
               onChange={(e) => onAtualizar({ parede: e.target.value })}
-              style={{ width: 60 }}
             >
               {Object.keys(paredes).map((p) => (
                 <option key={p} value={p}>
@@ -972,8 +979,8 @@ function BoxModuloCard({
               ))}
             </select>
           </div>
-          <div className="campos" style={{ marginTop: 8 }}>
-            <div>
+          <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-5">
+            <div className="min-w-0">
               <label>Largura</label>
               <input
                 type="number"
@@ -981,7 +988,7 @@ function BoxModuloCard({
                 onChange={(e) => onAtualizar({ largura: Number(e.target.value) })}
               />
             </div>
-            <div>
+            <div className="min-w-0">
               <label>Altura</label>
               <input
                 type="number"
@@ -989,7 +996,7 @@ function BoxModuloCard({
                 onChange={(e) => onAtualizar({ altura: Number(e.target.value) })}
               />
             </div>
-            <div>
+            <div className="min-w-0">
               <label>Prof.</label>
               <input
                 type="number"
@@ -997,7 +1004,7 @@ function BoxModuloCard({
                 onChange={(e) => onAtualizar({ profundidade: Number(e.target.value) })}
               />
             </div>
-            <div>
+            <div className="min-w-0">
               <label>Cor interno</label>
               <select
                 value={box.caixa.cor}
@@ -1010,7 +1017,7 @@ function BoxModuloCard({
                 ))}
               </select>
             </div>
-            <div>
+            <div className="min-w-0">
               <label>Esp. interno</label>
               <select
                 value={box.caixa.espessura}
@@ -1027,7 +1034,7 @@ function BoxModuloCard({
             </div>
           </div>
           {larguraInstalacao !== box.largura && (
-            <div className="muted" style={{ fontSize: 12, marginTop: 6 }}>
+            <div className="muted mt-1.5 text-legenda">
               Largura de instalação: {larguraInstalacao}mm (carcaça {box.largura}mm +
               tamponamento)
             </div>
@@ -1037,19 +1044,19 @@ function BoxModuloCard({
 
       {/* Outras configurações: overrides rápidos de instância (portas e fundo),
           sem reabrir o editor — agrupados atrás de um único botão colapsável. */}
-      <div style={{ marginTop: 10, borderTop: "1px solid var(--border)", paddingTop: 8 }}>
+      <div className="mt-2.5 border-t border-cinza-200 pt-2">
         {!outrasAbertas ? (
-          <button style={{ marginTop: 0 }} onClick={() => setOutrasAbertas(true)}>
+          <Button variant="ghost" size="sm" onClick={() => setOutrasAbertas(true)}>
             Outras configurações
-          </button>
+          </Button>
         ) : (
           <>
-            <button className="ghost" onClick={() => setOutrasAbertas(false)}>
+            <Button variant="ghost" size="sm" onClick={() => setOutrasAbertas(false)}>
               Fechar outras configurações
-            </button>
+            </Button>
 
-            <div className="campos" style={{ marginTop: 8 }}>
-              <div>
+            <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-5">
+              <div className="min-w-0">
                 <label>Tem fundo</label>
                 <select
                   value={box.temFundo ? "sim" : "nao"}
@@ -1062,17 +1069,19 @@ function BoxModuloCard({
             </div>
 
             {!box.overridePortas ? (
-              <button
-                style={{ marginTop: 8 }}
+              <Button
+                variant="ghost"
+                size="sm"
+                className="mt-2"
                 onClick={() => onAtualizar({ overridePortas: { cor: cores[0] ?? box.caixa.cor, espessura: 18 } })}
               >
                 + Personalizar cor das portas
-              </button>
+              </Button>
             ) : (
-              <div style={{ marginTop: 8 }}>
+              <div className="mt-2">
                 <label>Cor/espessura das portas (todas)</label>
-                <div className="campos" style={{ marginTop: 4 }}>
-                  <div>
+                <div className="mt-1 grid grid-cols-2 gap-2 sm:grid-cols-3">
+                  <div className="min-w-0">
                     <select
                       value={box.overridePortas.cor}
                       onChange={(e) => onAtualizar({ overridePortas: { ...box.overridePortas!, cor: e.target.value } })}
@@ -1080,7 +1089,7 @@ function BoxModuloCard({
                       {cores.map((c) => <option key={c} value={c}>{c}</option>)}
                     </select>
                   </div>
-                  <div>
+                  <div className="min-w-0">
                     <select
                       value={box.overridePortas.espessura}
                       onChange={(e) => onAtualizar({ overridePortas: { ...box.overridePortas!, espessura: Number(e.target.value) } })}
@@ -1091,9 +1100,14 @@ function BoxModuloCard({
                     </select>
                   </div>
                 </div>
-                <button className="ghost" style={{ marginTop: 4 }} onClick={() => onAtualizar({ overridePortas: undefined })}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="mt-1"
+                  onClick={() => onAtualizar({ overridePortas: undefined })}
+                >
                   Usar cor do gabarito
-                </button>
+                </Button>
               </div>
             )}
           </>
@@ -1106,7 +1120,7 @@ function BoxModuloCard({
         onChange={(t) => onAtualizar({ tamponamento: t })}
       />
 
-      <div className="muted" style={{ fontSize: 12, marginTop: 6 }}>
+      <div className="muted mt-1.5 text-legenda">
         Estrutura interna (vãos, prateleiras) definida no editor.{" "}
         <a href="/modulo">Editar em /modulo</a>.
       </div>
@@ -1139,9 +1153,9 @@ function TamponamentoConfig({
 
   if (!valor) {
     return (
-      <button style={{ marginTop: 8 }} onClick={() => onChange(tamponamentoInicial(cores))}>
+      <Button variant="ghost" size="sm" className="mt-2" onClick={() => onChange(tamponamentoInicial(cores))}>
         + Adicionar tamponamento
-      </button>
+      </Button>
     );
   }
 
@@ -1150,14 +1164,14 @@ function TamponamentoConfig({
   }
 
   return (
-    <div style={{ marginTop: 10, borderTop: "1px solid var(--border)", paddingTop: 8 }}>
+    <div className="mt-2.5 border-t border-cinza-200 pt-2">
       <label>Tamponamento (por lado)</label>
       {LADOS_TAMPONAMENTO.map((lado) => {
         const cfg = valor[lado];
         const espessuras = catalogo ? espessurasDaCor(catalogo, cfg.material.cor) : [15, 18, 25];
         return (
-          <div key={lado} style={{ marginTop: 8, paddingTop: 6, borderTop: "1px dashed var(--border)" }}>
-            <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13 }}>
+          <div key={lado} className="mt-2 border-t border-dashed border-cinza-200 pt-1.5">
+            <label className="flex items-center gap-1.5 text-corpo-pequeno">
               <input
                 type="checkbox"
                 checked={cfg.ativo}
@@ -1166,14 +1180,14 @@ function TamponamentoConfig({
               {ROTULO_LADO[lado]}
             </label>
             {cfg.ativo && (
-              <div className="campos" style={{ marginTop: 4 }}>
-                <div>
+              <div className="mt-1 grid grid-cols-2 gap-2 sm:grid-cols-3">
+                <div className="min-w-0">
                   <label>Cor</label>
                   <select value={cfg.material.cor} onChange={(e) => setLado(lado, { material: { ...cfg.material, cor: e.target.value } })}>
                     {cores.map((c) => <option key={c} value={c}>{c}</option>)}
                   </select>
                 </div>
-                <div>
+                <div className="min-w-0">
                   <label>Espessura</label>
                   <select
                     value={cfg.material.espessura}
@@ -1184,7 +1198,7 @@ function TamponamentoConfig({
                     ))}
                   </select>
                 </div>
-                <div>
+                <div className="min-w-0">
                   <label>Montagem</label>
                   <select value={cfg.sarrafo ? "sarrafo" : "inteirica"} onChange={(e) => setLado(lado, { sarrafo: e.target.value === "sarrafo" })}>
                     <option value="inteirica">Inteiriça</option>
@@ -1196,9 +1210,9 @@ function TamponamentoConfig({
           </div>
         );
       })}
-      <button className="ghost" style={{ marginTop: 8 }} onClick={() => onChange(undefined)}>
+      <Button variant="ghost" size="sm" className="mt-2" onClick={() => onChange(undefined)}>
         Remover tamponamento
-      </button>
+      </Button>
     </div>
   );
 }
@@ -1231,12 +1245,9 @@ function MaterialModulo({
 
   if (!valor) {
     return (
-      <button
-        style={{ marginTop: 8 }}
-        onClick={() => onChange(materialInicial(cores))}
-      >
+      <Button variant="ghost" size="sm" className="mt-2" onClick={() => onChange(materialInicial(cores))}>
         + Personalizar material
-      </button>
+      </Button>
     );
   }
 
@@ -1247,7 +1258,7 @@ function MaterialModulo({
     const s = valor[nome];
     const espessuras = catalogo ? espessurasDaCor(catalogo, s.acabamento) : [15, 18];
     return (
-      <div>
+      <div className="min-w-0">
         <label>{rot}</label>
         <select
           value={s.acabamento}
@@ -1263,7 +1274,7 @@ function MaterialModulo({
         </select>
         <select
           value={s.espessura}
-          style={{ marginTop: 4 }}
+          className="mt-1"
           onChange={(e) =>
             onChange({ ...valor, [nome]: { ...s, espessura: Number(e.target.value) } })
           }
@@ -1279,12 +1290,12 @@ function MaterialModulo({
   };
 
   return (
-    <div style={{ marginTop: 10, borderTop: "1px solid var(--border)", paddingTop: 8 }}>
-      <div className="campos">
+    <div className="mt-2.5 border-t border-cinza-200 pt-2">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
         {slot("interno", "Interno")}
         {slot("externo", "Externo")}
         {slot("portas", "Portas")}
-        <div>
+        <div className="min-w-0">
           <label>Tem fundo</label>
           <select
             value={valor.temFundo ? "sim" : "nao"}
@@ -1295,9 +1306,9 @@ function MaterialModulo({
           </select>
         </div>
       </div>
-      <button className="ghost" style={{ marginTop: 6 }} onClick={() => onChange(undefined)}>
+      <Button variant="ghost" size="sm" className="mt-1.5" onClick={() => onChange(undefined)}>
         Usar padrão do ambiente
-      </button>
+      </Button>
     </div>
   );
 }
