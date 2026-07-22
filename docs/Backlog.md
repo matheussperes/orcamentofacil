@@ -486,7 +486,7 @@ conforme reescrito em `docs/Design-System.md` v2.
   - [ ] `npm run build`/`npm run test` passam; nenhuma rota ou handler de clique foi alterado.
 
 ### Task 6.2 — Stepper visual do `NovoModuloWizard` (Ambiente → Tipo → Modelo)
-- **Status**: ⏱️ Planejado
+- **Status**: ✅ Concluído (2026-07-22, mesclada em `feature/6.2-stepper-wizard`, aprovada por Code Auditor + UX Auditor — `components/ui/stepper.tsx` novo; estados concluída/atual/pendente e fallback mobile "Passo N de 3" confirmados ao vivo no browser. Overflow horizontal de ~24px em 375px reportado 2x (Tasks 6.1 e 6.2) como pré-existente em `.card`/`.modulo` legado — não causado pelo stepper; endereçar explicitamente nas Tasks 6.3/6.4)
 - **Modelo Recomendado**: Sonnet
 - **Prioridade**: 🔴 Alta
 - **Executor sugerido**: Frontend Engineer
