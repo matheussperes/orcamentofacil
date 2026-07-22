@@ -24,7 +24,7 @@ export function SecaoHeader({
 }) {
   if (aberta) {
     return (
-      <h2 className="mb-4 flex cursor-default items-center justify-between border-b border-cinza-200 pb-3 text-titulo-card text-cinza-900">
+      <h2 className="mb-4 flex cursor-default items-center justify-between border-b border-cinza-200 pb-3 text-titulo-card font-semibold text-cinza-900">
         {titulo}
       </h2>
     );
