@@ -507,7 +507,7 @@ conforme reescrito em `docs/Design-System.md` v2.
   - [ ] Caso `presets.length === 0` (estado vazio já tratado em `app/page.tsx:820-830`), o stepper não aparece — o aviso de "nenhum módulo cadastrado" continua como está.
 
 ### Task 6.3 — Card de módulo expandido (`BoxModuloCard` / `TemplateModuloCard`)
-- **Status**: ⏱️ Planejado
+- **Status**: ✅ Concluído (2026-07-22, mesclada em `feature/6.3-card-modulo-expandido`, aprovada por Code Auditor + UX Auditor — **causa raiz do overflow das Tasks 6.1/6.2 resolvida**: grid blowout em `.campos` legado, `grid-template-columns: repeat(auto-fit, minmax(90px,1fr))` sem `min-width:0`; corrigido para grid Tailwind com `min-w-0` por célula. Confirmado ao vivo: 0 overflow em 375px/768px/1280px com os 7 módulos do preset demo expandidos)
 - **Modelo Recomendado**: Sonnet
 - **Prioridade**: 🟡 Média
 - **Executor sugerido**: Frontend Engineer
