@@ -581,7 +581,19 @@ conforme reescrito em `docs/Design-System.md` v2.
 > accordion e do canvas.
 
 ### Task 7.1 — Accordion shell (`SecaoHeader` + 5 cards de seção)
+- **Status**: ✅ Concluído (2026-07-22, mesclada em `feature/7.1-accordion-shell`, aprovada por Code Auditor + UX Auditor na Tentativa 2 — Tentativa 1 reprovada: header "aberta" sem `font-semibold`, corrigido e revalidado ao vivo, 600/16px confirmado. Ver Task 7.1b para um achado mais profundo encontrado durante esta revalidação)
+
+### Task 7.1b — [Achado durante a Task 7.1] Fix estrutural: `cn()`/`tailwind-merge` descarta tokens de tipografia customizados
 - **Status**: ⏱️ Planejado
+- **Modelo Recomendado**: Sonnet
+- **Prioridade**: 🔴 Alta (bug de fundação, afeta silenciosamente qualquer combinação de tamanho de fonte customizado + cor via `cn()`)
+- **Executor sugerido**: Frontend Engineer
+- **Descrição objetiva**: `lib/utils.ts` usa `twMerge()` do pacote `tailwind-merge` sem configuração customizada. `tailwind-merge` não conhece os tokens de `fontSize` definidos em `tailwind.config.ts` (`display`, `titulo-secao`, `titulo-card`, `corpo`, `corpo-pequeno`, `legenda`, `valor-destaque`) e os trata como conflitantes com qualquer classe `text-{cor}`, descartando silenciosamente uma das duas (a que vier primeiro na string) sempre que ambas passam por `cn()`. Reproduzido isoladamente: `twMerge('text-legenda text-cinza-600')` → `"text-cinza-600"` (perde o tamanho). Achado ao vivo em `components/ui/stepper.tsx` (rótulos do Stepper renderizando 16px em vez de 12px/`legenda`). A correção da Task 6.4 no `button.tsx` (reordenar `size` antes de `variant` no objeto `variants` do `cva`) não resolveu a causa raiz — só reordenou qual classe vence nesse caso específico; o problema de fundo permanece.
+- **Critérios de aceitação verificáveis**:
+  - [ ] `lib/utils.ts` usa `extendTailwindMerge()` (ou equivalente) registrando os 7 tokens de `fontSize` customizados como grupo próprio, distinto do grupo de cor de texto.
+  - [ ] `twMerge('text-legenda text-cinza-600')` (e as demais 6 combinações de token+cor) preserva AMBAS as classes, testado isoladamente via script Node.
+  - [ ] Auditoria retroativa de todo componente em `components/ui/` e todo uso de `cn(...)` em `app/` (Stages 5-7 já mescladas) atrás de combinações silenciosamente quebradas — usar o mesmo método de `getComputedStyle` ao vivo (não só leitura de código) nos pontos onde token de tipografia + cor coexistem. Reportar e corrigir cada ocorrência encontrada (ex: `components/ui/stepper.tsx` já confirmado).
+  - [ ] `npm run build`/`lint`/`typecheck`/`test` passam sem regressão.
 - **Modelo Recomendado**: Sonnet
 - **Prioridade**: 🔴 Alta
 - **Executor sugerido**: Frontend Engineer
