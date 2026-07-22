@@ -546,7 +546,7 @@ conforme reescrito em `docs/Design-System.md` v2.
   - [ ] Comportamento de expandir/colapsar (`minimizar`/`expandir` em `app/page.tsx`) não foi alterado — só a apresentação.
 
 ### Task 6.5 — Painel de resultado (Simulação comercial, KPIs, insumos, plano de corte)
-- **Status**: ⏱️ Planejado
+- **Status**: ✅ Concluído (2026-07-22, mesclada em `feature/6.5-painel-resultado`, aprovada por Code Auditor + UX Auditor — KPI destaque em `accent` #2563EB, alerta de margem mínima em `--erro` confirmado nos dois sentidos ao vivo, tabelas conforme Seção 6.9, sliders com CSS customizado — Radix Slider avaliado e descartado por exigir mudar a assinatura `valor/onChange` do componente, fora do escopo "só apresentação". **Stage 6 (Produção) concluída.** Overflow horizontal em 375px reportado novamente (3ª vez), desta vez em `flex gap-3` sem `flex-wrap` no cabeçalho de `BoxModuloCard`/`TemplateModuloCard` (`app/page.tsx`, header com Parede+Largura/Altura/Profundidade) — não confirmado de forma conclusiva pela ferramenta de validação nesta rodada (medições inconsistentes de viewport), mas registrado como pendência a corrigir no início da Stage 7, antes de mais recorrências)
 - **Modelo Recomendado**: Sonnet
 - **Prioridade**: 🟡 Média
 - **Executor sugerido**: Frontend Engineer
