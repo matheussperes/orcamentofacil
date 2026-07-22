@@ -257,9 +257,73 @@ th.num {
   gap: 12px;
   margin: 8px 0;
 }
+/*
+ * Task 6.5 — trilho/thumb do slider de margem/desconto em `--accent`
+ * (Design-System Seção 0/6). Tailwind não estiliza os pseudo-elementos
+ * nativos de `input[type=range]` (::-webkit-slider-thumb/::-moz-range-thumb)
+ * sem plugin dedicado, então esta é a exceção documentada de CSS puro citada
+ * na Task 6.5 do Backlog — os valores usados são os tokens hex do Design
+ * System (`--legacy-accent` = accent #2563EB, `--legacy-border` = cinza-200
+ * #E2E8F0, `--legacy-bg` = cinza-0 #FFFFFF), não cores inventadas. O
+ * preenchimento do trilho até o thumb é dado pela variável `--range-progress`
+ * (0%–100%), calculada em React a partir de `(valor - min) / (max - min)` e
+ * aplicada via `style` inline no `Slider` de `app/page.tsx` — não é um valor
+ * mágico de design, é o progresso dinâmico do próprio controle.
+ */
 .slider-row input[type="range"] {
   flex: 1;
   padding: 0;
+  -webkit-appearance: none;
+  appearance: none;
+  height: 4px;
+  border-radius: 999px;
+  background: linear-gradient(
+    to right,
+    var(--legacy-accent) 0%,
+    var(--legacy-accent) var(--range-progress, 0%),
+    var(--legacy-border) var(--range-progress, 0%),
+    var(--legacy-border) 100%
+  );
+  outline: none;
+  cursor: pointer;
+}
+.slider-row input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  background: var(--legacy-accent);
+  border: 2px solid var(--legacy-bg);
+  box-shadow:
+    0 1px 3px rgba(15, 23, 42, 0.08),
+    0 1px 2px rgba(15, 23, 42, 0.04);
+  cursor: pointer;
+}
+.slider-row input[type="range"]::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  background: var(--legacy-accent);
+  border: 2px solid var(--legacy-bg);
+  box-shadow:
+    0 1px 3px rgba(15, 23, 42, 0.08),
+    0 1px 2px rgba(15, 23, 42, 0.04);
+  cursor: pointer;
+}
+.slider-row input[type="range"]::-moz-range-track {
+  height: 4px;
+  border-radius: 999px;
+  background: var(--legacy-border);
+}
+.slider-row input[type="range"]::-moz-range-progress {
+  height: 4px;
+  border-radius: 999px;
+  background: var(--legacy-accent);
+}
+.slider-row input[type="range"]:focus-visible {
+  outline: 2px solid var(--legacy-accent);
+  outline-offset: 2px;
 }
 .slider-row .v {
   width: 56px;
