@@ -789,7 +789,7 @@ function TemplateModuloCard({
   const meta = templates.find((t) => t.codigo === modulo.templateCodigo);
   return (
     <>
-      <div className="flex gap-3">
+      <div className="flex flex-wrap gap-3 sm:flex-nowrap">
         <ModulePreview
           modulo={{
             largura_mm: modulo.largura_mm,
@@ -1002,7 +1002,7 @@ function BoxModuloCard({
 
   return (
     <>
-      <div className="flex gap-3">
+      <div className="flex flex-wrap gap-3 sm:flex-nowrap">
         <div className="w-[180px] shrink-0">
           <BoxCanvas box={box} comercial />
         </div>
