@@ -584,7 +584,7 @@ conforme reescrito em `docs/Design-System.md` v2.
 - **Status**: ✅ Concluído (2026-07-22, mesclada em `feature/7.1-accordion-shell`, aprovada por Code Auditor + UX Auditor na Tentativa 2 — Tentativa 1 reprovada: header "aberta" sem `font-semibold`, corrigido e revalidado ao vivo, 600/16px confirmado. Ver Task 7.1b para um achado mais profundo encontrado durante esta revalidação)
 
 ### Task 7.1b — [Achado durante a Task 7.1] Fix estrutural: `cn()`/`tailwind-merge` descarta tokens de tipografia customizados
-- **Status**: ⏱️ Planejado
+- **Status**: ✅ Concluído (2026-07-22, mesclada em `feature/7.1b-fix-tailwind-merge`, aprovada por Code Auditor + UX Auditor — `lib/utils.ts` usa `extendTailwindMerge` registrando os 7 tokens de fontSize como classGroup próprio, validado isoladamente (14 combinações) e ao vivo. **Escopo real maior que o estimado**: afetava TODO `<Button>` do app (não só `size="sm"`), incluindo o botão "Criar orçamento" (`variant="primary" size="default"`) — todos os botões já mesclados nas Stages 6/7.1 renderizavam texto em 16px em vez de 14px `text-corpo` até este fix. Confirmado corrigido ao vivo em `components/ui/stepper.tsx` e nos botões de produção)
 - **Modelo Recomendado**: Sonnet
 - **Prioridade**: 🔴 Alta (bug de fundação, afeta silenciosamente qualquer combinação de tamanho de fonte customizado + cor via `cn()`)
 - **Executor sugerido**: Frontend Engineer
