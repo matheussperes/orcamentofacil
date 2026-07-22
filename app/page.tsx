@@ -423,10 +423,11 @@ export default function Home() {
                 <div
                   className={
                     min
-                      ? "modulo"
+                      ? "mb-2 cursor-pointer rounded-lg border border-cinza-200 bg-cinza-50 p-3 hover:border-accent-border hover:bg-cinza-100"
                       : "mb-2 rounded-lg border border-cinza-200 bg-cinza-0 p-4 shadow-xs"
                   }
                   key={id}
+                  onClick={min ? () => expandir(id) : undefined}
                 >
                   {min ? (
                     <ResumoModulo it={it} templates={templates} />
@@ -450,20 +451,25 @@ export default function Home() {
                       onAtualizar={(patch) => atualizarBoxCampo(id, patch)}
                     />
                   )}
-                  <div className="acoes" style={{ marginTop: 8 }}>
+                  <div
+                    className="mt-2 flex flex-wrap justify-end gap-2"
+                    onClick={(e) => e.stopPropagation()}
+                  >
                     {min ? (
-                      <button className="primary" onClick={() => expandir(id)}>
+                      <Button variant="primary" size="sm" onClick={() => expandir(id)}>
                         Editar
-                      </button>
+                      </Button>
                     ) : (
-                      <button className="primary" onClick={() => minimizar(id)}>
+                      <Button variant="primary" size="sm" onClick={() => minimizar(id)}>
                         Salvar
-                      </button>
+                      </Button>
                     )}
-                    <button onClick={() => duplicar(id)}>Duplicar</button>
-                    <button className="danger" onClick={() => excluir(id)}>
+                    <Button variant="ghost" size="sm" onClick={() => duplicar(id)}>
+                      Duplicar
+                    </Button>
+                    <Button variant="danger" size="sm" onClick={() => excluir(id)}>
                       Excluir
-                    </button>
+                    </Button>
                   </div>
                 </div>
               );
