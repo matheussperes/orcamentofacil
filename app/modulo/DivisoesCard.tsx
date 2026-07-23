@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { PosicaoDivisao } from "@/lib/engine/box/types";
+import { Button } from "@/components/ui/button";
 import { SecaoHeader } from "./SecaoHeader";
 
 export interface ConfigDivisao {
@@ -51,10 +52,14 @@ export function DivisoesCard({
       <SecaoHeader titulo="Divisões" aberta={aberta} onAbrir={onAbrir} />
       {aberta && (
         <>
-          <div className="acoes" style={{ display: "flex", gap: 8, marginBottom: 10 }}>
-            <button className={modoSelecaoDivisoes ? "primary" : "ghost"} onClick={onSelecionarModoDivisoes}>
+          <div className="flex flex-wrap gap-sm mb-sm">
+            <Button
+              variant={modoSelecaoDivisoes ? "iconActive" : "ghost"}
+              size="sm"
+              onClick={onSelecionarModoDivisoes}
+            >
               Selecionar divisões
-            </button>
+            </Button>
           </div>
 
           <div className="campos">

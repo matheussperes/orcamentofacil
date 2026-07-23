@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { Button } from "@/components/ui/button";
 import { BoxCanvas, type ModoSelecao } from "../components/BoxCanvas";
 import {
   calcularOrcamentoBox,
@@ -524,13 +525,14 @@ export default function EditorModulo() {
         <div>
           <div className="card">
             <h2>Vãos (clique para selecionar)</h2>
-            <div className="acoes" style={{ display: "flex", gap: 8, marginBottom: 10 }}>
-              <button
-                className={modoSelecao === "vaos" ? "primary" : "ghost"}
+            <div className="flex flex-wrap gap-sm mb-sm">
+              <Button
+                variant={modoSelecao === "vaos" ? "iconActive" : "ghost"}
+                size="sm"
                 onClick={clicarSelecionarVaos}
               >
                 Selecionar vãos{modoSelecao === "vaos" && multiSelecaoVaos ? " (múltiplos)" : ""}
-              </button>
+              </Button>
             </div>
             <BoxCanvas
               box={box}

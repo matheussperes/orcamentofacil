@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import type { Catalogo } from "@/lib/catalog";
 import { espessurasDaCor } from "@/lib/catalog";
 import type { GrupoPortas, SentidoAbrir, SentidoCorrer } from "@/lib/engine/box/types";
+import { Button } from "@/components/ui/button";
 import { SecaoHeader } from "./SecaoHeader";
 
 export interface ConfigPortas {
@@ -98,10 +99,14 @@ export function PortasCard({
       <SecaoHeader titulo="Portas" aberta={aberta} onAbrir={onAbrir} />
       {aberta && (
         <>
-          <div className="acoes" style={{ display: "flex", gap: 8, marginBottom: 10 }}>
-            <button className={modoSelecaoPortas ? "primary" : "ghost"} onClick={onSelecionarModoPortas}>
+          <div className="flex flex-wrap gap-sm mb-sm">
+            <Button
+              variant={modoSelecaoPortas ? "iconActive" : "ghost"}
+              size="sm"
+              onClick={onSelecionarModoPortas}
+            >
               Selecionar portas
-            </button>
+            </Button>
           </div>
 
           {grupoEmEdicao && (

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import type { Catalogo } from "@/lib/catalog";
 import { espessurasDaCor } from "@/lib/catalog";
+import { Button } from "@/components/ui/button";
 import { SecaoHeader } from "./SecaoHeader";
 
 export interface ConfigGaveta {
@@ -81,10 +82,14 @@ export function GavetasCard({
       <SecaoHeader titulo="Gavetas" aberta={aberta} onAbrir={onAbrir} />
       {aberta && (
         <>
-          <div className="acoes" style={{ display: "flex", gap: 8, marginBottom: 10 }}>
-            <button className={modoSelecaoGavetas ? "primary" : "ghost"} onClick={onSelecionarModoGavetas}>
+          <div className="flex flex-wrap gap-sm mb-sm">
+            <Button
+              variant={modoSelecaoGavetas ? "iconActive" : "ghost"}
+              size="sm"
+              onClick={onSelecionarModoGavetas}
+            >
               Selecionar gaveta
-            </button>
+            </Button>
           </div>
 
           {gavetaEmEdicao && (
