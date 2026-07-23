@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { BayNode, BoxModule, FrenteConteudo, GrupoPortas, TipoPuxador } from "@/lib/engine/box/types";
 import {
   layoutDivisorias,
@@ -27,6 +27,13 @@ import { corParaHex } from "./ModulePreview";
 
 const W = 380;
 const H = 360;
+
+// Design-System.md Seção 2.2 (accent) / 6.6 (canvas modo laboratório) — cores
+// hardcoded em JS porque o desenho é Canvas 2D, não classes Tailwind. Vão
+// hover: contorno tracejado 2px ACCENT. Vão selecionado: contorno sólido 2px
+// ACCENT + fundo ACCENT_SUBTLE.
+const ACCENT = "#2563EB";
+const ACCENT_SUBTLE = "#EFF6FF";
 
 interface Geo {
   scale: number;
@@ -290,6 +297,10 @@ export function BoxCanvas({
   onSelecionarVaoGaveta?: (id: string) => void;
 }) {
   const ref = useRef<HTMLCanvasElement>(null);
+  // Vão sob o mouse (só nos modos "vaos"/"gavetas", que operam sobre os
+  // mesmos retângulos de g.rects) — puramente apresentacional, não afeta
+  // onToggleVao/modoSelecao/vaosSelecionados.
+  const [hoverId, setHoverId] = useState<string | null>(null);
 
   useEffect(() => {
     const ctx = ref.current?.getContext("2d");
@@ -329,11 +340,16 @@ export function BoxCanvas({
         const sel =
           (modoSelecao === "vaos" && vaosSelecionados.includes(r.id)) ||
           (modoSelecao === "gavetas" && vaoGavetaSelecionado === r.id);
-        ctx.fillStyle = sel ? "rgba(79,140,255,0.28)" : "#ffffff";
+        const hover =
+          !sel && hoverId === r.id && (modoSelecao === "vaos" || modoSelecao === "gavetas");
+
+        ctx.fillStyle = sel ? ACCENT_SUBTLE : "#ffffff";
         ctx.fillRect(x, y, w, h);
-        ctx.strokeStyle = sel ? "#4f8cff" : "#94a3b8";
-        ctx.lineWidth = sel ? 2.5 : 1;
+        ctx.setLineDash(hover ? [4, 3] : []);
+        ctx.strokeStyle = sel || hover ? ACCENT : "#94a3b8";
+        ctx.lineWidth = sel || hover ? 2 : 1;
         ctx.strokeRect(x, y, w, h);
+        ctx.setLineDash([]);
 
         // Gaveta ganha representação visual (linhas + puxador), igual às
         // portas — não só o texto. Outros conteúdos (prateleiras/vazio)
@@ -367,7 +383,7 @@ export function BoxCanvas({
           (d) => d.parentId === divisaoSelecionada.parentId && d.indice === divisaoSelecionada.indice
         );
         if (d) {
-          ctx.fillStyle = "#4f8cff";
+          ctx.fillStyle = ACCENT;
           ctx.fillRect(px(d.x) - 1.5, py(d.y) - 1.5, Math.max(d.w * g.scale, 1) + 3, Math.max(d.h * g.scale, 1) + 3);
         }
       }
@@ -382,8 +398,8 @@ export function BoxCanvas({
       desenharGrupoPortas(ctx, rectPx, grupo, box.puxador);
       // Modo "Selecionar Portas": destaca o grupo selecionado por cima.
       if (!comercial && modoSelecao === "portas" && portaSelecionada === grupo.id) {
-        ctx.strokeStyle = "#4f8cff";
-        ctx.lineWidth = 3;
+        ctx.strokeStyle = ACCENT;
+        ctx.lineWidth = 2;
         ctx.strokeRect(rectPx.x + 2, rectPx.y + 2, rectPx.w - 4, rectPx.h - 4);
       }
     }
@@ -410,7 +426,7 @@ export function BoxCanvas({
         ctx.fillRect(px(0), py(0) + box.altura * g.scale, box.largura * g.scale, faixa);
       }
     }
-  }, [box, comercial, modoSelecao, vaosSelecionados, divisaoSelecionada, portaSelecionada, vaoGavetaSelecionado]);
+  }, [box, comercial, modoSelecao, vaosSelecionados, divisaoSelecionada, portaSelecionada, vaoGavetaSelecionado, hoverId]);
 
   function clique(e: React.MouseEvent<HTMLCanvasElement>) {
     if (comercial) return; // preview comercial não é interativo
@@ -476,21 +492,54 @@ export function BoxCanvas({
     }
   }
 
+  /** Só atualiza o vão sob o mouse (feedback visual de hover) — não dispara
+   * nenhum callback de seleção. Restrito aos modos "vaos"/"gavetas", que
+   * operam sobre os mesmos retângulos de g.rects. */
+  function moverMouse(e: React.MouseEvent<HTMLCanvasElement>) {
+    if (comercial) return;
+    if (modoSelecao !== "vaos" && modoSelecao !== "gavetas") {
+      if (hoverId !== null) setHoverId(null);
+      return;
+    }
+    const canvas = ref.current;
+    if (!canvas) return;
+    const rectEl = canvas.getBoundingClientRect();
+    const cx = ((e.clientX - rectEl.left) / rectEl.width) * W;
+    const cy = ((e.clientY - rectEl.top) / rectEl.height) * H;
+    const g = geometria(box);
+    let encontrado: string | null = null;
+    for (const r of g.rects) {
+      const x = g.ox + r.x * g.scale;
+      const y = g.oy + r.y * g.scale;
+      if (cx >= x && cx <= x + r.w * g.scale && cy >= y && cy <= y + r.h * g.scale) {
+        encontrado = r.id;
+        break;
+      }
+    }
+    if (encontrado !== hoverId) setHoverId(encontrado);
+  }
+
+  function sairMouse() {
+    if (hoverId !== null) setHoverId(null);
+  }
+
   return (
-    <canvas
-      ref={ref}
-      width={W}
-      height={H}
-      onClick={clique}
-      style={{
-        width: "100%",
-        maxWidth: W,
-        height: "auto",
-        background: "#f9fafb",
-        border: "1px solid var(--border)",
-        borderRadius: 8,
-        cursor: comercial ? "default" : "pointer",
-      }}
-    />
+    <div className="max-w-full rounded-md border border-cinza-200 bg-cinza-50 p-2">
+      <canvas
+        ref={ref}
+        width={W}
+        height={H}
+        onClick={clique}
+        onMouseMove={moverMouse}
+        onMouseLeave={sairMouse}
+        style={{
+          display: "block",
+          width: "100%",
+          maxWidth: W,
+          height: "auto",
+          cursor: comercial ? "default" : "pointer",
+        }}
+      />
+    </div>
   );
 }
