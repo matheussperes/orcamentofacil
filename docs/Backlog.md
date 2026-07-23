@@ -636,6 +636,18 @@ conforme reescrito em `docs/Design-System.md` v2.
   - [ ] Vão hover (tracejado) e vão selecionado (sólido + fundo tintado) no canvas usam os valores exatos da Seção 6.6.
   - [ ] Os 4 modos de seleção (vãos único/múltiplo, divisões, portas, gavetas) testados manualmente sem regressão — clique continua selecionando/desselecionando corretamente.
 
+### Task 7.2b — [Gap identificado na Task 7.2] Botões internos de `DivisoesCard`/`PortasCard`/`GavetasCard`
+- **Status**: ⏱️ Planejado
+- **Modelo Recomendado**: Sonnet
+- **Prioridade**: 🟢 Normal
+- **Executor sugerido**: Frontend Engineer
+- **Descrição objetiva**: Os botões de ação internos (Aplicar, Excluir, Salvar e equivalentes) dentro de `app/modulo/DivisoesCard.tsx`, `PortasCard.tsx` e `GavetasCard.tsx` continuam com `<button className="primary"|"danger"|"ghost">` legado (CSS antigo), não convertidos por nenhuma das Tasks 7.1 (shell/header) ou 7.2 (canvas/toolbar de modo). Converter para o componente `Button` do shadcn (`variant="primary"/"ghost"/"danger"`, `size` conforme o contexto), consistente com o resto do editor já convertido. Não altera nenhuma lógica de estado/aplicação de divisão/porta/gaveta — só apresentação.
+- **Critérios de aceitação verificáveis**:
+  - [ ] Nenhum `<button className="primary"|"danger"|"ghost">` legado remanescente nos três arquivos.
+  - [ ] Hierarquia visual primary/ghost/danger idêntica à já usada no resto do editor (Seção 6.1).
+  - [ ] Fluxo de aplicar/excluir divisão, porta e gaveta testado manualmente sem regressão de comportamento.
+  - [ ] `npm run build`/`lint`/`typecheck`/`test` passam sem regressão.
+
 ### Task 7.3 — Painel direito do editor (Custo ao vivo, Peças, Plano de corte)
 - **Status**: ⏱️ Planejado
 - **Modelo Recomendado**: Sonnet
