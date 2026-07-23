@@ -616,7 +616,7 @@ conforme reescrito em `docs/Design-System.md` v2.
   - [ ] Fluxo completo Caixa→Divisões→Portas→Gavetas→Puxador testado manualmente sem regressão de comportamento (avançar/reabrir seções continua funcionando).
 
 ### Task 7.2 — Canvas de seleção (`BoxCanvas` modo laboratório + toolbar de modos)
-- **Status**: ⏱️ Planejado
+- **Status**: ✅ Concluído (2026-07-22, mesclada em `feature/7.2-canvas-selecao`, aprovada por Code Auditor + UX Auditor — contêiner `#F8FAFC`/`#E2E8F0`/8px/100% confirmado; botão de modo ativo `#EFF6FF`/`#BFDBFE`/`#2563EB` confirmado; seleção de vão confirmada por leitura de pixel do canvas (`getImageData` → `#EFF6FF`); hover tracejado adicionado como funcionalidade nova, não existia antes. Zero overflow em 375px. **Gap identificado, sem task própria**: botões internos (Aplicar/Excluir/Salvar) dentro de `DivisoesCard`/`PortasCard`/`GavetasCard` continuam com CSS legado — nenhuma task do Backlog cobre explicitamente esses botões (7.1 = shell/header, 7.2 = canvas/toolbar de modo, 7.3 = painel direito). Decisão do operador pendente sobre se abre uma task 7.2b)
 - **Modelo Recomendado**: Sonnet
 - **Prioridade**: 🔴 Alta
 - **Executor sugerido**: Frontend Engineer
