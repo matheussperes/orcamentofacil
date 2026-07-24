@@ -1,84 +1,56 @@
-import { calcularEngine, consolidarResultados } from "./engine/engine";
+import { consolidarResultados } from "./engine/consolidar";
 import { explodeBox } from "./engine/box";
 import { larguraInstalacaoBox, type BoxModule } from "./engine/box/types";
 import type {
   EngineOutput,
   MateriaisAmbiente,
-  ModuloInstanciado,
-  ModuloTemplate,
   ParametrosFabrica,
   ResultadoModulo,
 } from "./engine/types";
 
-// Modelo unificado de item de orçamento: uma única lista polimórfica para
-// módulos de template (motor paramétrico) e módulos-caixa (box-builder V3),
-// em vez de duas listas de estado paralelas na UI ("efeito Frankenstein").
-// Union discriminada por `origem`, aninhando os tipos de domínio já existentes
-// — dá segurança de tipo ao estreitar, sem sopa de campos opcionais.
-export type ModuloOrcamento =
-  | { origem: "template"; modulo: ModuloInstanciado }
-  | { origem: "custom_box"; box: BoxModule };
+// Modelo unificado de item de orçamento: uma única lista polimórfica de
+// módulos-caixa (box-builder V3), em vez de estado paralelo na UI ("efeito
+// Frankenstein"). Union discriminada por `origem` — hoje com um único
+// membro real (o motor de templates V1 foi removido na Task 10.1); a Task
+// 12.1 adiciona o branch `{ origem: "placa"; placa: Placa }` (Modelo de
+// Domínio, Seção 1). Mantém a forma de objeto discriminado de propósito —
+// não colapsar em `BoxModule` solto quando o segundo branch chegar.
+export type ModuloOrcamento = { origem: "custom_box"; box: BoxModule };
 
 export function idDoItem(m: ModuloOrcamento): string {
-  return m.origem === "template" ? m.modulo.id : m.box.id;
+  return m.box.id;
 }
 export function paredeDoItem(m: ModuloOrcamento): string {
-  return (m.origem === "template" ? m.modulo.parede : m.box.parede) ?? "A";
+  return m.box.parede ?? "A";
 }
 // Largura de INSTALAÇÃO (doc 12: tamponamento soma à largura, decisão A) —
 // usada na barra/canvas de ocupação da parede. Não é a largura de fabricação
 // da carcaça (essa fica em `box.largura`, intacta para o cálculo de peças).
 export function larguraDoItem(m: ModuloOrcamento): number {
-  return m.origem === "template" ? m.modulo.largura_mm : larguraInstalacaoBox(m.box);
+  return larguraInstalacaoBox(m.box);
 }
 export function alturaDoItem(m: ModuloOrcamento): number {
-  return m.origem === "template" ? m.modulo.altura_mm : m.box.altura;
+  return m.box.altura;
 }
 export function profundidadeDoItem(m: ModuloOrcamento): number {
-  return m.origem === "template" ? m.modulo.profundidade_mm : m.box.profundidade;
+  return m.box.profundidade;
 }
 export function corExternaDoItem(m: ModuloOrcamento): string | undefined {
-  return m.origem === "template"
-    ? m.modulo.configMaterial?.externo.acabamento ?? m.modulo.overridesMaterial?.cor_caixa
-    : m.box.caixa.cor;
+  return m.box.caixa.cor;
 }
 
 export interface CalcMistoInput {
   ambiente: { tipo: string; materiais: MateriaisAmbiente };
   parametros: ParametrosFabrica;
   itens: ModuloOrcamento[];
-  templates?: Record<string, ModuloTemplate>; // overrides de engenharia (V2-4)
 }
 
 export function calcularOrcamentoMisto(input: CalcMistoInput): EngineOutput {
-  const templateModulos = input.itens
-    .filter(
-      (i): i is Extract<ModuloOrcamento, { origem: "template" }> =>
-        i.origem === "template"
-    )
-    .map((i) => i.modulo);
-  const boxes = input.itens
-    .filter(
-      (i): i is Extract<ModuloOrcamento, { origem: "custom_box" }> =>
-        i.origem === "custom_box"
-    )
-    .map((i) => i.box);
+  const boxes = input.itens.map((i) => i.box);
 
-  let porModulo: ResultadoModulo[] = [];
-  let globais: EngineOutput["globais"] = [];
-  let warnings: EngineOutput["warnings"] = [];
-
-  if (templateModulos.length > 0) {
-    const out = calcularEngine({
-      ambiente: input.ambiente,
-      parametros: input.parametros,
-      modulos: templateModulos,
-      templates: input.templates,
-    });
-    porModulo = [...out.porModulo];
-    globais = out.globais;
-    warnings = out.warnings;
-  }
+  const porModulo: ResultadoModulo[] = [];
+  const globais: EngineOutput["globais"] = [];
+  const warnings: EngineOutput["warnings"] = [];
 
   for (const box of boxes) {
     const r = explodeBox(box);
