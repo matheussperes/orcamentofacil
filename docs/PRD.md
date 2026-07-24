@@ -77,22 +77,24 @@ Legenda: **[E]** já existe (preservar) · **[P]** parcial · **[N]** novo
 | RF | Descrição | Status |
 |---|---|---|
 | RF-01 | Autenticação multi-tenant (org + usuários) com isolamento no banco | [N] |
-| RF-02 | Perfil da organização: marca/logo, unidade, alturas padrão, modo de precificação e montagem padrão | [N] |
+| RF-02 | Perfil da organização: marca/logo, **CNPJ, endereço, telefone** (saem na proposta), unidade, alturas padrão, modo de precificação e montagem padrão | [N] |
+| RF-02b | Cadastro de cliente (nome, telefone, endereço) capturado na criação do orçamento + prazo de entrega, para pré-preencher a proposta | [N] |
 | RF-03 | Catálogo de produtos editável (chapas, ferragens, LEDs, acessórios) — cópia no signup | [P] |
 | RF-04 | Biblioteca de módulos por categoria — base global read-only + fork na edição | [P] |
 | RF-05 | Editor de item dirigido por capacidade: módulo-caixa (carcaça+vãos+portas+gavetas) e placa | [P] |
-| RF-06 | Primitiva Placa: espessura, material, orientação, borda por lado, engrossamento/dobra, ripado | [N] |
+| RF-06 | Primitiva Placa: espessura, material, orientação, borda por lado, ripado, e **engrossamento (placa + sarrafos, oca) vs dobra (placas laminadas, maciça)** com **seleção de quais lados engrossar** | [N] |
+| RF-06b | **Fita de borda derivada da espessura final** da peça (15/18→22mm · 30→35mm · 45/60→65mm) — fitas são produtos distintos no catálogo | [N] |
 | RF-07 | Ambiente com parede(s): dimensões + elementos de parede + posicionamento 1D com faixas | [N] |
 | RF-08 | Validação de encaixe Tier 1 (cabe, não sobrepõe) + Tier 2 (faixas não colidem, respeita elementos de parede) | [N] |
 | RF-09 | Detecção automática de conjuntos adjacentes + quebra/união manual (handle de junção na elevação) | [N] |
-| RF-10 | Elementos contínuos unificados (tampo/rodapé/tamponamento) com dimensão derivada | [N] |
-| RF-11 | Motor de BOM + plano de corte com restrição de veio de chapa | [P] |
+| RF-10 | Elementos contínuos unificados — **tampo · rodapé · tamponamento (4 posições) · fechamento** — com dimensão derivada (editável em rodapé/fechamento) | [N] |
+| RF-11 | Motor de BOM + plano de corte com restrição de veio, **sentido do veio por peça visível e alterável** (default nos módulos-caixa) | [P] |
 | RF-12 | Precificação: 4 modos (um no 1º corte) + resumo de 6 campos | [P] |
 | RF-13 | Rateio de preço por custo alocado, segregado por material, com congelamento | [N] |
 | RF-14 | Frete (proporcional) e montagem (3 modos, rateio acompanha base), diluídos na proposta | [N] |
 | RF-15 | Lista de material (pré-pedido) editável + adição manual + congelamento + extração texto/CSV | [P] |
 | RF-16 | Linha de Proposta: agrupamento comercial, render automático de conjunto, override manual com rebalanceamento | [N] |
-| RF-17 | Proposta em PDF com marca, sem custos internos, valor à vista/parcelado (texto livre) | [P] |
+| RF-17 | Proposta em PDF: marca + **CNPJ/endereço/telefone** do emitente, **dados do cliente**, **ambientes orçados** com imagem e valor, **prazo de entrega**, sem custos internos, à vista/parcelado (texto livre) | [P] |
 | RF-18 | Persistência real de todo o estado (orçamento, ambiente, itens, linhas) por tenant | [N] |
 
 ---

@@ -830,19 +830,32 @@ jornada do cliente, agora sobre Tailwind + shadcn/ui).
 
 ## Pipeline Stage 12 — Extensões do motor (Fase B)
 
-- **Task 12.1** — Primitiva `Placa` + modificadores (engrossada/dobrada com
-  BOMs distintos, ripado gerador de peças). `ItemOrcamento` union
-  `BoxModule | Placa`. 🔴 Alta · Sonnet. Testes de BOM por técnica.
+- **Task 12.1** — Primitiva `Placa` + modificadores. `ItemOrcamento` union
+  `BoxModule | Placa`. 🔴 Alta · Sonnet.
+  **Regras corrigidas na auditoria de 2026-07-24** (`docs/Modelo-de-Dominio.md`
+  2.1 — usar como especificação, não a versão antiga):
+  *engrossada* = placa + sarrafos de 70mm nas bordas (peça OCA), camadas por
+  lado `{30→1, 45→2, 60→3}`, sarrafo do eixo maior inteiro e do menor
+  encaixado entre eles; *dobrada* = placas inteiras laminadas (MACIÇA)
+  `{30→2, 45→3, 60→4}`; **seleção de quais lados engrossar**; **fita derivada
+  da espessura final** (15/18→22 · 30→35 · 45/60→65).
+  **Testes obrigatórios**: reproduzir os 6 exemplos trabalhados do operador
+  (peça a peça) + casos de engrossamento parcial. Resolver a pendência da
+  placa-base de 18 mm antes de implementar.
 - **Task 12.2** — Parede/Ambiente + posicionamento 1D com faixas + validação
   Tier 1 e 2. 🔴 Alta · Sonnet.
 - **Task 12.3** — Detecção de conjuntos adjacentes + override (união/quebra).
   🟡 Média · Sonnet.
-- **Task 12.4** — Elementos contínuos unificados; tamponamento sai do
-  `BayContent`; migração de presets (`migrate.ts`, descarte com aviso para
-  bays de tamponamento). 🔴 Alta · Sonnet.
-- **Task 12.5** — Veio de chapa: flag `temVeio`, rotação do bin-packing só
-  quando `!temVeio` (`cutting.ts:75-77`). 🟡 Média · Sonnet. **Avisar operador
-  que o aproveitamento vai mudar.**
+- **Task 12.4** — Elementos contínuos unificados — **4 tipos: tampo, rodapé,
+  tamponamento (4 posições), fechamento** (`docs/Modelo-de-Dominio.md` 3.4/3.5,
+  corrigido na auditoria); dimensões derivadas com override em rodapé/
+  fechamento; tampo engrossável/dobrável. Tamponamento sai do `BayContent`;
+  migração de presets (`migrate.ts`, descarte com aviso). 🔴 Alta · Sonnet.
+- **Task 12.5** — Veio de chapa: flag `temVeio` no material + **`sentidoVeio`
+  por peça** (qual dimensão corre nos 2720mm), com defaults para módulos-caixa
+  (altura/largura→2720, profundidade→1820) e **exibição/alteração visual para
+  placas**. Rotação do bin-packing só quando `!temVeio` (`cutting.ts:75-77`).
+  🟡 Média · Sonnet. **Avisar operador que o aproveitamento vai mudar.**
 - **Task 12.6** — Modos de precificação (1 no 1º corte, arquitetura p/ 4) +
   rateio por custo alocado + frete/montagem + congelamento. 🔴 Alta · Opus
   (regra financeira). **Testes obrigatórios**: soma das linhas == total

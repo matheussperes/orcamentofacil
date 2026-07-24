@@ -84,22 +84,90 @@ type Placa = {
 }
 ```
 
-### 2.1 Engrossamento / dobra (briefing 7.2) — DUAS técnicas, BOMs distintos
+### 2.1 Engrossamento / dobra — DUAS técnicas, BOMs distintos
 
-Valores de borda: **30 / 45 / 60 mm**. Não é um flag — são dois caminhos de
-fabricação diferentes que geram peças e metragem de fita diferentes:
+> **Corrigido em 2026-07-24 pela auditoria de domínio do operador.** A versão
+> anterior descrevia "dobrada" como chapa usinada e dobrada a 45° — está
+> errado. As regras abaixo derivam dos 6 exemplos trabalhados fornecidos pelo
+> operador e são a especificação canônica.
+
+Espessuras finais possíveis: **30 / 45 / 60 mm**. Em ambas as técnicas a placa
+**mantém as dimensões de face** (uma placa 1000×500 continua 1000×500) — o que
+muda é a espessura e o conjunto de peças gerado.
 
 ```ts
 type Engrossamento =
-  | { tecnica: "engrossada"; borda_mm: 30 | 45 | 60 }
-  //   → sarrafo colado atrás da borda: PEÇAS ADICIONAIS + cola + fita na face aparente
-  | { tecnica: "dobrada";    borda_mm: 30 | 45 | 60 }
-  //   → chapa usinada e dobrada a 45°: PEÇA ÚNICA MAIOR + operação de usinagem,
-  //     sem peças extras, metragem de fita diferente
+  | { tecnica: "engrossada"; espessuraFinal: 30 | 45 | 60; lados: LadoPlaca[] }
+  | { tecnica: "dobrada";    espessuraFinal: 30 | 45 | 60 }
+
+type LadoPlaca = "superior" | "inferior" | "esquerda" | "direita"
 ```
 
-O impacto em metros lineares de fita é significativo — o motor de BOM precisa
-tratar cada técnica com sua própria regra de explosão. Especificar ambas.
+#### Engrossada — placa + sarrafos nas bordas (peça OCA no meio)
+
+Sarrafos colados por trás, nas bordas. A peça **não** vira maciça: só as
+bordas ganham espessura. O marceneiro **escolhe quais lados engrossar**
+(pode querer só os dois maiores) — ver 2.1.1.
+
+Regras de derivação (sarrafo padrão **70 mm** de largura):
+
+```
+camadas por lado = { 30mm → 1, 45mm → 2, 60mm → 3 }
+```
+> A camada extra é o que soma espessura: placa 15mm + 1 sarrafo 15mm = 30mm;
+> + 2 = 45mm; + 3 = 60mm.
+
+- Sarrafos do **eixo maior** correm o comprimento inteiro da placa.
+- Sarrafos do **eixo menor** encaixam **entre** eles: comprimento = dimensão
+  menor − (70 × nº de lados perpendiculares efetivamente selecionados).
+
+**Conferência com os exemplos do operador** (placa 1000×500):
+
+| Exemplo | Config | Peças geradas |
+|---|---|---|
+| 1 | Engrossada 30mm (4 lados) | 1× 1000×500 · 2× 1000×70 · 2× 360×70 |
+| 3 | Engrossada 45mm (4 lados) | 1× 1000×500 · 4× 1000×70 · 4× 360×70 |
+| 5 | Engrossada 60mm (4 lados) | 1× 1000×500 · 6× 1000×70 · 6× 360×70 |
+
+`360 = 500 − 2×70` (os dois sarrafos de 1000 ocupam 70mm de cada ponta).
+
+#### Dobrada — placas inteiras laminadas (peça MACIÇA)
+
+Sem sarrafo: empilham-se placas inteiras até a espessura alvo.
+
+```
+nº de placas = { 30mm → 2, 45mm → 3, 60mm → 4 }
+```
+
+| Exemplo | Config | Peças geradas |
+|---|---|---|
+| 2 | Dobrada 30mm | 2× 1000×500 |
+| 4 | Dobrada 45mm | 3× 1000×500 |
+| 6 | Dobrada 60mm | 4× 1000×500 |
+
+#### Fita de borda por espessura final — regra de catálogo
+
+A técnica (engrossada vs dobrada) **não** muda a fita; a **espessura final**
+mede. Fitas de larguras diferentes são produtos distintos no catálogo:
+
+| Espessura final da peça | Fita |
+|---|---|
+| 15 mm ou 18 mm | **22 mm** |
+| 30 mm (engrossada ou dobrada) | **35 mm** |
+| 45 mm ou 60 mm (engrossada ou dobrada) | **65 mm** |
+
+#### 2.1.1 Seleção de lados a engrossar (requisito de UX)
+
+O marceneiro precisa escolher **quais bordas** engrossar — caso comum: só os
+dois lados maiores. Interação sugerida (operador aberto a alternativas):
+referência visual da placa com os 4 lados clicáveis; escolhida a espessura
+(30/45/60), cada clique num lado adiciona/remove o engrossamento daquele lado,
+com confirmação. O BOM recalcula ao vivo (o comprimento dos sarrafos do eixo
+menor depende de quantos lados perpendiculares estão selecionados).
+
+> ⚠️ **Assunção a confirmar** (ver Seção 10): as tabelas de camadas assumem
+> placa-base de **15 mm**. Para base de 18 mm as contas de espessura final não
+> fecham em 30/45/60 — comportamento a definir.
 
 ### 2.2 Ripado (briefing 7.2, D-06) — gerador de peças
 
@@ -186,29 +254,55 @@ override.
 
 ### 3.4 Elementos contínuos unificados (briefing 6.1) — a maior simplificação
 
-Tampo, rodapé e tamponamento são **o mesmo mecanismo**: elemento aplicado a um
-conjunto, com dimensão **derivada**, não digitada. Isto elimina o "elemento
-contínuo do V1" como caso especial — não é feature portada, é consequência do
-modelo novo.
+> **Corrigido em 2026-07-24 pela auditoria do operador**: são **quatro** tipos
+> (entrou o **Fechamento**), as posições do tamponamento são 4 (não 2), e as
+> dimensões de tampo/rodapé estavam erradas.
+
+Tampo, rodapé, tamponamento e fechamento são **o mesmo mecanismo**: elemento
+aplicado a um conjunto (ou módulo individual), com dimensão **derivada da
+geometria**. Isto elimina o "elemento contínuo do V1" como caso especial — não
+é feature portada, é consequência do modelo novo.
 
 ```ts
 type ElementoContinuo = {
   id: string
-  tipo: "tampo" | "rodape" | "tamponamento"
-  conjuntoId: string
-  lado?: "esquerda" | "direita" | "frente" | "superior"
+  tipo: "tampo" | "rodape" | "tamponamento" | "fechamento"
+  alvo: { conjuntoId: string } | { moduloId: string }   // bloco ou módulo isolado
+  posicao: PosicaoElemento                              // válida por tipo, ver tabela
   material: MaterialRef
   espessura: number
-  sarrafo?: SarrafoConfig
-  // dimensões NÃO são input — derivam (regra difere por tipo, ver abaixo)
+  // dimensões derivadas por regra (tabela abaixo); alguns tipos aceitam override
+  override?: Partial<{ largura: number; profundidade: number; altura: number }>
+  engrossamento?: Engrossamento                          // só tampo (ver 2.1)
 }
+
+type PosicaoElemento = "superior" | "base" | "esquerda" | "direita" | "topo"
 ```
 
-| Elemento | Deriva de | Largura | Outra dimensão |
-|---|---|---|---|
-| **Tampo** | Bloco inteiro | Extensão total do bloco | Profundidade dos módulos (a maior, se variarem) |
-| **Rodapé** | Bloco inteiro | Extensão total do bloco | Altura configurável no perfil |
-| **Tamponamento** | **Módulo da extremidade** (não o bloco!) | — | Ver 3.5 |
+#### Posições válidas por tipo
+
+| Elemento | Posições possíveis |
+|---|---|
+| **Tampo** | `superior` (única) |
+| **Rodapé** | `base` (única) |
+| **Tamponamento** | `esquerda` · `direita` · `base` · `topo` (4) |
+| **Fechamento** | `superior` · `esquerda` · `direita` (3) |
+
+#### Regras de derivação de dimensão
+
+| Elemento | Deriva de | Largura | Profundidade | Altura / Espessura |
+|---|---|---|---|---|
+| **Tampo** | Bloco (ou módulo isolado) | Largura total dos módulos | Profundidade **+ 30 mm** | Espessura do material; **pode ser engrossado/dobrado 30/45/60** (regra da Seção 2.1) |
+| **Rodapé** | Bloco inteiro | Largura total **− 30 mm** | Profundidade do módulo **− 130 mm** | **150 mm** (padrão) |
+| **Tamponamento** | **Módulo da extremidade** (não o bloco) | — | Ver 3.5 | Ver 3.5 |
+| **Fechamento** | Bloco (ou módulo) | 1 sarrafo na medida total: **largura total** (posição `superior`) ou **altura total** (posições laterais) | — | **50 mm** de largura do sarrafo (padrão) |
+
+> **Derivado ≠ imutável.** Rodapé e Fechamento derivam os valores acima como
+> **default no momento de adicionar, e todos os campos são editáveis** (o
+> operador pode alterar altura do rodapé, largura do sarrafo do fechamento
+> etc.). Já no **tamponamento** as dimensões continuam estritamente derivadas
+> e não digitáveis (Seção 3.5) — é a exceção, porque ali digitar é fonte de
+> erro sem ganho.
 
 ### 3.5 Tamponamento (briefing 6.1) — deriva do módulo da extremidade
 
@@ -219,9 +313,9 @@ vem do módulo da extremidade **daquele lado**, não do maior nem da média.
 ```ts
 type Tamponamento = {
   tipo: "inteiro" | "sarrafo"
-  lado: "esquerda" | "direita"
+  posicao: "esquerda" | "direita" | "base" | "topo"   // 4 posições (corrigido 2026-07-24)
   material: MaterialRef            // cor — INPUT
-  espessura: number               // INPUT
+  espessura: number                // INPUT
   // DERIVADOS — nunca digitáveis:
   //   altura       = altura do módulo da extremidade
   //   profundidade = "inteiro"  → profundidade do módulo da extremidade + 25mm
@@ -229,7 +323,12 @@ type Tamponamento = {
 }
 ```
 
-**Inputs do usuário: tipo, lado, cor, espessura. Nada mais.**
+**Inputs do usuário: tipo, posição, cor, espessura. Nada mais.**
+
+> Nas posições `base` e `topo` o elemento corre na horizontal — a dimensão
+> derivada da "altura do módulo da extremidade" passa a ser a **largura** do
+> módulo da extremidade. A regra é a mesma (deriva do módulo da ponta exposta
+> daquele lado), só muda o eixo.
 
 ### 3.6 O que quebra no `BoxModule` atual (briefing 6.4)
 
@@ -397,11 +496,12 @@ sobrevive a reload. A V2 persiste tudo, com tenant.
 
 | Entidade | Escopo | Conteúdo | Estratégia |
 |---|---|---|---|
-| **Organização** | — | Tenant raiz (D-13: tenant = Organização, não Usuário) | RLS root |
-| **Usuário / Perfil** | Org | Nome, e-mail, telefone, endereço, logo, marca, unidade (mm/cm, D-05 global), alturas padrão, modo de precificação padrão, modo de montagem padrão | RLS por org |
+| **Organização** | — | Tenant raiz (D-13). **Dados do emitente que saem na proposta**: marca/logo, **CNPJ**, **endereço**, **telefone** | RLS root |
+| **Usuário / Perfil** | Org | Nome, e-mail, telefone, unidade (mm/cm, D-05 global), alturas padrão das faixas, modo de precificação padrão, modo de montagem padrão | RLS por org |
+| **Cliente** | Org | **Nome, telefone, endereço** — capturados ao criar o orçamento; alimentam a proposta | RLS por org |
 | **Produto** | Org | Chapas, ferragens, LEDs, acessórios | **Cópia no signup** (D-15) — preço é local |
 | **Módulo / Gabarito** | Global + Org | Por categoria | **Base global read-only + fork na edição** (D-15) |
-| **Orçamento** | Org | Cliente, status, itens | RLS por org |
+| **Orçamento** | Org | Ref. ao Cliente, status, itens, **prazo de entrega** | RLS por org |
 | **Ambiente / Parede** | Orçamento | Dimensões, elementos, itens posicionados | — |
 | **Elemento contínuo** | Parede/Conjunto | Tampo, rodapé, tamponamento | — |
 | **Linha de Proposta** | Orçamento | Agrupamento, render, descrição, `valorRateado` congelado | — |
@@ -417,13 +517,34 @@ sobrevive a reload. A V2 persiste tudo, com tenant.
 
 ## 8. Veio de chapa (briefing 7.3) — restrição no bin-packing
 
+> **Ampliado em 2026-07-24 pela auditoria do operador**: não basta a flag no
+> material — o sentido do veio precisa ser **visível e alterável por peça**.
+
 ```ts
 // no cadastro do material:
 type MaterialRef = { /* ...atual... */ temVeio: boolean }
+
+// por peça — qual dimensão da peça se alinha ao COMPRIMENTO da chapa (2720mm):
+type SentidoVeio = "comprimento" | "largura"
+type Peca = { /* ...atual... */ sentidoVeio: SentidoVeio }
 ```
 
-- Sentido do veio por peça, derivado do papel/orientação.
-- **Bin-packing aceita rotação apenas quando `!temVeio`.**
+**Semântica** (exemplo do operador, peça 800×400):
+- `sentidoVeio: "comprimento"` → a medida de **800 mm** corre no sentido dos
+  2720 mm da chapa (veio "de pé" nos 800).
+- `sentidoVeio: "largura"` → a medida de **400 mm** corre no sentido dos
+  2720 mm (veio "deitado" nos 400).
+
+**Defaults para módulos-caixa** (não exigem escolha do usuário):
+- Peças derivadas de **altura** e **largura** do módulo → alinhadas ao
+  **comprimento (2720 mm)**.
+- Peças derivadas de **profundidade** → alinhadas à **largura (1820 mm)**.
+
+**Placas**: o sentido é **visível e alterável ao adicionar a placa** (requisito
+de UX — a representação visual precisa mostrar a direção do veio).
+
+- **Bin-packing aceita rotação apenas quando `!temVeio`.** Com veio, a peça é
+  posicionada respeitando o `sentidoVeio` — a rotação deixa de ser livre.
 - Verificação de código confirmada: `lib/engine/box/cutting.ts:75-77` **hoje
   rotaciona sem restrição** (`{...p, w: p.h, h: p.w}`). Consequência a avisar
   ao operador: o aproveitamento atual está otimista para chapas com veio e
@@ -453,3 +574,25 @@ type MaterialRef = { /* ...atual... */ temVeio: boolean }
 | D-06 ripado quantidade→espaçamento | Seção 2.2 |
 | D-07 montagem é custo | Seção 5.5 |
 | D-15 produtos cópia / módulos base+fork | Seção 7 |
+
+---
+
+## 10. Assunções da auditoria de 2026-07-24 (a confirmar)
+
+Correções do operador aplicadas nas Seções 2.1, 3.4, 3.5, 7 e 8. Ao traduzir
+os 6 exemplos trabalhados em regra geral, assumi o seguinte — cada item é
+barato de corrigir agora e caro depois de implementado:
+
+| # | Assunção | Base |
+|---|---|---|
+| A-01 | **Sarrafo = 70 mm** de largura | Constante nos 6 exemplos (`360 = 500 − 2×70`) |
+| A-02 | **60 mm ⇒ 3 camadas** por lado | O texto do operador diz "60mm 1 sarr", mas o Exemplo 5 mostra 6+6 peças (= 3 por lado). Segui o exemplo, tratando o texto como lapso |
+| A-03 | Camadas por lado `{30→1, 45→2, 60→3}` e placas da dobrada `{30→2, 45→3, 60→4}` — ambos coerentes com **placa-base de 15 mm** | Aritmética dos exemplos |
+| A-04 | Com engrossamento **parcial**, o sarrafo do eixo menor só desconta 70 mm por lado perpendicular **efetivamente selecionado** | Generalização do caso de 4 lados |
+| A-05 | Sarrafos do **eixo maior** correm inteiros; os do menor encaixam entre eles | Nos exemplos o 1000 corre inteiro e o 500 vira 360 |
+| A-06 | Tampo: "profundidade + 30 mm" = profundidade **do módulo** (a maior, se o bloco variar) | Analogia com a regra do tamponamento |
+| A-07 | Fechamento e Rodapé usam a **espessura do material escolhido**; "50 mm"/"150 mm" são largura/altura do elemento, não espessura | Leitura literal |
+
+**Pendência real (não assunção)**: placa-base de **18 mm**. As tabelas de A-03
+só fecham para base de 15 mm — com 18 mm nem engrossada nem dobrada atingem
+exatamente 30/45/60. Definir antes da Task 12.1.

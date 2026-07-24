@@ -54,7 +54,12 @@
 
 ### 3.2 `/` — Dashboard de orçamentos
 - Lista de orçamentos da organização por status (rascunho / fechado / enviado).
-- Ação primária: "Novo orçamento" → dados do cliente → abre `/orcamento/[id]`.
+- Ação primária: **"Novo orçamento"** → formulário curto com os **dados do
+  cliente** (nome, telefone, endereço) + **prazo de entrega** → abre
+  `/orcamento/[id]`.
+  > Capturar aqui é o que faz a proposta (3.8) sair pré-preenchida sem
+  > retrabalho — requisito explícito do operador. Cliente já existente pode ser
+  > selecionado em vez de redigitado.
 - Reaproveita padrão de tabela/lista do Design System (Seção 6.9).
 
 ### 3.3 `/perfil` — Área pessoal / organização
@@ -125,15 +130,42 @@ lateral/inferior** visível em todas as abas (briefing Seção 3 passo 6:
 - **Dirigido por capacidade**: para módulo-caixa mostra o accordion atual;
   para placa mostra dimensões/material/orientação/borda-por-lado/
   engrossamento/ripado. O schema de capacidades decide as seções.
+- **Seletor de lados do engrossamento** (requisito do operador — Modelo de
+  Domínio 2.1.1): escolhida a espessura (30/45/60), o usuário clica nos lados
+  da referência visual da placa para engrossar só o que quer (ex.: só os dois
+  maiores), com confirmação. O BOM e a fita recalculam ao vivo.
+- **Sentido do veio visível e alterável** (Modelo de Domínio 8): ao adicionar
+  uma placa, mostrar graficamente em qual dimensão o veio corre e permitir
+  inverter. Módulos-caixa usam os defaults (altura/largura → 2720; profundidade
+  → 1820) sem exigir escolha.
 - Custo ao vivo + peças + mini plano de corte do item (painel direito, Task
   7.3 — ainda pendente da esteira visual antiga, reaproveitável aqui).
 
 ### 3.8 `/proposta/[id]/pdf` — Proposta imprimível
-- Documento com a marca do marceneiro, linhas de ambiente com imagem e valor,
-  total, à vista/parcelado (texto livre, D-09). Sem custos internos.
-- Evolução de `/proposta` atual + `proposta.css` (que a Task 9.1 migraria — a
-  base de impressão A4 é reaproveitável; a novidade é imagem + valor por
-  linha).
+
+> **Ampliado em 2026-07-24 pela auditoria do operador**: a proposta precisa de
+> muito mais que a marca.
+
+**Cabeçalho — dados do emitente** (vêm da Organização, `/perfil`):
+marca/logo · **CNPJ** · **endereço** · **telefone**.
+
+**Dados do cliente** (vêm do Cliente vinculado ao orçamento, capturados na
+criação — ver 3.2): **nome** · **telefone** · **endereço**.
+
+**Corpo:**
+- **Ambientes orçados** — uma linha por Linha de Proposta, com render
+  automático do conjunto, descrição e valor.
+- **Prazo de entrega** (campo do orçamento).
+- Total, à vista/parcelado (texto livre, D-09).
+- **Sem custos internos** — o cliente nunca vê custo de material, montagem ou
+  frete separados (D-25: diluídos no valor por ambiente).
+
+Todos os campos pré-preenchidos a partir dos cadastros, **com opção de editar**
+na hora de gerar.
+
+- Evolução de `/proposta` atual + `proposta.css` (a base de impressão A4 é
+  reaproveitável; a novidade é imagem + valor por linha e o bloco de dados
+  emitente/cliente).
 
 ---
 
