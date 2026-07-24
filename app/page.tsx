@@ -7,11 +7,7 @@ import {
   MATERIAIS_PADRAO,
   PARAMETROS_FABRICA_PADRAO,
 } from "@/lib/engine/defaults";
-import type {
-  ConfiguracaoMaterialModulo,
-  EngineOutput,
-  ModuloInstanciado,
-} from "@/lib/engine/types";
+import type { EngineOutput } from "@/lib/engine/types";
 import {
   larguraInstalacaoBox,
   type BoxModule,
@@ -36,10 +32,8 @@ import {
   espessurasDaCor,
   type Catalogo,
 } from "@/lib/catalog";
-import { carregarOverrides } from "@/lib/templateOverrides";
 import { montarLinhasInsumos, todasAsPecas } from "@/lib/insumos";
 import { planoDeCorte } from "@/lib/engine/box/cutting";
-import { ModulePreview } from "./components/ModulePreview";
 import { BoxCanvas } from "./components/BoxCanvas";
 import { PlanoCorteCanvas } from "./components/PlanoCorteCanvas";
 import { Button } from "@/components/ui/button";
@@ -47,83 +41,26 @@ import { Stepper } from "@/components/ui/stepper";
 import { cn } from "@/lib/utils";
 import { LayoutVisualizer, type LayoutModulo } from "./components/LayoutVisualizer";
 
-interface TemplateMeta {
-  codigo: string;
-  nome: string;
-  categoria: string;
-  config_padrao: Record<string, number>;
-}
-
 const PAREDES_PADRAO: Record<string, number> = { A: 3200, B: 2100 };
 
 let seq = 1;
 const novoId = () => `m${seq++}`;
 
-function itemTemplatePreset(
-  templateCodigo: string,
-  parede: string,
-  l: number,
-  h: number,
-  p: number,
-  config: Record<string, number> = {}
-): ModuloOrcamento {
-  return {
-    origem: "template",
-    modulo: {
-      id: novoId(),
-      templateCodigo,
-      parede,
-      largura_mm: l,
-      altura_mm: h,
-      profundidade_mm: p,
-      config,
-    },
-  };
-}
-
-/** Cópia editável de um item (novo id), preservando a origem. */
+/** Cópia editável de um item (novo id). */
 function clonarItem(it: ModuloOrcamento): ModuloOrcamento {
-  if (it.origem === "template") {
-    return {
-      origem: "template",
-      modulo: {
-        ...it.modulo,
-        id: novoId(),
-        config: { ...(it.modulo.config ?? {}) },
-        configMaterial: it.modulo.configMaterial
-          ? { ...it.modulo.configMaterial }
-          : undefined,
-      },
-    };
-  }
   const box: BoxModule = JSON.parse(JSON.stringify(it.box));
   box.id = novoId();
   return { origem: "custom_box", box };
 }
-
-const PRESET_COZINHA: ModuloOrcamento[] = [
-  itemTemplatePreset("CANTO_RETO", "A", 650, 720, 550, { CONFIG_QTD_PORTAS: 1, CONFIG_QTD_PRATELEIRAS: 1 }),
-  itemTemplatePreset("BASE_PORTAS", "A", 800, 720, 550, { CONFIG_QTD_PORTAS: 2, CONFIG_QTD_PRATELEIRAS: 1 }),
-  itemTemplatePreset("GAVETEIRO", "A", 450, 720, 550, { CONFIG_QTD_GAVETAS: 4 }),
-  itemTemplatePreset("BASE_PORTAS", "A", 600, 720, 550, { CONFIG_QTD_PORTAS: 2, CONFIG_QTD_PRATELEIRAS: 1 }),
-  itemTemplatePreset("AEREO_PORTAS", "A", 800, 700, 350, { CONFIG_QTD_PORTAS: 2, CONFIG_QTD_PRATELEIRAS: 1 }),
-  itemTemplatePreset("AEREO_PORTAS", "A", 800, 700, 350, { CONFIG_QTD_PORTAS: 2, CONFIG_QTD_PRATELEIRAS: 1 }),
-  itemTemplatePreset("TORRE_QUENTE", "B", 700, 2200, 600, {
-    CONFIG_QTD_PORTAS: 2,
-    CONFIG_QTD_PRATELEIRAS: 2,
-    CONFIG_QTD_NICHOS_FORNO: 2,
-  }),
-];
 
 const brl = (n: number) =>
   n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 const pct = (n: number) => `${(n * 100).toFixed(1)}%`;
 
 export default function Home() {
-  const [templates, setTemplates] = useState<TemplateMeta[]>([]);
-  // Lista única e polimórfica: cada item é um módulo de template ou uma
-  // caixa customizada (V3), diferenciados por `origem`. Sem estado paralelo.
-  const [itens, setItens] = useState<ModuloOrcamento[]>(PRESET_COZINHA);
+  // Lista única de itens de orçamento (hoje só caixas customizadas V3; a
+  // Task 12.1 adiciona o branch "placa"). Sem estado paralelo.
+  const [itens, setItens] = useState<ModuloOrcamento[]>([]);
   const [presets, setPresets] = useState<BoxPreset[]>([]);
   const [paredes, setParedes] = useState<Record<string, number>>(PAREDES_PADRAO);
   const [engine, setEngine] = useState<EngineOutput | null>(null);
@@ -144,34 +81,27 @@ export default function Home() {
   const [comercial, setComercial] = useState<ParametrosComerciais>(COMERCIAL_PADRAO);
 
   useEffect(() => {
-    fetch("/api/templates")
-      .then((r) => r.json())
-      .then((d) => setTemplates(d.templates))
-      .catch(() => {});
     setCatalogo(carregarCatalogo());
     seedPresetsPadrao();
     setPresets(listarPresets());
   }, []);
 
-  const templateMeta = (codigo: string) => templates.find((t) => t.codigo === codigo);
   const precos = useMemo(
     () => (catalogo ? catalogoParaPrecos(catalogo) : undefined),
     [catalogo]
   );
 
-  // Cálculo no cliente: a lista única já mistura templates e caixas — o
-  // orquestrador separa e combina internamente numa única saída consolidada.
+  // Cálculo no cliente: a lista única de caixas — o orquestrador consolida
+  // numa única saída (MDF, fita, ferragens).
   function calcular() {
     setCarregando(true);
     setErro(null);
     try {
-      const overrides = carregarOverrides();
       const t0 = performance.now();
       const result = calcularOrcamentoMisto({
         ambiente: { tipo: "Cozinha", materiais: MATERIAIS_PADRAO },
         parametros: PARAMETROS_FABRICA_PADRAO,
         itens,
-        templates: Object.keys(overrides).length ? overrides : undefined,
       });
       setEngine(result);
       setTempoMs(Math.round(performance.now() - t0));
@@ -218,33 +148,6 @@ export default function Home() {
     window.open("/proposta", "_blank");
   }
 
-  function atualizarTemplateModulo(id: string, patch: Partial<ModuloInstanciado>) {
-    setItens((its) =>
-      its.map((it) =>
-        it.origem === "template" && it.modulo.id === id
-          ? { ...it, modulo: { ...it.modulo, ...patch } }
-          : it
-      )
-    );
-  }
-  function atualizarTemplateConfig(id: string, chave: string, valor: number) {
-    setItens((its) =>
-      its.map((it) =>
-        it.origem === "template" && it.modulo.id === id
-          ? { ...it, modulo: { ...it.modulo, config: { ...it.modulo.config, [chave]: valor } } }
-          : it
-      )
-    );
-  }
-  function atualizarTemplateMaterial(id: string, cm: ConfiguracaoMaterialModulo | undefined) {
-    setItens((its) =>
-      its.map((it) =>
-        it.origem === "template" && it.modulo.id === id
-          ? { ...it, modulo: { ...it.modulo, configMaterial: cm } }
-          : it
-      )
-    );
-  }
   function atualizarBoxCampo(id: string, patch: Partial<BoxModule>) {
     setItens((its) =>
       its.map((it) =>
@@ -299,16 +202,10 @@ export default function Home() {
         largura_mm: larguraDoItem(it),
         altura_mm: alturaDoItem(it),
         profundidade_mm: profundidadeDoItem(it),
-        categoria:
-          it.origem === "template"
-            ? templateMeta(it.modulo.templateCodigo)?.categoria ?? "inferior"
-            : it.box.tipo === "aereo"
-            ? "superior"
-            : "inferior",
+        categoria: it.box.tipo === "aereo" ? "superior" : "inferior",
         cor: corExternaDoItem(it),
       })),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [itens, templates]
+    [itens]
   );
 
   return (
@@ -334,25 +231,12 @@ export default function Home() {
           >
             Materiais
           </a>
-          <a
-            href="/configuracoes/engenharia"
-            className="text-accent hover:text-accent-hover hover:underline"
-          >
-            Engenharia
-          </a>
         </nav>
       </header>
 
       <div className="mb-4 flex flex-wrap gap-3">
         <Button variant="primary" onClick={calcular} disabled={carregando}>
           {carregando ? "Calculando…" : "Criar orçamento"}
-        </Button>
-        <Button
-          variant="ghost"
-          className="max-sm:h-auto max-sm:whitespace-normal max-sm:py-2 max-sm:text-left"
-          onClick={() => setItens(PRESET_COZINHA.map(clonarItem))}
-        >
-          Recarregar preset &quot;Cozinha em L&quot; (demo legado)
         </Button>
       </div>
 
@@ -431,19 +315,7 @@ export default function Home() {
                   onClick={min ? () => expandir(id) : undefined}
                 >
                   {min ? (
-                    <ResumoModulo it={it} templates={templates} />
-                  ) : it.origem === "template" ? (
-                    <TemplateModuloCard
-                      modulo={it.modulo}
-                      templates={templates}
-                      paredes={paredes}
-                      catalogo={catalogo}
-                      onAtualizar={(patch) => atualizarTemplateModulo(id, patch)}
-                      onAtualizarConfig={(chave, valor) =>
-                        atualizarTemplateConfig(id, chave, valor)
-                      }
-                      onAtualizarMaterial={(cm) => atualizarTemplateMaterial(id, cm)}
-                    />
+                    <ResumoModulo it={it} />
                   ) : (
                     <BoxModuloCard
                       box={it.box}
@@ -701,39 +573,7 @@ export default function Home() {
 }
 
 // Vista resumida de um módulo "salvo" (colapsado): preview + dados essenciais.
-function ResumoModulo({
-  it,
-  templates,
-}: {
-  it: ModuloOrcamento;
-  templates: TemplateMeta[];
-}) {
-  if (it.origem === "template") {
-    const m = it.modulo;
-    const meta = templates.find((t) => t.codigo === m.templateCodigo);
-    return (
-      <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-        <ModulePreview
-          modulo={{
-            largura_mm: m.largura_mm,
-            altura_mm: m.altura_mm,
-            config: m.config ?? {},
-            corExterno: m.configMaterial?.externo.acabamento,
-          }}
-        />
-        <div style={{ fontSize: 13, lineHeight: 1.6 }}>
-          <div style={{ fontWeight: 600 }}>{meta?.nome ?? m.templateCodigo}</div>
-          <div className="muted">
-            Parede {m.parede ?? "A"} · {m.largura_mm}×{m.altura_mm}×{m.profundidade_mm}mm
-          </div>
-          <div className="muted">
-            Cor: {m.configMaterial?.externo.acabamento ?? "padrão do ambiente"}
-          </div>
-        </div>
-      </div>
-    );
-  }
-
+function ResumoModulo({ it }: { it: ModuloOrcamento }) {
   const box = it.box;
   const coresTamponamento = [
     box.tamponamento?.esquerdo,
@@ -765,115 +605,6 @@ function ResumoModulo({
         </div>
       </div>
     </div>
-  );
-}
-
-// Card de edição de um módulo de TEMPLATE (motor paramétrico clássico).
-function TemplateModuloCard({
-  modulo,
-  templates,
-  paredes,
-  catalogo,
-  onAtualizar,
-  onAtualizarConfig,
-  onAtualizarMaterial,
-}: {
-  modulo: ModuloInstanciado;
-  templates: TemplateMeta[];
-  paredes: Record<string, number>;
-  catalogo: Catalogo | null;
-  onAtualizar: (patch: Partial<ModuloInstanciado>) => void;
-  onAtualizarConfig: (chave: string, valor: number) => void;
-  onAtualizarMaterial: (cm: ConfiguracaoMaterialModulo | undefined) => void;
-}) {
-  const meta = templates.find((t) => t.codigo === modulo.templateCodigo);
-  return (
-    <>
-      <div className="flex flex-wrap gap-3 sm:flex-nowrap">
-        <ModulePreview
-          modulo={{
-            largura_mm: modulo.largura_mm,
-            altura_mm: modulo.altura_mm,
-            config: modulo.config ?? {},
-            corExterno: modulo.configMaterial?.externo.acabamento,
-          }}
-        />
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <select
-              className="min-w-0 flex-1 text-titulo-card font-semibold"
-              value={modulo.templateCodigo}
-              onChange={(e) => {
-                const t = templates.find((x) => x.codigo === e.target.value);
-                onAtualizar({
-                  templateCodigo: e.target.value,
-                  config: { ...(t?.config_padrao ?? {}) },
-                });
-              }}
-            >
-              {templates.map((t) => (
-                <option key={t.codigo} value={t.codigo}>
-                  {t.nome}
-                </option>
-              ))}
-            </select>
-            <select
-              className="w-16"
-              value={modulo.parede ?? "A"}
-              onChange={(e) => onAtualizar({ parede: e.target.value })}
-            >
-              {Object.keys(paredes).map((p) => (
-                <option key={p} value={p}>
-                  {p}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-5">
-            <div className="min-w-0">
-              <label>Largura</label>
-              <input
-                type="number"
-                value={modulo.largura_mm}
-                onChange={(e) => onAtualizar({ largura_mm: Number(e.target.value) })}
-              />
-            </div>
-            <div className="min-w-0">
-              <label>Altura</label>
-              <input
-                type="number"
-                value={modulo.altura_mm}
-                onChange={(e) => onAtualizar({ altura_mm: Number(e.target.value) })}
-              />
-            </div>
-            <div className="min-w-0">
-              <label>Prof.</label>
-              <input
-                type="number"
-                value={modulo.profundidade_mm}
-                onChange={(e) => onAtualizar({ profundidade_mm: Number(e.target.value) })}
-              />
-            </div>
-            {Object.keys(meta?.config_padrao ?? modulo.config ?? {}).map((chave) => (
-              <div key={chave} className="min-w-0">
-                <label>{chave.replace("CONFIG_QTD_", "").replace("CONFIG_", "")}</label>
-                <input
-                  type="number"
-                  value={modulo.config?.[chave] ?? 0}
-                  onChange={(e) => onAtualizarConfig(chave, Number(e.target.value))}
-                />
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      <MaterialModulo
-        catalogo={catalogo}
-        valor={modulo.configMaterial}
-        onChange={onAtualizarMaterial}
-      />
-    </>
   );
 }
 
@@ -1275,99 +1006,6 @@ function tamponamentoInicial(cores: string[]): TamponamentoInstancia {
     direito: ladoBase(),
     superior: ladoBase(),
     inferior: ladoBase(),
-  };
-}
-
-// V2-1 — Editor de material por módulo (interno/externo/portas + tem fundo).
-function MaterialModulo({
-  catalogo,
-  valor,
-  onChange,
-}: {
-  catalogo: Catalogo | null;
-  valor?: ConfiguracaoMaterialModulo;
-  onChange: (cm: ConfiguracaoMaterialModulo | undefined) => void;
-}) {
-  const cores = catalogo ? coresDisponiveis(catalogo) : ["Branco TX", "Louro Freijó"];
-
-  if (!valor) {
-    return (
-      <Button variant="ghost" size="sm" className="mt-2" onClick={() => onChange(materialInicial(cores))}>
-        + Personalizar material
-      </Button>
-    );
-  }
-
-  const slot = (
-    nome: "interno" | "externo" | "portas",
-    rot: string
-  ) => {
-    const s = valor[nome];
-    const espessuras = catalogo ? espessurasDaCor(catalogo, s.acabamento) : [15, 18];
-    return (
-      <div className="min-w-0">
-        <label>{rot}</label>
-        <select
-          value={s.acabamento}
-          onChange={(e) =>
-            onChange({ ...valor, [nome]: { ...s, acabamento: e.target.value } })
-          }
-        >
-          {cores.map((c) => (
-            <option key={c} value={c}>
-              {c}
-            </option>
-          ))}
-        </select>
-        <select
-          value={s.espessura}
-          className="mt-1"
-          onChange={(e) =>
-            onChange({ ...valor, [nome]: { ...s, espessura: Number(e.target.value) } })
-          }
-        >
-          {(espessuras.length ? espessuras : [15, 18]).map((esp) => (
-            <option key={esp} value={esp}>
-              {esp} mm
-            </option>
-          ))}
-        </select>
-      </div>
-    );
-  };
-
-  return (
-    <div className="mt-2.5 border-t border-cinza-200 pt-2">
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
-        {slot("interno", "Interno")}
-        {slot("externo", "Externo")}
-        {slot("portas", "Portas")}
-        <div className="min-w-0">
-          <label>Tem fundo</label>
-          <select
-            value={valor.temFundo ? "sim" : "nao"}
-            onChange={(e) => onChange({ ...valor, temFundo: e.target.value === "sim" })}
-          >
-            <option value="sim">Sim</option>
-            <option value="nao">Não</option>
-          </select>
-        </div>
-      </div>
-      <Button variant="ghost" size="sm" className="mt-1.5" onClick={() => onChange(undefined)}>
-        Usar padrão do ambiente
-      </Button>
-    </div>
-  );
-}
-
-function materialInicial(cores: string[]): ConfiguracaoMaterialModulo {
-  const branco = cores.find((c) => c.toLowerCase().includes("branco")) ?? cores[0];
-  const frente = cores.find((c) => c !== branco) ?? branco;
-  return {
-    interno: { espessura: 15, acabamento: branco },
-    externo: { espessura: 18, acabamento: branco },
-    portas: { espessura: 18, acabamento: frente },
-    temFundo: true,
   };
 }
 

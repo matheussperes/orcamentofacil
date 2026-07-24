@@ -57,8 +57,7 @@ export default function ConfigMateriais() {
         <h1>Materiais e produtos</h1>
         <p>
           Cadastro de insumos e preços que alimentam o motor de custos.{" "}
-          <a href="/">← voltar à calculadora</a> ·{" "}
-          <a href="/configuracoes/engenharia">Engenharia dos módulos →</a>
+          <a href="/">← voltar à calculadora</a>
         </p>
       </header>
 

@@ -1,4 +1,4 @@
-import { consolidarResultados } from "../engine";
+import { consolidarResultados } from "../consolidar";
 import type { EngineOutput, ResultadoModulo } from "../types";
 import { explodeBox } from "./explode";
 import type { BoxModule } from "./types";
