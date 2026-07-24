@@ -91,14 +91,31 @@ type Placa = {
 > errado. As regras abaixo derivam dos 6 exemplos trabalhados fornecidos pelo
 > operador e são a especificação canônica.
 
-Espessuras finais possíveis: **30 / 45 / 60 mm**. Em ambas as técnicas a placa
-**mantém as dimensões de face** (uma placa 1000×500 continua 1000×500) — o que
-muda é a espessura e o conjunto de peças gerado.
+Em ambas as técnicas a placa **mantém as dimensões de face** (uma placa
+1000×500 continua 1000×500) — o que muda é a espessura e o conjunto de peças.
+
+**O parâmetro real é o NÍVEL (1/2/3), não a espessura.** "30/45/60 mm" é o
+rótulo do caso comum (placa-base de 15 mm); com base de 18 mm o nível é o
+mesmo e a espessura final é outra:
+
+```
+espessuraFinal = espessuraBase × (1 + nivel)
+```
+
+| Nível | Base 15 mm | Base 18 mm |
+|---|---|---|
+| 1 | 30 mm | 36 mm |
+| 2 | 45 mm | 54 mm |
+| 3 | 60 mm | 72 mm |
 
 ```ts
 type Engrossamento =
-  | { tecnica: "engrossada"; espessuraFinal: 30 | 45 | 60; lados: LadoPlaca[] }
-  | { tecnica: "dobrada";    espessuraFinal: 30 | 45 | 60 }
+  | { tecnica: "engrossada"
+      nivel: 1 | 2 | 3
+      lados: LadoPlaca[]              // quais bordas engrossar (ver 2.1.1)
+      larguraSarrafo?: number }       // default 70 mm, EDITÁVEL
+  | { tecnica: "dobrada"
+      nivel: 1 | 2 | 3 }
 
 type LadoPlaca = "superior" | "inferior" | "esquerda" | "direita"
 ```
@@ -109,17 +126,24 @@ Sarrafos colados por trás, nas bordas. A peça **não** vira maciça: só as
 bordas ganham espessura. O marceneiro **escolhe quais lados engrossar**
 (pode querer só os dois maiores) — ver 2.1.1.
 
-Regras de derivação (sarrafo padrão **70 mm** de largura):
+Regras de derivação (sarrafo: largura **70 mm** por padrão, editável):
 
 ```
-camadas por lado = { 30mm → 1, 45mm → 2, 60mm → 3 }
+camadas de sarrafo por lado selecionado = nivel   (1, 2 ou 3)
 ```
-> A camada extra é o que soma espessura: placa 15mm + 1 sarrafo 15mm = 30mm;
+> Cada camada soma uma espessura de placa: base 15mm + 1 sarrafo = 30mm;
 > + 2 = 45mm; + 3 = 60mm.
 
+- **Só os lados selecionados geram sarrafo.** Lado não selecionado não produz
+  peça alguma naquela borda.
 - Sarrafos do **eixo maior** correm o comprimento inteiro da placa.
 - Sarrafos do **eixo menor** encaixam **entre** eles: comprimento = dimensão
-  menor − (70 × nº de lados perpendiculares efetivamente selecionados).
+  menor − (larguraSarrafo × nº de lados perpendiculares **selecionados**).
+  Se nenhum lado perpendicular estiver selecionado, o sarrafo menor sai na
+  medida cheia.
+
+**Exemplo de engrossamento parcial** (placa 1000×500, nível 1, só os dois
+lados de 1000): peças = 1× 1000×500 + 2× 1000×70. **Nenhum sarrafo de 360.**
 
 **Conferência com os exemplos do operador** (placa 1000×500):
 
@@ -133,10 +157,10 @@ camadas por lado = { 30mm → 1, 45mm → 2, 60mm → 3 }
 
 #### Dobrada — placas inteiras laminadas (peça MACIÇA)
 
-Sem sarrafo: empilham-se placas inteiras até a espessura alvo.
+Sem sarrafo: empilham-se placas inteiras.
 
 ```
-nº de placas = { 30mm → 2, 45mm → 3, 60mm → 4 }
+nº de placas = nivel + 1        // nível 1 → 2 placas · 2 → 3 · 3 → 4
 ```
 
 | Exemplo | Config | Peças geradas |
@@ -147,14 +171,21 @@ nº de placas = { 30mm → 2, 45mm → 3, 60mm → 4 }
 
 #### Fita de borda por espessura final — regra de catálogo
 
-A técnica (engrossada vs dobrada) **não** muda a fita; a **espessura final**
-mede. Fitas de larguras diferentes são produtos distintos no catálogo:
+A técnica (engrossada vs dobrada) **não** muda a fita; quem manda é a
+**espessura final**. Regra geral: **a menor fita disponível ≥ espessura
+final**. Fitas de larguras diferentes são produtos distintos no catálogo.
 
-| Espessura final da peça | Fita |
+| Espessura final | Fita |
 |---|---|
-| 15 mm ou 18 mm | **22 mm** |
-| 30 mm (engrossada ou dobrada) | **35 mm** |
-| 45 mm ou 60 mm (engrossada ou dobrada) | **65 mm** |
+| 15 mm · 18 mm | **22 mm** |
+| 30 mm | **35 mm** |
+| 36 mm · 45 mm · 54 mm · 60 mm | **65 mm** |
+
+> ⚠️ **Borda do domínio**: base 18 mm no nível 3 dá **72 mm**, que excede a
+> maior fita da tabela (65 mm). Nenhuma fita cobre esse caso. Tratar como
+> combinação **não oferecida na UI** (nível 3 indisponível para base 18 mm),
+> a menos que exista fita mais larga no catálogo do marceneiro — decidir na
+> Task 12.1.
 
 #### 2.1.1 Seleção de lados a engrossar (requisito de UX)
 
@@ -165,9 +196,10 @@ referência visual da placa com os 4 lados clicáveis; escolhida a espessura
 com confirmação. O BOM recalcula ao vivo (o comprimento dos sarrafos do eixo
 menor depende de quantos lados perpendiculares estão selecionados).
 
-> ⚠️ **Assunção a confirmar** (ver Seção 10): as tabelas de camadas assumem
-> placa-base de **15 mm**. Para base de 18 mm as contas de espessura final não
-> fecham em 30/45/60 — comportamento a definir.
+> ✅ **Resolvido pelo operador (2026-07-24)**: engrossar/dobrar vale também
+> para base de 18 mm — a espessura final passa a ser `base × (1 + nivel)` e a
+> fita segue a espessura real. Por isso o parâmetro do domínio é o **nível**,
+> não a espessura.
 
 ### 2.2 Ripado (briefing 7.2, D-06) — gerador de peças
 
@@ -583,16 +615,17 @@ Correções do operador aplicadas nas Seções 2.1, 3.4, 3.5, 7 e 8. Ao traduzir
 os 6 exemplos trabalhados em regra geral, assumi o seguinte — cada item é
 barato de corrigir agora e caro depois de implementado:
 
-| # | Assunção | Base |
+| # | Assunção | Situação |
 |---|---|---|
-| A-01 | **Sarrafo = 70 mm** de largura | Constante nos 6 exemplos (`360 = 500 − 2×70`) |
-| A-02 | **60 mm ⇒ 3 camadas** por lado | O texto do operador diz "60mm 1 sarr", mas o Exemplo 5 mostra 6+6 peças (= 3 por lado). Segui o exemplo, tratando o texto como lapso |
-| A-03 | Camadas por lado `{30→1, 45→2, 60→3}` e placas da dobrada `{30→2, 45→3, 60→4}` — ambos coerentes com **placa-base de 15 mm** | Aritmética dos exemplos |
-| A-04 | Com engrossamento **parcial**, o sarrafo do eixo menor só desconta 70 mm por lado perpendicular **efetivamente selecionado** | Generalização do caso de 4 lados |
-| A-05 | Sarrafos do **eixo maior** correm inteiros; os do menor encaixam entre eles | Nos exemplos o 1000 corre inteiro e o 500 vira 360 |
-| A-06 | Tampo: "profundidade + 30 mm" = profundidade **do módulo** (a maior, se o bloco variar) | Analogia com a regra do tamponamento |
-| A-07 | Fechamento e Rodapé usam a **espessura do material escolhido**; "50 mm"/"150 mm" são largura/altura do elemento, não espessura | Leitura literal |
+| A-01 | Sarrafo de 70 mm | ✅ **Confirmado com ajuste**: 70 mm é **default editável**, não constante fixa (`larguraSarrafo`) |
+| A-02 | Nível 3 ⇒ **3 camadas** por lado | ⏳ **A confirmar**: o texto do operador dizia "60mm 1 sarr", mas o Exemplo 5 mostra 6+6 peças (3 por lado). Segui o exemplo — se o texto estiver certo, inverter |
+| A-03 | Camadas/placas por nível | ✅ **Resolvido e generalizado**: `espessuraFinal = base × (1 + nivel)`; vale para base 15 **e** 18 mm; "30/45/60" é rótulo do caso base-15 |
+| A-04 | Engrossamento parcial | ✅ **Confirmado**: lado não selecionado não gera peça nenhuma; o sarrafo menor só desconta por lado perpendicular selecionado |
+| A-05 | Eixo maior corre inteiro; menor encaixa entre eles | ✅ Mantido (consistente com os 6 exemplos) |
+| A-06 | Tampo: profundidade **do módulo** + 30 mm (a maior, se o bloco variar) | ⏳ A confirmar |
+| A-07 | Fechamento/Rodapé usam a espessura do material; "50 mm"/"150 mm" são largura/altura, não espessura | ⏳ A confirmar |
 
-**Pendência real (não assunção)**: placa-base de **18 mm**. As tabelas de A-03
-só fecham para base de 15 mm — com 18 mm nem engrossada nem dobrada atingem
-exatamente 30/45/60. Definir antes da Task 12.1.
+**Nova borda de domínio descoberta**: base 18 mm no nível 3 = **72 mm**, acima
+da maior fita da tabela (65 mm). Ver o aviso na Seção 2.1 — tratar como
+combinação não oferecida, salvo fita mais larga no catálogo. Decidir na Task
+12.1.
