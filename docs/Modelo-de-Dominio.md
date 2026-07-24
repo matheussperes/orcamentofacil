@@ -618,12 +618,14 @@ barato de corrigir agora e caro depois de implementado:
 | # | Assunção | Situação |
 |---|---|---|
 | A-01 | Sarrafo de 70 mm | ✅ **Confirmado com ajuste**: 70 mm é **default editável**, não constante fixa (`larguraSarrafo`) |
-| A-02 | Nível 3 ⇒ **3 camadas** por lado | ⏳ **A confirmar**: o texto do operador dizia "60mm 1 sarr", mas o Exemplo 5 mostra 6+6 peças (3 por lado). Segui o exemplo — se o texto estiver certo, inverter |
+| A-02 | Nível 3 ⇒ **3 camadas** por lado | ✅ **Confirmado pelo operador (2026-07-24)**: o exemplo é a fonte da verdade, não o texto |
 | A-03 | Camadas/placas por nível | ✅ **Resolvido e generalizado**: `espessuraFinal = base × (1 + nivel)`; vale para base 15 **e** 18 mm; "30/45/60" é rótulo do caso base-15 |
 | A-04 | Engrossamento parcial | ✅ **Confirmado**: lado não selecionado não gera peça nenhuma; o sarrafo menor só desconta por lado perpendicular selecionado |
 | A-05 | Eixo maior corre inteiro; menor encaixa entre eles | ✅ Mantido (consistente com os 6 exemplos) |
-| A-06 | Tampo: profundidade **do módulo** + 30 mm (a maior, se o bloco variar) | ⏳ A confirmar |
-| A-07 | Fechamento/Rodapé usam a espessura do material; "50 mm"/"150 mm" são largura/altura, não espessura | ⏳ A confirmar |
+| A-06 | Tampo: profundidade **do módulo maior** + 30 mm, se o bloco variar | ✅ **Confirmado pelo operador (2026-07-24)** |
+| A-07 | Fechamento/Rodapé: "50 mm"/"150 mm" são largura/altura; a espessura é sempre a do material | ✅ **Confirmado pelo operador (2026-07-24)** |
+
+Todas as assunções estão confirmadas. Nenhuma pendência bloqueante para a Fase B.
 
 **Nova borda de domínio descoberta**: base 18 mm no nível 3 = **72 mm**, acima
 da maior fita da tabela (65 mm). Ver o aviso na Seção 2.1 — tratar como
