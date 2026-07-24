@@ -1,28 +1,22 @@
-import { NextRequest, NextResponse } from "next/server";
-import { SESSION_COOKIE, verifySession } from "@/lib/auth";
+import { type NextRequest } from "next/server";
+import { updateSession } from "@/lib/supabase/middleware";
 
-// Protege as rotas de dados (clientes, orçamentos).
-//
-// Task 1.3 (docs/Backlog.md): exige sessão autenticada, mesmo padrão usado
-// por /api/clientes e /api/orcamentos.
-// Task 10.1: removida a entrada de /api/calcular (motor V1 removido, rota
-// excluída — não confundir com o caminho de caixa, que roda client-side).
-export async function middleware(req: NextRequest) {
-  const token = req.cookies.get(SESSION_COOKIE)?.value;
-  const session = token ? await verifySession(token) : null;
-
-  if (!session) {
-    return NextResponse.json(
-      { erro: "Não autenticado." },
-      { status: 401 }
-    );
-  }
-  return NextResponse.next();
+// Task 11.1 (docs/Backlog.md — Stage 11): substitui o middleware de JWT
+// próprio (verificava SESSION_COOKIE de lib/auth.ts e retornava 401 em
+// /api/clientes e /api/orcamentos — ambas removidas nesta task, eram do
+// modelo de dados V1). Novo escopo: refresh de sessão Supabase em todas as
+// rotas, sem gate de login (decisão de UX da Fase C).
+export async function middleware(request: NextRequest) {
+  return await updateSession(request);
 }
 
 export const config = {
   matcher: [
-    "/api/clientes/:path*",
-    "/api/orcamentos/:path*",
+    /*
+     * Roda em todas as rotas exceto assets estáticos e otimização de imagem
+     * do Next.js, para que o refresh de sessão aconteça em qualquer request
+     * que possa depender de auth (inclusive páginas, não só /api).
+     */
+    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };
