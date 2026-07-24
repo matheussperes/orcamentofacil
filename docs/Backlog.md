@@ -782,7 +782,7 @@ jornada do cliente, agora sobre Tailwind + shadcn/ui).
 > os tipos do V1). Lista **verificada no código**, não presumida.
 
 ### Task 10.1 — Remover o motor de templates (V1), preservando o compartilhado
-- **Status**: ⏱️ Planejado
+- **Status**: ✅ Concluído (2026-07-24, mesclada em `feature/10.1-remover-motor-v1`, aprovada por Code Auditor + teste funcional ao vivo — `consolidarResultados` extraído para `lib/engine/consolidar.ts`; 11 arquivos V1 removidos (~1900 linhas líquidas); `ModuloOrcamento` reduzido a `{origem: "custom_box"}` (união de 1 membro, Task 12.1 adiciona `"placa"`); fluxo completo confirmado no browser (preset de caixa → BOM → preço → insumos, R$ 2.590,21). **69/96 testes restantes** (não 73 — o Backlog não contava os 4 testes de `app/api/calcular/route.test.ts`, 100% V1, removidos junto). Achado lateral: nenhuma rota além de `/api/calcular` tinha teste próprio de padrão `getSession()`→401 — gap pré-existente, não regressão, registrado para Stage 11)
 - **Modelo Recomendado**: Sonnet
 - **Prioridade**: 🔴 Alta
 - **Executor sugerido**: Backend Engineer
