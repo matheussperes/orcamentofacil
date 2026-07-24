@@ -747,3 +747,139 @@ conforme reescrito em `docs/Design-System.md` v2.
 **Total: 26 tasks em 9 Pipeline Stages** (13 de correção/dívida técnica —
 Stage 1 e Task 2.1 já concluídas — + 13 do épico de refatoração visual da
 jornada do cliente, agora sobre Tailwind + shadcn/ui).
+
+---
+
+# ÉPICO V2 — Reorientação do Produto (Briefing V2)
+
+> **Adicionado na Fase A (Discovery), 2026-07-24.** Fonte:
+> `docs/00-briefing-v2-reorientacao_1.md`, `docs/Modelo-de-Dominio.md`,
+> `docs/PRD.md`, `docs/Mapa-de-Telas.md`. Isto **reorienta** o backlog: as
+> Stages 1–9 acima eram correção + refatoração visual da V1; daqui em diante é
+> a construção da V2 do produto (motor estendido + Supabase multi-tenant + UI
+> reconstruída). As Stages seguem a numeração e continuam em Fase B (motor/
+> dados) e Fase C (telas).
+
+## Status das Stages 1–9 sob a ótica da V2
+
+| Stage | Reaproveitamento na V2 |
+|---|---|
+| 1 (Segurança crítica) ✅ | **Mantido.** Princípios valem. `/api/calcular` e `seed-qa-user.ts` mudam de forma na migração Supabase, mas as correções não se perdem. |
+| 2.1 (ESLint) ✅ | **Mantido integralmente.** |
+| 2.2 (CI lint gate) | **Mantido** — reavaliar após a migração de infra. |
+| 3.x (segurança média/baixa) | **Parcial.** 3.1 (rate limiting) e 3.5 (bcrypt Edge) ficam obsoletos com Supabase Auth. 3.3 (auditoria) e 3.4 (headers) seguem válidos. Rever na Fase B. |
+| 4.x (upgrades major) | **Mantido** como avaliação. |
+| 5.1/5.2 (Tailwind+shadcn) ✅ | **Base da Fase C.** Reaproveitado integralmente. |
+| 6.1–6.5 (Produção) ✅ | **Parcialmente superseguido.** `app/page.tsx` é decomposto nas abas de `/orcamento/[id]`. Componentes/padrões (Button, Stepper, KPI, tabela) sobrevivem; o layout de página única não. |
+| 7.1/7.2 ✅ | **Base direta do Editor de Item** (`/modulo` → `/orcamento/[id]/item/[itemId]`). Reaproveitado. |
+| 7.2b, 7.3, 8.1, 9.1 (planejadas) | **Reabsorvidas** pela Fase C: 7.3 (painel direito) → Editor de Item; 8.1 (Biblioteca) → tela `/biblioteca` da V2; 9.1 (proposta.css) → tela de proposta da V2. Executar dentro da Fase C, não isoladamente. |
+
+---
+
+## Pipeline Stage 10 — Remoção do Motor V1 (Fase B, primeiro passo pós-PRD)
+
+> **Bloqueia** o resto da Fase B (o modelo de dados novo não deve conviver com
+> os tipos do V1). Lista **verificada no código**, não presumida.
+
+### Task 10.1 — Remover o motor de templates (V1), preservando o compartilhado
+- **Status**: ⏱️ Planejado
+- **Modelo Recomendado**: Sonnet
+- **Prioridade**: 🔴 Alta
+- **Executor sugerido**: Backend Engineer
+- **Descrição objetiva**: Remover o motor V1 de templates. **Nuance crítica
+  verificada**: `lib/engine/engine.ts` exporta `consolidarResultados` (linha
+  327 — COMPARTILHADO, usado pelo caminho de caixa em `lib/orcamento.ts`) E
+  `calcularEngine` (linha 380 — só V1). **Não apagar `engine.ts` inteiro** —
+  extrair `consolidarResultados` para um módulo próprio (ex:
+  `lib/engine/consolidar.ts`) antes de remover o resto.
+- **Arquivos a remover** (V1-only, confirmados por grep):
+  - `lib/engine/templates.ts`, `lib/engine/evaluator.ts` (+ `evaluator.test.ts`)
+  - `lib/templateOverrides.ts`
+  - `lib/engine/engine.ts` (após extrair `consolidarResultados`) + `engine.test.ts` (17 testes V1)
+  - `lib/validation/templates.ts` (validava o body de templates de `/api/calcular`)
+  - `app/api/calcular/route.ts` (100% V1 hoje — recebe `ModuloInstanciado[]`, chama `calcularEngine`; o caminho de caixa roda client-side, não por esta rota) — remover ou reconstruir na Fase C se uma rota de cálculo server-side for necessária
+  - `app/api/templates/route.ts`
+  - `app/configuracoes/engenharia/page.tsx` (editor de fórmulas do V1)
+- **Arquivos a alterar**:
+  - `lib/orcamento.ts` — trocar o branch `origem: "template"` por `origem: "placa"` (NÃO colapsar o union); remover `calcularOrcamentoMisto`'s ramo de template.
+  - `app/page.tsx` — remover os 10 pontos de `origem === "template"` / criação de item template (será decomposto na Fase C de qualquer forma; nesta task, no mínimo, deixar de referenciar o V1 sem quebrar o build).
+  - `prisma/seed.ts` — remove seed de templates (sai junto com o Prisma na Task 11.1 de qualquer forma).
+- **Critérios de aceitação verificáveis**:
+  - [ ] Nenhum import de `lib/engine/engine`, `templates`, `evaluator`, `templateOverrides` fora dos arquivos removidos (grep vazio).
+  - [ ] `consolidarResultados` preservado e o caminho de caixa (`explodeBox` → BOM → plano de corte) continua funcionando.
+  - [ ] `npm test` verde **sem** os 23 testes de V1 (`engine.test.ts` 17 + `evaluator.test.ts` 6) e **sem testes órfãos**. Restam os testes do V3.
+  - [ ] `npm run build`/`lint`/`typecheck` limpos.
+
+## Pipeline Stage 11 — Persistência multi-tenant (Fase B)
+
+> Maior mudança de infraestrutura do plano (D-14). Detalhamento fino de cada
+> migration/política fica para quando a Stage iniciar; aqui o recorte.
+
+- **Task 11.1** — Migrar auth Prisma → Supabase Auth. Remover `app/api/auth/*`,
+  `prisma/schema.prisma`, `prisma/seed.ts`, `middleware.ts` (auth próprio),
+  `lib/auth.ts`. Introduzir clientes Supabase server/browser separados.
+  🔴 Alta · Opus (mudança de infra cruzada).
+- **Task 11.2** — Modelo de dados: Organização, Perfil, Produto, Gabarito,
+  Orçamento, Ambiente/Parede, ElementoContinuo, LinhaProposta, Lista fechada
+  (`docs/Modelo-de-Dominio.md` Seção 7). Cada tabela com RLS + política na
+  mesma migration. 🔴 Alta · Sonnet.
+- **Task 11.3** — Teste de isolamento por tabela (tenant A ≠ tenant B).
+  🔴 Alta · Sonnet. **Critério de aceitação, não follow-up.**
+- **Task 11.4** — Estratégias de catálogo (D-15): Produtos = cópia no signup;
+  Gabaritos = base global read-only + fork. 🟡 Média · Sonnet.
+
+## Pipeline Stage 12 — Extensões do motor (Fase B)
+
+- **Task 12.1** — Primitiva `Placa` + modificadores (engrossada/dobrada com
+  BOMs distintos, ripado gerador de peças). `ItemOrcamento` union
+  `BoxModule | Placa`. 🔴 Alta · Sonnet. Testes de BOM por técnica.
+- **Task 12.2** — Parede/Ambiente + posicionamento 1D com faixas + validação
+  Tier 1 e 2. 🔴 Alta · Sonnet.
+- **Task 12.3** — Detecção de conjuntos adjacentes + override (união/quebra).
+  🟡 Média · Sonnet.
+- **Task 12.4** — Elementos contínuos unificados; tamponamento sai do
+  `BayContent`; migração de presets (`migrate.ts`, descarte com aviso para
+  bays de tamponamento). 🔴 Alta · Sonnet.
+- **Task 12.5** — Veio de chapa: flag `temVeio`, rotação do bin-packing só
+  quando `!temVeio` (`cutting.ts:75-77`). 🟡 Média · Sonnet. **Avisar operador
+  que o aproveitamento vai mudar.**
+- **Task 12.6** — Modos de precificação (1 no 1º corte, arquitetura p/ 4) +
+  rateio por custo alocado + frete/montagem + congelamento. 🔴 Alta · Opus
+  (regra financeira). **Testes obrigatórios**: soma das linhas == total
+  (arredondamento), segregação por material, congelamento no fechamento.
+
+## Pipeline Stage 13 — Reconstrução da experiência (Fase C)
+
+> Só inicia com o modelo de dados (Stages 11–12) de pé. Cadência: **validação
+> em lote por conjunto de telas** (decisão do operador), não task-a-task.
+> Ordem do briefing (Seção 8). Detalhamento por tela quando a Stage iniciar.
+
+- **Task 13.0** — **Pré-requisito de canvas**: refatorar `BoxCanvas.geometria`
+  para aceitar **lista de itens posicionados**, não um `BoxModule` só (render
+  de conjunto). Vem antes de qualquer tela que dependa dele. 🔴 Alta · Sonnet.
+- **Task 13.1** — Editor de Item (módulo + placa, dirigido por capacidade) —
+  base em `/modulo` (Tasks 7.1/7.2). Absorve a 7.3.
+- **Task 13.2** — Ambientes e Paredes (elevação 2D, posicionamento, validação,
+  conjuntos com handle de junção, elementos contínuos). A tela mais nova/densa.
+- **Task 13.3** — Shell `/orcamento/[id]` com abas + Dashboard `/` + fluxo de
+  novo orçamento/cliente.
+- **Task 13.4** — Corte & Material (pré-pedido, adição manual, congelamento,
+  extração texto/CSV). Reaproveita `PlanoCorteCanvas`/`montarLinhasInsumos`.
+- **Task 13.5** — Financeiro (6 campos, modos). Reaproveita KPIs da Task 6.5.
+- **Task 13.6** — Linhas de Proposta (render de conjunto, rateio, override com
+  rebalanceamento) + PDF com marca (absorve a 9.1). 🔴 Alta.
+- **Task 13.7** — Perfil / Organização + Catálogo de produtos + Biblioteca
+  (absorve a 8.1).
+
+---
+
+## Resumo do Épico V2
+
+| Fase | Stages | Foco |
+|---|---|---|
+| A — Discovery ✅ | — | PRD, Modelo de Domínio, Mapa de Telas, este replanejamento (2026-07-24) |
+| B — Motor e dados | 10 (remoção V1), 11 (multi-tenant), 12 (extensões do motor) | Backend Engineer; base sem a qual a UI seria refeita |
+| C — Experiência | 13 (telas) | Frontend Engineer; reaproveita fundação Tailwind + Editor `/modulo`; validação em lote |
+
+**Gate de saída da Fase A**: aprovação do operador sobre PRD + Modelo de
+Domínio + Mapa de Telas antes de iniciar a Stage 10 (Fase B).
