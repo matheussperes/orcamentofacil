@@ -815,10 +815,8 @@ jornada do cliente, agora sobre Tailwind + shadcn/ui).
 > Maior mudança de infraestrutura do plano (D-14). Detalhamento fino de cada
 > migration/política fica para quando a Stage iniciar; aqui o recorte.
 
-- **Task 11.1** — Migrar auth Prisma → Supabase Auth. Remover `app/api/auth/*`,
-  `prisma/schema.prisma`, `prisma/seed.ts`, `middleware.ts` (auth próprio),
-  `lib/auth.ts`. Introduzir clientes Supabase server/browser separados.
-  🔴 Alta · Opus (mudança de infra cruzada).
+- **Task 11.1** — ✅ **Concluído (2026-07-24**, mesclada em `feature/11.1-supabase-auth`, aprovada por Code Auditor + Security Auditor). Projeto Supabase `orcamentofacil` (`ioakptuwhfvlirvrciwg`). 4 migrations versionadas em `supabase/migrations/` **e** aplicadas: `organizacao` + `perfil` com RLS e políticas, função `private.org_do_usuario()` (SECURITY DEFINER, `search_path=''`, fora do PostgREST) e trigger `on_auth_user_created` que cria org+perfil no signup (torna D-13 real). Clientes Supabase separados (`lib/supabase/{client,server,middleware}.ts`). **Prisma removido inteiro** (schema, seed, `@prisma/client`, `prisma`, `bcryptjs`, `jose`) + rotas V1 `/api/auth/*`, `/api/clientes/*`, `/api/orcamentos/*` (desenhadas para o modelo V1, nunca ligadas ao fluxo de caixa — Fase C constrói o acesso a dados do V2). **`get_advisors` security: zero achados** (o executor endureceu as funções SECURITY DEFINER após 2 achados intermediários). Verificado pelo Maestro: `.env` não rastreado, `.env.example` só com placeholders, zero `service_role` hardcoded. 69/69 testes; fluxo de caixa intacto (R$ 2.590,21, idêntico à Task 10.1).
+  - **Pendências herdadas para 11.2+**: (a) `modo_precificacao_padrao`/`modo_montagem_padrao` gravados como `jsonb` com defaults placeholder — a Task 12.6 define o shape real; (b) UPDATE em `organizacao`/`perfil` liberado para qualquer membro da org, sem granularidade por `papel` — definir regra quando houver caso de uso.
 - **Task 11.2** — Modelo de dados: Organização, Perfil, Produto, Gabarito,
   Orçamento, Ambiente/Parede, ElementoContinuo, LinhaProposta, Lista fechada
   (`docs/Modelo-de-Dominio.md` Seção 7). Cada tabela com RLS + política na
