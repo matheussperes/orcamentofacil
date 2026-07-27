@@ -10,18 +10,18 @@
 O projeto deixou de ser "refatoração visual da V1" e virou **a V2 do
 produto**: painel de orçamento para marceneiros, motor de caixa (V3)
 estendido, persistência real multi-tenant via Supabase. **Fase A (discovery)
-aprovada pelo operador. Fase B (motor + dados) em andamento**: Task 10.1
-(remoção do motor V1), Task 11.1 (Supabase Auth + RLS, Prisma removido),
-Task 11.2 (modelo de dados multi-tenant completo — 9 tabelas com RLS),
-Task 11.3 (teste de isolamento por tabela, 11/11 tabelas multi-tenant) e
-Task 11.4 (estratégia de catálogo — cópia de produtos no signup + fork de
-gabarito), Task 12.1 (primitiva `Placa` no motor V3), Task 12.2
-(Parede/Ambiente + posicionamento 1D + validação Tier 1/2), Task 12.3
-(detecção de conjuntos adjacentes + override) e Task 12.4 (elementos
-contínuos unificados) e Task 12.5 (veio de chapa — restrição no
-bin-packing) já concluídas, mescladas e publicadas. **Stage 11 completa;
-Stage 12 em andamento.** Próximo passo: **Task 12.6** (modos de
-precificação + rateio — tag **Opus**, não Sonnet).
+aprovada. Fase B (motor + dados) COMPLETA — Stages 11 e 12 fechadas.** Tudo
+concluído, mesclado e publicado: Task 10.1 (remoção do motor V1); Stage 11 —
+11.1 (Supabase Auth + RLS, Prisma fora), 11.2 (9 tabelas multi-tenant com
+RLS), 11.3 (teste de isolamento por tabela), 11.4 (catálogo: cópia no signup
++ fork); Stage 12 — 12.1 (primitiva `Placa`), 12.2 (Parede/Ambiente +
+posicionamento 1D + Tier 1/2), 12.3 (conjuntos adjacentes + override), 12.4
+(elementos contínuos unificados), 12.5 (veio de chapa), 12.6 (precificação
+V2 + rateio por custo alocado). **Próximo passo: Fase C — Stage 13
+(reconstrução da experiência / telas)**, começando pela Task 13.0
+(pré-requisito de canvas). É a mudança de fase mais significativa desde o
+início da V2 — sai de motor/dados puro e entra em UI (Frontend Engineer volta
+a ser o executor principal).
 
 ## 2. Como orientar-se (leia nesta ordem)
 
@@ -99,6 +99,18 @@ precificação + rateio — tag **Opus**, não Sonnet).
   quando o editor de Placa existir (Fase C). **⚠️ Aviso**: aproveitamento de
   chapas com `temVeio: true` vai piorar (ficar correto) — sem impacto visível
   hoje, nenhum material cadastrado usa a flag ainda.
+- `lib/engine/precificacao/*` (novo — Task 12.6, Motor Engineer em **Opus**):
+  modelo de precificação V2 — 4 modos de preço (multiplicador/percentual/
+  por_chapa/fixo) + 3 de montagem + rateio por custo alocado + resumo de 6
+  campos + `RateioSnapshot` congelável. **`pricing.ts` V1 intocado**
+  (coexistência até a Fase C — ainda ativo em `app/page.tsx`, `app/modulo`,
+  `app/proposta`, `defaults.ts`). Decisão de negócio: markup só sobre
+  material; montagem/frete somados por cima. Rateio **modular por
+  componente** (móveis+frete por custo; montagem pela base do seu modo). O
+  exemplo trabalhado do briefing (R$19.000, casos de 19 e 20 chapas) é teste
+  de aceitação e fecha número a número. `engine.globais` sempre `[]` no
+  caminho V2 hoje — atribuição de custo de elementos contínuos aos grupos
+  fica pra integração da Fase C.
 - **O motor V1 de templates foi removido por completo** (Task 10.1, 2026-07-24):
   `lib/engine/engine.ts` (calcularEngine), `templates.ts`, `evaluator.ts`,
   `lib/templateOverrides.ts`, `lib/validation/templates.ts`,
@@ -182,15 +194,28 @@ requisito explícito da V2, não um débito à parte.
 
 ## 6. Pendência em aberto agora (prioridade atual)
 
-**Stage 12 (extensões do motor) em andamento.** Tasks 12.1-12.5 concluídas —
-motor V3 agora tem Placa, Parede/Ambiente+Tier1/2, Conjuntos, Elementos
-Contínuos e veio de chapa. Próxima task: **12.6 — Modos de precificação +
-rateio por custo alocado + frete/montagem + congelamento**
-(`docs/Modelo-de-Dominio.md` Seção 5). **Tag do Backlog: Opus, não Sonnet**
-("regra financeira") — trocar o modelo antes de despachar (ver
-`docs/Backlog.md`/memória do projeto sobre model routing). Testes
-obrigatórios explícitos no Backlog: soma das linhas == total
-(arredondamento), segregação por material, congelamento no fechamento.
+**Fase B (motor + dados) COMPLETA — Stages 11 e 12 fechadas.** O modelo de
+dados multi-tenant está de pé (Stage 11) e o motor V3 tem todas as extensões
+da V2 (Stage 12: Placa, Parede/Ambiente+Tier1/2, Conjuntos, Elementos
+Contínuos, veio de chapa, precificação+rateio). 163 testes verdes.
+
+**Próximo passo: Fase C — Stage 13 (reconstrução da experiência / telas).**
+Primeira task: **13.0 — pré-requisito de canvas**: refatorar
+`BoxCanvas.geometria` para aceitar **lista de itens posicionados**, não um
+`BoxModule` só (render de conjunto) — vem antes de qualquer tela que dependa
+disso. 🔴 Alta · Sonnet. **Mudança de fase importante**: as tasks da Stage 13
+são majoritariamente UI (o **Frontend Engineer** volta a ser o executor
+principal, com UX Auditor no loop de validação — ver
+`.maestro/pipelines/03-quality.md`); só validar visualmente em lote por
+conjunto de telas (cadência do operador), não task-a-task. **Antes de
+começar a Stage 13, vale um Discovery/planejamento**: o `docs/Mapa-de-Telas.md`
+existe (Fase A), mas o Backlog da Stage 13 está em recorte grosso — detalhar
+por tela quando a Stage iniciar (nota no próprio Backlog). Duas dívidas de
+integração que a Fase C precisa resolver, herdadas do motor: (a)
+`BoxModule.tamponamento`/`TamponamentoInstancia` coexiste com o
+`ElementoContinuo` novo (Task 12.4); (b) `calcularOrcamentoMisto` ainda não
+liga `ElementoContinuo`/`Placa` ao `EngineOutput.globais` nem o rateio novo
+às telas.
 
 `supabase/tests/isolamento-tenant.sql` (Task 11.3) é o teste de isolamento
 permanente: script `begin;...rollback;`, seguro de rodar contra o projeto
@@ -202,10 +227,6 @@ signup + fork), mas os ~380 padrões reais de MDF do operador ainda não foram
 cadastrados — decisão explícita dele de esperar a tela de catálogo da Fase C
 (Stage 13) ou usar o Supabase Table Editor diretamente antes disso, sem
 pressa.
-
-Depois da Stage 12: Stage 13 (telas da Fase C). **Não pular para a Fase C
-antes do modelo de dados estar de pé** — é regra explícita do briefing (já
-cumprida: Stage 11 fechada).
 
 ## 7. Convenções operacionais desta sessão (para a próxima também)
 
