@@ -1061,26 +1061,107 @@ jornada do cliente, agora sobre Tailwind + shadcn/ui).
 
 ## Pipeline Stage 13 — Reconstrução da experiência (Fase C)
 
-> Só inicia com o modelo de dados (Stages 11–12) de pé. Cadência: **validação
-> em lote por conjunto de telas** (decisão do operador), não task-a-task.
-> Ordem do briefing (Seção 8). Detalhamento por tela quando a Stage iniciar.
+> **Discovery/planejamento feito pelo Maestro em 2026-07-27** (detalhamento
+> deste recorte, antes vago). Só inicia com o modelo de dados (Stages 11–12)
+> de pé — **cumprido**. Cadência: **validação em lote por conjunto de telas**
+> (decisão do operador), não task-a-task. Ordem de dependência real (não é
+> só numeração): 13.0 → 13.1 → 13.2 → 13.3 → {13.4, 13.5 em paralela} → 13.6
+> → 13.7 (13.7 pode andar em paralelo desde o início, é isolada). A partir
+> daqui, **Frontend Engineer é o executor principal** (Motor/Backend Engineer
+> entram só quando uma task específica pede, ver notas); UX Auditor volta ao
+> loop de validação (`.maestro/pipelines/03-quality.md`).
+>
+> **Duas dívidas arquiteturais herdadas do motor (Stages 11-12), fechadas
+> como decisão em 2026-07-27, código amarrado às tasks abaixo** (decisão do
+> operador: não forçar código antes da tela existir):
+> - **Dívida A** (`BoxModule.tamponamento`/`TamponamentoInstancia` vs.
+>   `ElementoContinuo` tipo "tamponamento"): **`TamponamentoInstancia` é
+>   RETIRADO nesta Stage, dentro da Task 13.2** — é o único lugar que ainda o
+>   usa (`larguraInstalacaoBox()`, `BoxCanvas.tsx`), e é exatamente onde o
+>   tamponamento novo (via `ElementoContinuo`) ganha UI real. Não é
+>   coexistência permanente — é sequenciamento.
+> - **Dívida B2** (rateio novo → telas): a Task 13.5 é quem liga
+>   `ratearPrecificacao` (Task 12.6) à tela Financeiro pela primeira vez,
+>   usando Linhas de Proposta (Task 13.6) como `GrupoItens`. Não há trabalho
+>   de wiring a fazer antes disso existir.
+> - (Dívida B1 — `ElementoContinuo` → `EngineOutput.globais`/`porModulo` — foi
+>   resolvida como código em 2026-07-27, Task 12.7, motor puro sem UI. Ver
+>   Stage 12.)
 
 - **Task 13.0** — **Pré-requisito de canvas**: refatorar `BoxCanvas.geometria`
   para aceitar **lista de itens posicionados**, não um `BoxModule` só (render
-  de conjunto). Vem antes de qualquer tela que dependa dele. 🔴 Alta · Sonnet.
-- **Task 13.1** — Editor de Item (módulo + placa, dirigido por capacidade) —
-  base em `/modulo` (Tasks 7.1/7.2). Absorve a 7.3.
-- **Task 13.2** — Ambientes e Paredes (elevação 2D, posicionamento, validação,
-  conjuntos com handle de junção, elementos contínuos). A tela mais nova/densa.
+  de conjunto — `docs/Modelo-de-Dominio.md` Seção 6). Vem antes de qualquer
+  tela que dependa dele (13.2, 13.6). **Critério de aceitação**: renderizar
+  N módulos/placas lado a lado a partir de `ItemPosicionado[]` (posição `x` +
+  `faixa`, Y via `derivarY` da Task 12.2), sem regressão visual do render de
+  item único usado hoje em `/modulo`. 🔴 Alta · Sonnet.
+- **Task 13.1** — Editor de Item (módulo + placa, dirigido por capacidade,
+  `docs/Modelo-de-Dominio.md` Seção 4) — base em `/modulo` (Tasks 7.1/7.2).
+  Absorve a 7.3 (painel de custo/peças ao vivo). **Critério de aceitação**:
+  (a) schema de capacidades decide as seções visíveis por `origem` (nenhum
+  `if` de tipo espalhado no componente); (b) **seletor de lados do
+  engrossamento** (Modelo de Domínio 2.1.1) — clique nos 4 lados da
+  referência visual da placa, BOM recalcula ao vivo; (c) **sentido do veio
+  visível e alterável para Placa** (Modelo de Domínio Seção 8, Task 12.5
+  deixou isso pendente de propósito — é aqui que entra: campo
+  `sentidoVeio`/`temVeio` do material vira controle visual); módulos-caixa
+  usam os defaults sem exigir escolha. Depende de 13.0 pro canvas de
+  seleção. 🔴 Alta · Sonnet.
+- **Task 13.2** — Ambientes e Paredes (elevação 2D, posicionamento,
+  validação, conjuntos, elementos contínuos) — **a tela mais densa da
+  Stage**, considerar quebrar em sub-tasks se ficar grande demais pra uma
+  branch efêmera só (13.2a elevação+posicionamento, 13.2b conjuntos+handle
+  de junção, 13.2c elementos contínuos — decisão de quem executar).
+  **Resolve a Dívida A** (ver nota acima): remove `BoxModule.tamponamento`/
+  `TamponamentoInstancia` de `lib/engine/box/types.ts`/`explode.ts` e o uso
+  em `BoxCanvas.tsx`; `larguraInstalacaoBox()` deixa de somar tamponamento
+  de instância (tamponamento vira só `ElementoContinuo`, aplicado via
+  Conjunto/módulo extremidade). **Critério de aceitação**: (a) elevação 2D
+  com régua, faixas, elementos de parede; (b) posicionar item por
+  faixa/`x`, validação Tier 1+2 em tempo real (Task 12.2, `EngineWarning[]`
+  já pronto — só falta exibir); (c) conjuntos detectados automaticamente
+  (Task 12.3) com contorno visual + handle de junção clicável
+  (união/quebra via `aplicarOverrides`) — **override do usuário precisa de
+  persistência**: não existe tabela `conjunto` (decisão consciente da Task
+  11.2/12.3) — esta task provavelmente precisa de uma coluna/tabela pequena
+  pros overrides de junção (ex.: `parede.overrides_juncao jsonb`, ou tabela
+  dedicada); se for esse o caso, **envolve Backend Engineer** pra essa fatia
+  específica antes do Frontend consumir; (d) elementos contínuos
+  (tampo/rodapé/tamponamento/fechamento) com painel lateral ao selecionar um
+  conjunto, usando a integração da Task 12.7. Depende de 13.0, 13.1. 🔴 Alta.
 - **Task 13.3** — Shell `/orcamento/[id]` com abas + Dashboard `/` + fluxo de
-  novo orçamento/cliente.
-- **Task 13.4** — Corte & Material (pré-pedido, adição manual, congelamento,
-  extração texto/CSV). Reaproveita `PlanoCorteCanvas`/`montarLinhasInsumos`.
-- **Task 13.5** — Financeiro (6 campos, modos). Reaproveita KPIs da Task 6.5.
-- **Task 13.6** — Linhas de Proposta (render de conjunto, rateio, override com
-  rebalanceamento) + PDF com marca (absorve a 9.1). 🔴 Alta.
+  novo orçamento/cliente (captura nome/telefone/endereço + prazo de entrega
+  na criação, `docs/Mapa-de-Telas.md` 3.2). Reaproveita `cliente`/`orcamento`
+  (Task 11.2, RLS já pronta). Depende de 13.2 pra ter algo real dentro do
+  shell. 🟡 Média · Sonnet.
+- **Task 13.4** — Corte & Material (pré-pedido, adição manual, congelamento
+  em `lista_material` — tabela já existe, Task 11.2 — extração texto/CSV,
+  D-08). Reaproveita `PlanoCorteCanvas`/`montarLinhasInsumos`; plano de corte
+  agora respeita restrição de veio (Task 12.5) — exibir chapas
+  compradas/área/sobra, nunca a fração intermediária de custo (Seção 5.2,
+  "onde a sobra aparece e onde não"). Depende de 13.3 (shell). 🟡 Média ·
+  Sonnet.
+- **Task 13.5** — Financeiro (6 campos, modos de precificação/montagem,
+  frete editável). **Resolve a Dívida B2** (ver nota acima) — primeira
+  ligação real de `ratearPrecificacao` (Task 12.6) a uma tela, usando as
+  Linhas de Proposta da Task 13.6 como `GrupoItens`. Reaproveita o painel de
+  KPIs já convertido (Task 6.5), com os campos novos. Depende de 13.3
+  (shell) e é mais fácil depois de 13.6 existir (precisa de grupos reais pra
+  ratear) — **considerar inverter a ordem 13.5↔13.6** se fizer mais sentido
+  na prática; não é dependência rígida, é conveniência. 🔴 Alta · Sonnet.
+- **Task 13.6** — Linhas de Proposta (render de conjunto via 13.0, rateio via
+  13.5, override manual com rebalanceamento — Seção 5.2/6) + PDF com marca
+  (absorve a 9.1, dados do emitente da Organização + do Cliente,
+  `docs/Mapa-de-Telas.md` 3.8). `valorRateado` persiste em
+  `linha_proposta.valor_rateado` (coluna já existe, Task 11.2) no
+  congelamento (Task 12.6 `RateioSnapshot` é o que persiste). Depende de
+  13.3, 13.5. 🔴 Alta · Sonnet.
 - **Task 13.7** — Perfil / Organização + Catálogo de produtos + Biblioteca
-  (absorve a 8.1).
+  (absorve a 8.1). CRUD de `produto` (Task 11.4, RLS já pronta — inclusive
+  onde o operador cadastra os ~380 padrões de MDF, se ainda não tiver feito
+  via Table Editor) e `gabarito` (fork via `fork_gabarito`, Task 11.4).
+  **Isolada** — pode ser feita em paralelo com qualquer outra task da Stage,
+  não depende de canvas/posicionamento. 🟡 Média · Sonnet.
 
 ---
 
