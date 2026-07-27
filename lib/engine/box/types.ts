@@ -9,8 +9,6 @@ export interface BoxMaterial {
   espessura: number; // mm
 }
 
-export type LadoTamponamento = "direito" | "esquerdo" | "superior" | "inferior";
-
 // A "frente" de um vão-folha: o que cobre a abertura visível (ou nada).
 // Portas NÃO fazem parte daqui — são uma entidade independente (`GrupoPortas`,
 // ver abaixo) que pode cobrir 1+ vãos, ou a caixa inteira, sobrepondo o que
@@ -27,21 +25,20 @@ export type FrenteConteudo =
       espessuraFrente?: number; // usado quando externa (default 18)
     };
 
-// Conteúdo de um vão-folha: OU um espaço normal (frente + prateleiras
-// combináveis), OU o vão inteiro vira um painel de tamponamento estrutural
-// (parte do gabarito — diferente do TamponamentoInstancia, que é comercial).
-export type BayContent =
-  | {
-      tipo: "espaco";
-      frente: FrenteConteudo;
-      prateleiras?: { qtd: number; recuo: number }; // recuo frontal (mm)
-    }
-  | {
-      tipo: "tamponamento";
-      lado: LadoTamponamento;
-      material: BoxMaterial;
-      sarrafo: boolean; // true = quadro de sarrafos; false = chapa inteiriça
-    };
+// Conteúdo de um vão-folha: espaço normal (frente + prateleiras combináveis).
+// Até a Task 12.4, `BayContent` também tinha um branch `tipo: "tamponamento"`
+// (vão inteiro virando um painel de tamponamento ESTRUTURAL, parte do
+// gabarito). Esse branch saiu do modelo (Modelo de Domínio, Seção 3.6): o
+// mecanismo unificado `ElementoContinuo` tipo "tamponamento"
+// (lib/engine/elemento-continuo/) substitui esse caso de uso. `BayContent`
+// deixa de ser union — mantém o campo `tipo: "espaco"` (não é mais
+// discriminante de nada, já que só resta uma forma) só pra minimizar o raio
+// de impacto em código que já lê `content.tipo` (migrate.ts, tree.ts, testes).
+export type BayContent = {
+  tipo: "espaco";
+  frente: FrenteConteudo;
+  prateleiras?: { qtd: number; recuo: number }; // recuo frontal (mm)
+};
 
 export type PosicaoDivisao = "centralizado" | "direita" | "esquerda";
 

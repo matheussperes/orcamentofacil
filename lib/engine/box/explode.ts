@@ -34,7 +34,6 @@ interface Ctx {
   pecas: Peca[];
   ferragens: Map<string, number>;
   caixa: BoxMaterial;
-  altura: number; // altura total do módulo (p/ tamponamento lateral)
   temFundo: boolean;
   puxador: TipoPuxador;
   overridePortas?: BoxMaterial;
@@ -133,14 +132,10 @@ function aplicarConteudo(ctx: Ctx, node: BayNode, W: number, H: number, D: numbe
   const c = node.content;
   if (!c) return;
 
-  if (c.tipo === "tamponamento") {
-    aplicarTamponamentoGabarito(ctx, c, W, D);
-    return;
-  }
-
-  // c.tipo === "espaco": frente (vazio/gaveta) + prateleiras são
-  // independentes e combináveis — portas ficam fora daqui (ver
-  // aplicarGruposPortas), assim como o fundo (ver gerarFundoGlobal), pois
+  // c.tipo === "espaco" (única forma desde a Task 12.4 — tamponamento
+  // ESTRUTURAL saiu do BayContent, ver types.ts): frente (vazio/gaveta) +
+  // prateleiras são independentes e combináveis — portas ficam fora daqui
+  // (ver aplicarGruposPortas), assim como o fundo (ver gerarFundoGlobal), pois
   // ambos cobrem 1+ vãos ou a caixa inteira, não o vão-folha isolado.
   aplicarFrente(ctx, c.frente, W, H, D);
   if (c.prateleiras && c.prateleiras.qtd > 0) {
@@ -263,24 +258,6 @@ function gerarFundoGlobal(ctx: Ctx, box: BoxModule) {
   push(ctx, "Fundo", colunas, { cor: ctx.caixa.cor, espessura: FUNDO_ESP_PADRAO }, "fundo", box.altura, larguraPorPeca, 0, 0);
 }
 
-/** Tamponamento ESTRUTURAL (gabarito): o vão inteiro vira um painel lateral. */
-function aplicarTamponamentoGabarito(
-  ctx: Ctx,
-  c: Extract<NonNullable<BayNode["content"]>, { tipo: "tamponamento" }>,
-  W: number,
-  D: number
-) {
-  const profundidade = D + TAMPONAMENTO_EXTRA;
-  const ehLateral = c.lado === "direito" || c.lado === "esquerdo";
-  const comp = ehLateral ? ctx.altura : W;
-  if (c.sarrafo) {
-    push(ctx, `Sarrafo tamponamento (${c.lado})`, 2, c.material, "frente", comp, SARRAFO_LARGURA, 0, 0);
-    push(ctx, `Sarrafo tamponamento (${c.lado})`, 2, c.material, "frente", profundidade - 2 * SARRAFO_LARGURA, SARRAFO_LARGURA, 0, 0);
-  } else {
-    push(ctx, `Tamponamento ${c.lado}`, 1, c.material, "frente", comp, profundidade, 1, 0);
-  }
-}
-
 /**
  * Tamponamento de INSTÂNCIA (doc 12): painéis colados por fora da carcaça já
  * pronta, um por lado ativado, cada um com sua própria montagem (inteiriça ou
@@ -319,7 +296,6 @@ export function explodeBox(box: BoxModule): BoxResult {
     pecas: [],
     ferragens: new Map(),
     caixa: box.caixa,
-    altura: box.altura,
     temFundo: box.temFundo,
     puxador: box.puxador,
     overridePortas: box.overridePortas,

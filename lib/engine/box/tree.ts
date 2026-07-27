@@ -231,8 +231,6 @@ export function rotuloConteudo(node: BayNode): string {
   const c = node.content;
   if (!c) return "vazio";
 
-  if (c.tipo === "tamponamento") return `tamp. ${c.lado}`;
-
   const partes: string[] = [];
   if (c.frente.tipo === "gaveta") {
     partes.push(`${c.frente.qtd} gaveta(s)${c.frente.interna ? " int." : ""}`);

@@ -146,7 +146,9 @@ function desenharConteudoBonito(
   }
 
   const c = node.content;
-  if (!c || c.tipo === "tamponamento") return;
+  // BayContent não tem mais o branch "tamponamento" (Modelo de Domínio, Seção
+  // 3.6; Task 12.4) — só resta a forma "espaco".
+  if (!c) return;
 
   const frente = c.frente;
   ctx.strokeStyle = "rgba(28,36,48,0.45)";
