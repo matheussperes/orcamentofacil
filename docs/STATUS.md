@@ -11,9 +11,10 @@ O projeto deixou de ser "refatoração visual da V1" e virou **a V2 do
 produto**: painel de orçamento para marceneiros, motor de caixa (V3)
 estendido, persistência real multi-tenant via Supabase. **Fase A (discovery)
 aprovada pelo operador. Fase B (motor + dados) em andamento**: Task 10.1
-(remoção do motor V1) e Task 11.1 (Supabase Auth + RLS, Prisma removido) já
-concluídas, mescladas e publicadas. Próximo passo: **Task 11.2** (modelo de
-dados multi-tenant completo).
+(remoção do motor V1), Task 11.1 (Supabase Auth + RLS, Prisma removido) e
+Task 11.2 (modelo de dados multi-tenant completo — 9 tabelas com RLS) já
+concluídas, mescladas e publicadas. Próximo passo: **Task 11.3** (teste de
+isolamento por tabela).
 
 ## 2. Como orientar-se (leia nesta ordem)
 
@@ -58,7 +59,7 @@ dados multi-tenant completo).
   todos removidos. 96 → 69 testes (23 eram do V1; nenhum órfão).
 - 69 testes passando, cobrindo só o motor V3.
 
-### Persistência e Auth (novo — Supabase, Task 11.1)
+### Persistência e Auth (novo — Supabase, Tasks 11.1 + 11.2)
 - Projeto Supabase real conectado: **`orcamentofacil`**
   (`ioakptuwhfvlirvrciwg`, `ca-central-1`, Postgres 17). Use as ferramentas
   MCP do Supabase (`ToolSearch` por `mcp__7d44308e...`) para consultar/alterar.
@@ -66,13 +67,24 @@ dados multi-tenant completo).
   `bcryptjs`, `jose`). Autenticação própria (`lib/auth.ts`, `middleware.ts`
   JWT) também removida.
 - Migrations aplicadas (versionadas em `supabase/migrations/`):
-  `organizacao` + `perfil`, RLS habilitada, políticas, função
+  `organizacao` + `perfil` (Task 11.1), RLS habilitada, políticas, função
   `private.org_do_usuario()` (SECURITY DEFINER, fora do PostgREST — não expor
   outra função assim sem o mesmo cuidado) e trigger `on_auth_user_created`
   que cria organização+perfil no signup (D-13 real).
+- **Task 11.2 (2026-07-27)**: 9 tabelas novas, todas com RLS + políticas
+  (`private.org_do_usuario()`, initplan-otimizada): `cliente`, `produto`,
+  `gabarito`, `orcamento`, `ambiente`, `parede`, `elemento_continuo`,
+  `linha_proposta`, `lista_material`. `organizacao_id` é denormalizado em
+  toda tabela (RLS direta por coluna, não via join na tabela pai — decisão
+  fechada pensando na Task 11.3). `gabarito` é a única com `organizacao_id`
+  nullable (null = base global read-only, D-15 — fork fica para a 11.4).
+  `lista_material` não tem política de UPDATE (snapshot imutável). `produto`
+  e `gabarito` nascem vazios — população é Task 11.4. Rascunho de referência
+  completo (spec de cada coluna) em `.maestro/tmp/schema.sql`.
 - Clientes Next.js: `lib/supabase/{client,server,middleware}.ts` — **nunca
   misturar** o cliente de servidor com o de browser.
-- `get_advisors` (security) rodando **zero achados** em 2026-07-24 — rodar de
+- `get_advisors` (security) rodando **zero achados** em 2026-07-27 (conferido
+  pelo Maestro após a Task 11.2, não só relatado pelo executor) — rodar de
   novo depois de qualquer migration nova (é grátis e pega RLS esquecida).
 - Rotas V1 de auth/clientes/orçamentos (Prisma) foram removidas junto — elas
   nunca estiveram ligadas ao fluxo de caixa (só ao modelo V1). A Fase C
@@ -123,13 +135,13 @@ requisito explícito da V2, não um débito à parte.
 
 ## 6. Pendência em aberto agora (prioridade atual)
 
-**Próxima task: 11.2 — Modelo de dados multi-tenant completo.** Tabelas:
-Produto, Gabarito, Orçamento, Cliente, Ambiente/Parede, ElementoContinuo,
-LinhaProposta, Lista de material fechada (`docs/Modelo-de-Dominio.md` Seção 7
-tem os campos). Cada tabela nasce com RLS + política **na mesma migration**
-— não é follow-up. Depois: 11.3 (teste de isolamento por tabela, critério de
-aceitação obrigatório) e 11.4 (estratégia de catálogo — produtos cópia no
-signup, gabaritos base global + fork).
+**Próxima task: 11.3 — Teste de isolamento por tabela** (tenant A não
+lê/edita/apaga linha do tenant B), uma vez para cada uma das 9 tabelas da
+Task 11.2 (`cliente`, `produto`, `gabarito`, `orcamento`, `ambiente`,
+`parede`, `elemento_continuo`, `linha_proposta`, `lista_material`) — critério
+de aceitação obrigatório, não follow-up. Depois: 11.4 (estratégia de catálogo
+— produtos cópia no signup, gabaritos base global + fork; as tabelas já
+suportam isso, só falta a lógica de população).
 
 Depois da Stage 11: Stage 12 (extensões do motor — Placa, Parede/Ambiente,
 elementos contínuos, veio, precificação/rateio) e só então Stage 13 (telas da

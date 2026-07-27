@@ -817,10 +817,30 @@ jornada do cliente, agora sobre Tailwind + shadcn/ui).
 
 - **Task 11.1** — ✅ **Concluído (2026-07-24**, mesclada em `feature/11.1-supabase-auth`, aprovada por Code Auditor + Security Auditor). Projeto Supabase `orcamentofacil` (`ioakptuwhfvlirvrciwg`). 4 migrations versionadas em `supabase/migrations/` **e** aplicadas: `organizacao` + `perfil` com RLS e políticas, função `private.org_do_usuario()` (SECURITY DEFINER, `search_path=''`, fora do PostgREST) e trigger `on_auth_user_created` que cria org+perfil no signup (torna D-13 real). Clientes Supabase separados (`lib/supabase/{client,server,middleware}.ts`). **Prisma removido inteiro** (schema, seed, `@prisma/client`, `prisma`, `bcryptjs`, `jose`) + rotas V1 `/api/auth/*`, `/api/clientes/*`, `/api/orcamentos/*` (desenhadas para o modelo V1, nunca ligadas ao fluxo de caixa — Fase C constrói o acesso a dados do V2). **`get_advisors` security: zero achados** (o executor endureceu as funções SECURITY DEFINER após 2 achados intermediários). Verificado pelo Maestro: `.env` não rastreado, `.env.example` só com placeholders, zero `service_role` hardcoded. 69/69 testes; fluxo de caixa intacto (R$ 2.590,21, idêntico à Task 10.1).
   - **Pendências herdadas para 11.2+**: (a) `modo_precificacao_padrao`/`modo_montagem_padrao` gravados como `jsonb` com defaults placeholder — a Task 12.6 define o shape real; (b) UPDATE em `organizacao`/`perfil` liberado para qualquer membro da org, sem granularidade por `papel` — definir regra quando houver caso de uso.
-- **Task 11.2** — Modelo de dados: Organização, Perfil, Produto, Gabarito,
-  Orçamento, Ambiente/Parede, ElementoContinuo, LinhaProposta, Lista fechada
-  (`docs/Modelo-de-Dominio.md` Seção 7). Cada tabela com RLS + política na
-  mesma migration. 🔴 Alta · Sonnet.
+- **Task 11.2** — ✅ **Concluído (2026-07-27**, mesclada em
+  `feature/11.2-modelo-dados-multitenant`, aprovada por Code Auditor +
+  auditoria de segurança do Maestro). 9 tabelas criadas e aplicadas ao projeto
+  real (`ioakptuwhfvlirvrciwg`), uma migration por tabela (`ambiente`+`parede`
+  juntas, mesma unidade conceitual): `cliente`, `produto`, `gabarito`,
+  `orcamento`, `ambiente`, `parede`, `elemento_continuo`, `linha_proposta`,
+  `lista_material`. Todas com RLS + políticas explícitas na própria migration,
+  usando `private.org_do_usuario()` (initplan-otimizada, padrão da 11.1).
+  **`get_advisors` security: zero achados** (verificado pelo Maestro, não só
+  relatado pelo executor). **Decisões de design fechadas nesta task** (ver
+  `.maestro/tmp/schema.sql` para o rascunho de referência completo):
+  `organizacao_id` denormalizado em toda tabela (RLS direta, não via join —
+  facilita o teste de isolamento por tabela da 11.3); `gabarito` é a única
+  tabela com `organizacao_id` nullable (null = base global read-only, D-15);
+  `lista_material` sem política de UPDATE (snapshot imutável, Seção 5.4);
+  `elemento_continuo.alvo` é jsonb solto sem FK (Conjunto não é entidade
+  persistida nesta task — fora de escopo, não inventado). `produto` e
+  `gabarito` nascem vazios; população (cópia no signup / fork) é Task 11.4.
+  `npm run build`/`lint` limpos.
+  - **Pendência herdada para 11.3+**: `orcamento.cliente_id` não tem
+    verificação de integridade cross-tabela (trigger) garantindo que o
+    cliente pertence à mesma `organizacao_id` do orçamento — hoje mitigado só
+    pela RLS de `cliente` impedir o app de selecionar cliente de outra org.
+    Considerar ao desenhar os testes de isolamento.
 - **Task 11.3** — Teste de isolamento por tabela (tenant A ≠ tenant B).
   🔴 Alta · Sonnet. **Critério de aceitação, não follow-up.**
 - **Task 11.4** — Estratégias de catálogo (D-15): Produtos = cópia no signup;
