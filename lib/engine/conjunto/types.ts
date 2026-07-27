@@ -10,9 +10,12 @@ export interface Conjunto {
   id: string;
   paredeId: string;
   faixa: Faixa;
-  // Ordenados por x — itens adjacentes, mesma faixa, bordas encostadas (ou
-  // um único item, quando ele não se junta a nenhum vizinho — ver decisão de
-  // design em detectar.ts sobre incluir conjuntos de 1 item).
+  // Ordenados por x — itens adjacentes, mesma faixa, bordas encostadas.
+  // SEMPRE 2+ itens: um item sem nenhum vizinho unido não gera Conjunto (ver
+  // detectar.ts). Evidência decisiva é a Seção 3.4 do Modelo de Domínio —
+  // `ElementoContinuo.alvo: { conjuntoId } | { moduloId }` ("bloco ou módulo
+  // isolado") já cobre o módulo isolado pelo branch `moduloId`; um Conjunto
+  // de tamanho 1 duplicaria essa representação.
   itensIds: string[];
 }
 
