@@ -15,10 +15,10 @@ aprovada pelo operador. Fase B (motor + dados) em andamento**: Task 10.1
 Task 11.2 (modelo de dados multi-tenant completo — 9 tabelas com RLS),
 Task 11.3 (teste de isolamento por tabela, 11/11 tabelas multi-tenant) e
 Task 11.4 (estratégia de catálogo — cópia de produtos no signup + fork de
-gabarito) e Task 12.1 (primitiva `Placa` no motor V3) já concluídas,
-mescladas e publicadas. **Stage 11 (persistência multi-tenant) está
-completa; Stage 12 (extensões do motor) iniciada.** Próximo passo: **Task
-12.2** (Parede/Ambiente + posicionamento 1D).
+gabarito), Task 12.1 (primitiva `Placa` no motor V3) e Task 12.2
+(Parede/Ambiente + posicionamento 1D + validação Tier 1/2) já concluídas,
+mescladas e publicadas. **Stage 11 completa; Stage 12 em andamento.**
+Próximo passo: **Task 12.3** (detecção de conjuntos adjacentes).
 
 ## 2. Como orientar-se (leia nesta ordem)
 
@@ -61,6 +61,12 @@ completa; Stage 12 (extensões do motor) iniciada.** Próximo passo: **Task
   mesmo padrão puro de `box/explode.ts`. Reaproveita `BoxMaterial` (não criou
   `MaterialRef`). `app/page.tsx` ainda não tem editor de Placa (fica pra Fase
   C) — só o glue mínimo de tipagem pra continuar compilando.
+- `lib/engine/parede/*` (novo — Task 12.2): `Parede`, `Ambiente`,
+  `ElementoParede`, `ItemPosicionado`, `Faixa`, `AlturasFaixas`; `derivarY()`
+  (Y nunca digitado, D-20) e `validarParedeTier1`/`Tier2` (retornam
+  `EngineWarning[]` — primeiro uso real desse canal, antes sempre vazio no
+  caminho V3). Tier 3 (folgas/ergonomia) não implementado, é decisão do
+  briefing pra depois.
 - **O motor V1 de templates foi removido por completo** (Task 10.1, 2026-07-24):
   `lib/engine/engine.ts` (calcularEngine), `templates.ts`, `evaluator.ts`,
   `lib/templateOverrides.ts`, `lib/validation/templates.ts`,
@@ -144,13 +150,15 @@ requisito explícito da V2, não um débito à parte.
 
 ## 6. Pendência em aberto agora (prioridade atual)
 
-**Stage 12 (extensões do motor) em andamento.** Task 12.1 (primitiva `Placa`)
-concluída. Próxima task: **12.2 — Parede/Ambiente + posicionamento 1D com
-faixas + validação Tier 1 e 2** (`docs/Modelo-de-Dominio.md` Seção 3.1/3.2).
-Note: como Task 12.1, isso é lógica de motor/domínio (TypeScript puro), não
-UI nem banco — não se encaixa no Frontend Engineer nem no Backend Engineer
-do framework `.maestro/` (lacuna conhecida do framework, contornada
-despachando como engenharia geral ancorada nas convenções do próprio motor).
+**Stage 12 (extensões do motor) em andamento.** Tasks 12.1 (primitiva
+`Placa`) e 12.2 (Parede/Ambiente + posicionamento 1D + Tier 1/2) concluídas.
+Próxima task: **12.3 — Detecção de conjuntos adjacentes + override
+(união/quebra)** (`docs/Modelo-de-Dominio.md` Seção 3.3). Mesma situação das
+duas anteriores: lógica de motor/domínio (TypeScript puro), não UI nem banco
+— não se encaixa no Frontend Engineer nem no Backend Engineer do framework
+`.maestro/` (lacuna conhecida, contornada despachando como engenharia geral
+ancorada nas convenções do próprio motor — o operador vai redesenhar o
+framework com um terceiro papel pra isso).
 
 `supabase/tests/isolamento-tenant.sql` (Task 11.3) é o teste de isolamento
 permanente: script `begin;...rollback;`, seguro de rodar contra o projeto
