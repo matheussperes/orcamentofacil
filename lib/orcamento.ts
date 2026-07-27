@@ -3,6 +3,8 @@ import { explodeBox } from "./engine/box";
 import { larguraInstalacaoBox, type BoxModule } from "./engine/box/types";
 import { explodePlaca } from "./engine/placa";
 import type { Placa } from "./engine/placa/types";
+import { explodeElementoContinuo } from "./engine/elemento-continuo";
+import type { AlvoResolvido, ElementoContinuo } from "./engine/elemento-continuo/types";
 import type {
   EngineOutput,
   MateriaisAmbiente,
@@ -48,10 +50,25 @@ export function corExternaDoItem(m: ModuloOrcamento): string | undefined {
   return m.origem === "custom_box" ? m.box.caixa.cor : m.placa.material.cor;
 }
 
+// Elemento Contínuo (Task 12.4, lib/engine/elemento-continuo/) + o alvo já
+// resolvido pelo chamador (`AlvoResolvido` — soma/máximo de itens do bloco ou
+// módulo da extremidade). `calcularOrcamentoMisto` não sabe resolver
+// `{conjuntoId}`/`{moduloId}` em dimensões (isso é I/O de domínio: olhar
+// Conjunto/Parede/os itens do orçamento — Task 13.2, quando a Fase C tiver
+// esses dados reais); aqui só entram os números já prontos, mesma fronteira
+// documentada em `lib/engine/elemento-continuo/types.ts` (`AlvoResolvido`).
+export interface ElementoContinuoResolvido {
+  elemento: ElementoContinuo;
+  alvo: AlvoResolvido;
+}
+
 export interface CalcMistoInput {
   ambiente: { tipo: string; materiais: MateriaisAmbiente };
   parametros: ParametrosFabrica;
   itens: ModuloOrcamento[];
+  // Opcional/retrocompatível — chamadas existentes sem este campo continuam
+  // funcionando exatamente como antes (Task 12.7).
+  elementosContinuos?: ElementoContinuoResolvido[];
 }
 
 export function calcularOrcamentoMisto(input: CalcMistoInput): EngineOutput {
@@ -87,10 +104,46 @@ export function calcularOrcamentoMisto(input: CalcMistoInput): EngineOutput {
     }
   }
 
+  // Task 12.7: cada Elemento Contínuo explodido vira um `ResultadoModulo`
+  // SINTÉTICO empurrado em `porModulo` — mesmo padrão que `BoxModule`/`Placa`
+  // já usam acima (moduloId/templateCodigo/nome/pecas/ferragens/areaMdfM2/
+  // fitaM). Decisão do Maestro: NÃO tocar `globais`/`PecaLinear` (formato
+  // antigo, V1, que `lib/insumos.ts::todasAsPecas` já lê com shape próprio) —
+  // fica como está, sempre `[]`. Erros de `validarPosicao` (dentro de
+  // `explodeElementoContinuo`) propagam sem serem capturados, mesmo padrão de
+  // `explodeBox`/`explodePlaca` acima.
+  for (const ec of input.elementosContinuos ?? []) {
+    const r = explodeElementoContinuo(ec.elemento, ec.alvo);
+    porModulo.push({
+      moduloId: ec.elemento.id,
+      templateCodigo: ec.elemento.tipo.toUpperCase(),
+      nome: nomeElementoContinuo(ec.elemento.tipo),
+      pecas: r.pecas,
+      ferragens: r.ferragens,
+      areaMdfM2: r.areaMdfM2,
+      fitaM: r.fitaM,
+    });
+  }
+
   const consolidado = consolidarResultados(
     porModulo,
     globais,
     input.parametros.perda_mdf
   );
   return { porModulo, globais, consolidado, warnings };
+}
+
+// Nome legível do `ResultadoModulo` sintético (Task 12.7) — capitalize do
+// `tipo` do Elemento Contínuo. As peças internas já têm nomes próprios mais
+// específicos ("Rodapé", "Fechamento", "Tamponamento (inteiro)" — ver
+// `lib/engine/elemento-continuo/explode.ts`); este é só o rótulo do
+// "módulo"/linha agregada, mesmo nível de `box.nome`/`placa.nome`.
+function nomeElementoContinuo(tipo: ElementoContinuo["tipo"]): string {
+  const nomes: Record<ElementoContinuo["tipo"], string> = {
+    tampo: "Tampo",
+    rodape: "Rodapé",
+    tamponamento: "Tamponamento",
+    fechamento: "Fechamento",
+  };
+  return nomes[tipo];
 }
