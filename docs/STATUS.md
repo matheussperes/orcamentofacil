@@ -15,10 +15,11 @@ aprovada pelo operador. Fase B (motor + dados) em andamento**: Task 10.1
 Task 11.2 (modelo de dados multi-tenant completo — 9 tabelas com RLS),
 Task 11.3 (teste de isolamento por tabela, 11/11 tabelas multi-tenant) e
 Task 11.4 (estratégia de catálogo — cópia de produtos no signup + fork de
-gabarito), Task 12.1 (primitiva `Placa` no motor V3) e Task 12.2
-(Parede/Ambiente + posicionamento 1D + validação Tier 1/2) já concluídas,
-mescladas e publicadas. **Stage 11 completa; Stage 12 em andamento.**
-Próximo passo: **Task 12.3** (detecção de conjuntos adjacentes).
+gabarito), Task 12.1 (primitiva `Placa` no motor V3), Task 12.2
+(Parede/Ambiente + posicionamento 1D + validação Tier 1/2) e Task 12.3
+(detecção de conjuntos adjacentes + override) já concluídas, mescladas e
+publicadas. **Stage 11 completa; Stage 12 em andamento.** Próximo passo:
+**Task 12.4** (elementos contínuos unificados).
 
 ## 2. Como orientar-se (leia nesta ordem)
 
@@ -67,6 +68,13 @@ Próximo passo: **Task 12.3** (detecção de conjuntos adjacentes).
   `EngineWarning[]` — primeiro uso real desse canal, antes sempre vazio no
   caminho V3). Tier 3 (folgas/ergonomia) não implementado, é decisão do
   briefing pra depois.
+- `lib/engine/conjunto/*` (novo — Task 12.3, primeira do **Motor Engineer**
+  — `.maestro/agents/motor-engineer.md`, não versionado): `detectarConjuntos()`
+  agrupa itens adjacentes por faixa (bordas encostadas, sem elemento
+  bloqueante entre eles); `aplicarOverrides()` aplica o handle de junção
+  manual. **`Conjunto` nunca tem tamanho 1** (módulo isolado usa `moduloId`
+  direto, Seção 3.4) — corrigido numa rodada de revisão do Maestro após a
+  primeira entrega incluir conjuntos de 1 por engano.
 - **O motor V1 de templates foi removido por completo** (Task 10.1, 2026-07-24):
   `lib/engine/engine.ts` (calcularEngine), `templates.ts`, `evaluator.ts`,
   `lib/templateOverrides.ts`, `lib/validation/templates.ts`,
@@ -151,13 +159,13 @@ requisito explícito da V2, não um débito à parte.
 ## 6. Pendência em aberto agora (prioridade atual)
 
 **Stage 12 (extensões do motor) em andamento.** Tasks 12.1 (primitiva
-`Placa`) e 12.2 (Parede/Ambiente + posicionamento 1D + Tier 1/2) concluídas.
-Próxima task: **12.3 — Detecção de conjuntos adjacentes + override
-(união/quebra)** (`docs/Modelo-de-Dominio.md` Seção 3.3). Mesma situação das
-duas anteriores: lógica de motor/domínio (TypeScript puro), não UI nem banco
-— não se encaixa no Frontend Engineer nem no Backend Engineer do framework
-`.maestro/` (lacuna conhecida, contornada despachando como engenharia geral
-ancorada nas convenções do próprio motor — o operador vai redesenhar o
+`Placa`), 12.2 (Parede/Ambiente + posicionamento 1D + Tier 1/2) e 12.3
+(conjuntos adjacentes + override) concluídas. Próxima task: **12.4 —
+Elementos contínuos unificados** (tampo/rodapé/tamponamento 4
+posições/fechamento, `docs/Modelo-de-Dominio.md` Seção 3.4/3.5). Mesma
+situação das anteriores: lógica de motor/domínio — usar o **Motor Engineer**
+(`.maestro/agents/motor-engineer.md`, não versionado no repo por decisão do
+operador — framework .maestro/ é tooling pontual, removido depois de usar).
 framework com um terceiro papel pra isso).
 
 `supabase/tests/isolamento-tenant.sql` (Task 11.3) é o teste de isolamento

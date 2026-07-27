@@ -938,8 +938,31 @@ jornada do cliente, agora sobre Tailwind + shadcn/ui).
   `AlturasFaixas` (exigido pela spec) mas não participa da geometria desta
   task — reservado para a derivação futura do elemento contínuo "rodapé"
   (Task 12.4). 🔴 Alta · Sonnet.
-- **Task 12.3** — Detecção de conjuntos adjacentes + override (união/quebra).
-  🟡 Média · Sonnet.
+- **Task 12.3** — ✅ **Concluído (2026-07-27**, mesclada em
+  `feature/12.3-deteccao-conjuntos`, aprovada por verificação independente do
+  Maestro após **1 rodada de correção**). Primeira task executada pelo
+  **Motor Engineer** (papel novo, ver `.maestro/agents/motor-engineer.md` —
+  não versionado no repo por decisão do operador). Novo módulo
+  `lib/engine/conjunto/` (`types.ts`, `detectar.ts`, `detectar.test.ts`,
+  `index.ts`): `detectarConjuntos()` agrupa itens adjacentes (mesma parede,
+  mesma faixa, bordas encostadas dentro de 2mm de tolerância, sem elemento de
+  parede bloqueante entre eles — reproduz os 2 exemplos literais do briefing
+  6.2: porta bloqueia, janela acima da bancada não bloqueia); `aplicarOverrides()`
+  aplica o "handle de junção" manual (união/quebra) sobre o resultado
+  automático, sempre vencendo a detecção. Reaproveita `derivarY` e o overlap
+  2D de `lib/engine/parede/validar.ts` (agora exportados) em vez de duplicar.
+  Persistência do override é fora de escopo (não há tabela `conjunto`, decisão
+  da Task 11.2) — fica pra Fase C.
+  **Correção de domínio pega na revisão do Maestro**: a primeira entrega
+  incluía "Conjunto de 1 item" quando um item ficava sem vizinho unido — o
+  próprio executor tinha citado a Seção 3.4 do Modelo de Domínio
+  (`ElementoContinuo.alvo: { conjuntoId } | { moduloId }` — "bloco ou módulo
+  isolado") como evidência contra essa leitura antes de decidir a favor mesmo
+  assim, guiado por uma frase de teste imprecisa do próprio Maestro no
+  contrato original. Corrigido: `Conjunto` nunca tem tamanho 1 — item sem
+  vizinho unido não aparece no resultado (é referenciado depois via
+  `moduloId` direto, não via um `conjuntoId` de 1). 112/112 testes,
+  build/lint/typecheck limpos. 🟡 Média · Sonnet.
 - **Task 12.4** — Elementos contínuos unificados — **4 tipos: tampo, rodapé,
   tamponamento (4 posições), fechamento** (`docs/Modelo-de-Dominio.md` 3.4/3.5,
   corrigido na auditoria); dimensões derivadas com override em rodapé/
