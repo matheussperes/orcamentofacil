@@ -841,8 +841,22 @@ jornada do cliente, agora sobre Tailwind + shadcn/ui).
     cliente pertence à mesma `organizacao_id` do orçamento — hoje mitigado só
     pela RLS de `cliente` impedir o app de selecionar cliente de outra org.
     Considerar ao desenhar os testes de isolamento.
-- **Task 11.3** — Teste de isolamento por tabela (tenant A ≠ tenant B).
-  🔴 Alta · Sonnet. **Critério de aceitação, não follow-up.**
+- **Task 11.3** — ✅ **Concluído (2026-07-27**, mesclada em
+  `feature/11.3-teste-isolamento-tenant`, aprovada por Code Auditor +
+  verificação independente do Maestro). `supabase/tests/isolamento-tenant.sql`:
+  script único `begin;...rollback;`, roda contra o projeto real
+  (`ioakptuwhfvlirvrciwg`) sem deixar resíduo e sem precisar da
+  `service_role_key` — simula cada tenant via `set local role authenticated`
+  + `set local request.jwt.claims`, cobrindo as **11 tabelas multi-tenant**
+  (as 9 da Task 11.2 + `organizacao`/`perfil` da 11.1, que ainda não tinham
+  esse teste). Confirma, por tabela: controle positivo (tenant A vê a própria
+  linha), tenant B não lê/edita/apaga linha de tenant A (SELECT/UPDATE/DELETE
+  = 0), caso especial `gabarito` (linha global visível a ambos, editável por
+  nenhum), caso especial `lista_material` (UPDATE = 0 até para o dono, sem
+  política). Maestro rodou o script de novo por conta própria (não só
+  aceitou o relato do executor) e confirmou zero resíduo em `auth.users` e
+  `gabarito` depois. 🔴 Alta · Sonnet. **Critério de aceitação, não
+  follow-up — cumprido.**
 - **Task 11.4** — Estratégias de catálogo (D-15): Produtos = cópia no signup;
   Gabaritos = base global read-only + fork. 🟡 Média · Sonnet.
 

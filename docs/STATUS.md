@@ -11,10 +11,11 @@ O projeto deixou de ser "refatoração visual da V1" e virou **a V2 do
 produto**: painel de orçamento para marceneiros, motor de caixa (V3)
 estendido, persistência real multi-tenant via Supabase. **Fase A (discovery)
 aprovada pelo operador. Fase B (motor + dados) em andamento**: Task 10.1
-(remoção do motor V1), Task 11.1 (Supabase Auth + RLS, Prisma removido) e
-Task 11.2 (modelo de dados multi-tenant completo — 9 tabelas com RLS) já
-concluídas, mescladas e publicadas. Próximo passo: **Task 11.3** (teste de
-isolamento por tabela).
+(remoção do motor V1), Task 11.1 (Supabase Auth + RLS, Prisma removido),
+Task 11.2 (modelo de dados multi-tenant completo — 9 tabelas com RLS) e
+Task 11.3 (teste de isolamento por tabela, 11/11 tabelas multi-tenant) já
+concluídas, mescladas e publicadas. Próximo passo: **Task 11.4** (estratégia
+de catálogo).
 
 ## 2. Como orientar-se (leia nesta ordem)
 
@@ -135,13 +136,14 @@ requisito explícito da V2, não um débito à parte.
 
 ## 6. Pendência em aberto agora (prioridade atual)
 
-**Próxima task: 11.3 — Teste de isolamento por tabela** (tenant A não
-lê/edita/apaga linha do tenant B), uma vez para cada uma das 9 tabelas da
-Task 11.2 (`cliente`, `produto`, `gabarito`, `orcamento`, `ambiente`,
-`parede`, `elemento_continuo`, `linha_proposta`, `lista_material`) — critério
-de aceitação obrigatório, não follow-up. Depois: 11.4 (estratégia de catálogo
-— produtos cópia no signup, gabaritos base global + fork; as tabelas já
-suportam isso, só falta a lógica de população).
+**Próxima task: 11.4 — Estratégia de catálogo** (D-15): produtos = cópia no
+signup; gabaritos = base global read-only + fork na edição. As tabelas já
+suportam isso (Task 11.2) — falta só a lógica de população/fork.
+
+`supabase/tests/isolamento-tenant.sql` (Task 11.3) é o teste de isolamento
+permanente: script `begin;...rollback;`, seguro de rodar contra o projeto
+real quantas vezes quiser, sem resíduo e sem precisar de `service_role_key`.
+Rode de novo depois de qualquer alteração de RLS futura.
 
 Depois da Stage 11: Stage 12 (extensões do motor — Placa, Parede/Ambiente,
 elementos contínuos, veio, precificação/rateio) e só então Stage 13 (telas da
