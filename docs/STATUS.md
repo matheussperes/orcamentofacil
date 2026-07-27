@@ -1,27 +1,35 @@
 # Status Atual, Decisões, Pendências e Próximos Passos
 
-> Atualizado em 2026-07-24. Este arquivo é o ponto de partida de qualquer
-> sessão nova — leia antes de assumir o que já existe. **O projeto virou V2
-> nesta sessão** (ver Seção 1) — não confie em nada anterior a 2026-07-24
-> sobre arquitetura/motor sem checar contra os documentos da Seção 7.
+> Atualizado em 2026-07-27 (handoff de sessão — Fases A e B completas,
+> planejamento da Fase C pronto). Este arquivo é o ponto de partida de
+> qualquer sessão nova — leia antes de assumir o que já existe. O projeto
+> virou V2 em 2026-07-24 (ver Seção 1) — não confie em nada anterior a essa
+> data sobre arquitetura/motor sem checar contra os documentos da Seção 7.
 
 ## 1. Onde estamos agora (resumo de uma linha)
 
 O projeto deixou de ser "refatoração visual da V1" e virou **a V2 do
 produto**: painel de orçamento para marceneiros, motor de caixa (V3)
 estendido, persistência real multi-tenant via Supabase. **Fase A (discovery)
-aprovada. Fase B (motor + dados) COMPLETA — Stages 11 e 12 fechadas.** Tudo
+e Fase B (motor + dados) COMPLETAS — Stages 10, 11 e 12 fechadas.** Tudo
 concluído, mesclado e publicado: Task 10.1 (remoção do motor V1); Stage 11 —
 11.1 (Supabase Auth + RLS, Prisma fora), 11.2 (9 tabelas multi-tenant com
 RLS), 11.3 (teste de isolamento por tabela), 11.4 (catálogo: cópia no signup
 + fork); Stage 12 — 12.1 (primitiva `Placa`), 12.2 (Parede/Ambiente +
 posicionamento 1D + Tier 1/2), 12.3 (conjuntos adjacentes + override), 12.4
 (elementos contínuos unificados), 12.5 (veio de chapa), 12.6 (precificação
-V2 + rateio por custo alocado). **Próximo passo: Fase C — Stage 13
-(reconstrução da experiência / telas)**, começando pela Task 13.0
-(pré-requisito de canvas). É a mudança de fase mais significativa desde o
-início da V2 — sai de motor/dados puro e entra em UI (Frontend Engineer volta
-a ser o executor principal).
+V2 + rateio por custo alocado), 12.7 (integra `ElementoContinuo` ao
+pipeline). 168 testes verdes.
+
+**A Stage 13 (Fase C — telas) já tem discovery/planejamento feito
+(2026-07-27)**: as 8 tasks (13.0-13.7) estão detalhadas com critério de
+aceitação e ordem de dependência no `docs/Backlog.md`, e as duas dívidas
+arquiteturais que ficaram em aberto (ver Seção 6) já têm decisão fechada,
+amarradas a tasks específicas — não é mais "pendência vaga". **Próximo
+passo real: começar a executar a Task 13.0** (pré-requisito de canvas). É a
+mudança de fase mais significativa desde o início da V2 — sai de
+motor/dados puro e entra em UI (**Frontend Engineer** volta a ser o
+executor principal, UX Auditor de volta no loop).
 
 ## 2. Como orientar-se (leia nesta ordem)
 
@@ -82,12 +90,11 @@ a ser o executor principal).
   tipo (tampo reaproveita `explodePlaca` da Task 12.1 pra engrossamento/
   dobra). `BayContent` deixa de ser union — tamponamento ESTRUTURAL saiu
   (Seção 3.6), `migrate.ts` descarta presets antigos com esse bay, com aviso.
-  **Pendência arquitetural registrada** (não resolvida, decisão consciente):
+  **Dívida A (agora com plano fechado, não mais vaga)**:
   `BoxModule.tamponamento`/`TamponamentoInstancia` (tamponamento de
   INSTÂNCIA, doc 12) continua ativo e coexistindo com o novo
-  `ElementoContinuo` tipo "tamponamento" — a Seção 3.6 só cobria o
-  estrutural. Resolver essa duplicidade é trabalho de planejamento da Fase C
-  (Stage 13), não desta Stage.
+  `ElementoContinuo` tipo "tamponamento" até a **Task 13.2** — é lá que é
+  retirado (ver Backlog, Stage 13).
 - `lib/engine/box/{types,explode,cutting}.ts` + `lib/engine/types.ts` (Task
   12.5 — veio de chapa): `BoxMaterial.temVeio?`, `Peca.temVeio`/`sentidoVeio`
   (denormalizados). 22 pontos de peça em `box/explode.ts` classificados
@@ -108,15 +115,23 @@ a ser o executor principal).
   material; montagem/frete somados por cima. Rateio **modular por
   componente** (móveis+frete por custo; montagem pela base do seu modo). O
   exemplo trabalhado do briefing (R$19.000, casos de 19 e 20 chapas) é teste
-  de aceitação e fecha número a número. `engine.globais` sempre `[]` no
-  caminho V2 hoje — atribuição de custo de elementos contínuos aos grupos
-  fica pra integração da Fase C.
+  de aceitação e fecha número a número.
+- `lib/orcamento.ts` (Task 12.7 — resolve a Dívida B1): `calcularOrcamentoMisto`
+  agora aceita `elementosContinuos?: ElementoContinuoResolvido[]` — cada
+  `ElementoContinuo` explodido vira um `ResultadoModulo` **sintético** em
+  `porModulo` (mesmo padrão de `BoxModule`/`Placa`; **não** em `globais`, que
+  é `PecaLinear[]`, formato V1 incompatível de shape). `AlvoResolvido`
+  continua sendo responsabilidade de quem chama (Conjunto/Parede → dimensões
+  é I/O de domínio) — isso sim fica pra Task 13.2. Trabalho de motor puro,
+  por isso não esperou a Stage 13.
 - **O motor V1 de templates foi removido por completo** (Task 10.1, 2026-07-24):
   `lib/engine/engine.ts` (calcularEngine), `templates.ts`, `evaluator.ts`,
   `lib/templateOverrides.ts`, `lib/validation/templates.ts`,
   `app/api/calcular`, `app/api/templates`, `app/configuracoes/engenharia` —
-  todos removidos. 96 → 69 testes (23 eram do V1; nenhum órfão).
-- 69 testes passando, cobrindo só o motor V3.
+  todos removidos. 96 → 69 testes na época (23 eram do V1; nenhum órfão).
+- **168 testes passando hoje** (2026-07-27), cobrindo motor V3 completo
+  (box, placa, parede, conjunto, elemento-contínuo, precificação) — todos
+  os módulos listados acima têm suíte própria.
 
 ### Persistência e Auth (novo — Supabase, Tasks 11.1 + 11.2)
 - Projeto Supabase real conectado: **`orcamentofacil`**
@@ -194,28 +209,37 @@ requisito explícito da V2, não um débito à parte.
 
 ## 6. Pendência em aberto agora (prioridade atual)
 
-**Fase B (motor + dados) COMPLETA — Stages 11 e 12 fechadas.** O modelo de
-dados multi-tenant está de pé (Stage 11) e o motor V3 tem todas as extensões
-da V2 (Stage 12: Placa, Parede/Ambiente+Tier1/2, Conjuntos, Elementos
-Contínuos, veio de chapa, precificação+rateio). 163 testes verdes.
+**Fases A e B COMPLETAS — Stages 10, 11 e 12 fechadas.** O modelo de dados
+multi-tenant está de pé (Stage 11) e o motor V3 tem todas as extensões da V2
+(Stage 12: Placa, Parede/Ambiente+Tier1/2, Conjuntos, Elementos Contínuos,
+veio de chapa, precificação+rateio, e a integração de tudo isso ao pipeline
+principal via Task 12.7). 168 testes verdes.
 
-**Próximo passo: Fase C — Stage 13 (reconstrução da experiência / telas).**
-Primeira task: **13.0 — pré-requisito de canvas**: refatorar
-`BoxCanvas.geometria` para aceitar **lista de itens posicionados**, não um
-`BoxModule` só (render de conjunto) — vem antes de qualquer tela que dependa
-disso. 🔴 Alta · Sonnet. **Mudança de fase importante**: as tasks da Stage 13
-são majoritariamente UI (o **Frontend Engineer** volta a ser o executor
-principal, com UX Auditor no loop de validação — ver
-`.maestro/pipelines/03-quality.md`); só validar visualmente em lote por
-conjunto de telas (cadência do operador), não task-a-task. **Antes de
-começar a Stage 13, vale um Discovery/planejamento**: o `docs/Mapa-de-Telas.md`
-existe (Fase A), mas o Backlog da Stage 13 está em recorte grosso — detalhar
-por tela quando a Stage iniciar (nota no próprio Backlog). Duas dívidas de
-integração que a Fase C precisa resolver, herdadas do motor: (a)
-`BoxModule.tamponamento`/`TamponamentoInstancia` coexiste com o
-`ElementoContinuo` novo (Task 12.4); (b) `calcularOrcamentoMisto` ainda não
-liga `ElementoContinuo`/`Placa` ao `EngineOutput.globais` nem o rateio novo
-às telas.
+**Próximo passo real: executar a Task 13.0** (Fase C — Stage 13,
+reconstrução da experiência). O discovery/planejamento da Stage 13 **já foi
+feito** (2026-07-27, Maestro) — não precisa ser refeito, só ler
+`docs/Backlog.md` Seção "Pipeline Stage 13" (tem critério de aceitação e
+ordem de dependência por task) e `docs/Mapa-de-Telas.md` (telas/fluxos).
+Ordem: **13.0 → 13.1 → 13.2 → 13.3 → {13.4, 13.5} → 13.6 → 13.7** (13.7 é
+isolada, pode andar em paralelo a qualquer momento). Primeira task: **13.0 —
+pré-requisito de canvas**: refatorar `BoxCanvas.geometria` para aceitar
+lista de itens posicionados (render de conjunto). 🔴 Alta · Sonnet.
+
+**Mudança de fase importante**: as tasks da Stage 13 são majoritariamente UI
+— o **Frontend Engineer** volta a ser o executor principal, com **UX
+Auditor** de volta no loop de validação (`.maestro/pipelines/03-quality.md`);
+validar visualmente em lote por conjunto de telas (cadência do operador), não
+task-a-task.
+
+**As duas dívidas de integração do motor já têm decisão fechada** (não são
+mais "pendência em aberto" — são plano concreto, ver nota completa no
+Backlog acima da Stage 13):
+- **Dívida A** (`TamponamentoInstancia` vs. `ElementoContinuo`): retirada
+  amarrada à **Task 13.2** — único lugar que ainda usa o mecanismo antigo.
+- **Dívida B2** (rateio novo → telas): wiring amarrado à **Task 13.5** —
+  primeira tela que consome `ratearPrecificacao` de verdade.
+- (Dívida B1 — `ElementoContinuo` → pipeline — **já foi resolvida como
+  código** na Task 12.7, motor puro, sem depender de tela nenhuma.)
 
 `supabase/tests/isolamento-tenant.sql` (Task 11.3) é o teste de isolamento
 permanente: script `begin;...rollback;`, seguro de rodar contra o projeto

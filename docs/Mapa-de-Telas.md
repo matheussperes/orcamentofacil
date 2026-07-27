@@ -176,7 +176,14 @@ na hora de gerar.
 | `/perfil` | Organização, Usuário/Perfil |
 | `/catalogo` | Produto |
 | `/biblioteca` | Módulo/Gabarito, Placa |
-| `/orcamento/[id]` (Ambientes) | Orçamento, Ambiente, Parede, ItemPosicionado, Conjunto, ElementoContinuo |
+| `/orcamento/[id]` (Ambientes) | Orçamento, Ambiente, Parede, ItemPosicionado, **Conjunto*, ElementoContinuo |
+
+\* **Conjunto não é entidade persistida** (decisão consciente da Task 11.2 —
+`elemento_continuo.alvo` referencia `conjuntoId` como jsonb solto, sem FK).
+É derivado em runtime por `detectarConjuntos()` (Task 12.3) a partir de
+`Parede.itens` + `Parede.elementos`; só o **override manual** do handle de
+junção (união/quebra) precisa de persistência própria — decisão de schema
+em aberto, ver nota da Task 13.2 no Backlog.
 | `/orcamento/[id]` (Corte & Material) | Plano de corte (motor), Lista de material fechada |
 | `/orcamento/[id]` (Financeiro) | ModoPrecificacao, resumo de 6 campos |
 | `/orcamento/[id]` (Proposta) | LinhaProposta |
