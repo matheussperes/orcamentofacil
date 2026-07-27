@@ -14,6 +14,7 @@ import {
   type TamponamentoInstancia,
   type TamponamentoLado,
 } from "@/lib/engine/box/types";
+import type { Placa } from "@/lib/engine/placa/types";
 import {
   calcularOrcamentoMisto,
   idDoItem,
@@ -48,6 +49,11 @@ const novoId = () => `m${seq++}`;
 
 /** Cópia editável de um item (novo id). */
 function clonarItem(it: ModuloOrcamento): ModuloOrcamento {
+  if (it.origem === "placa") {
+    const placa: Placa = JSON.parse(JSON.stringify(it.placa));
+    placa.id = novoId();
+    return { origem: "placa", placa };
+  }
   const box: BoxModule = JSON.parse(JSON.stringify(it.box));
   box.id = novoId();
   return { origem: "custom_box", box };
@@ -202,7 +208,10 @@ export default function Home() {
         largura_mm: larguraDoItem(it),
         altura_mm: alturaDoItem(it),
         profundidade_mm: profundidadeDoItem(it),
-        categoria: it.box.tipo === "aereo" ? "superior" : "inferior",
+        // Placa não tem `tipo` de carcaça (aereo/inferior/torre) — a faixa
+        // real de posicionamento de placas fica para a UI da Fase C (Modelo
+        // de Domínio Seção 3); por ora trata como "inferior" (default seguro).
+        categoria: it.origem === "custom_box" && it.box.tipo === "aereo" ? "superior" : "inferior",
         cor: corExternaDoItem(it),
       })),
     [itens]
@@ -316,13 +325,17 @@ export default function Home() {
                 >
                   {min ? (
                     <ResumoModulo it={it} />
-                  ) : (
+                  ) : it.origem === "custom_box" ? (
                     <BoxModuloCard
                       box={it.box}
                       paredes={paredes}
                       catalogo={catalogo}
                       onAtualizar={(patch) => atualizarBoxCampo(id, patch)}
                     />
+                  ) : (
+                    // Editor de Placa (Modelo de Domínio Seção 2) fica para a
+                    // UI da Fase C — Task 12.1 só traz o motor.
+                    <div className="text-corpo text-cinza-500">{it.placa.nome} (placa)</div>
                   )}
                   <div
                     className="mt-2 flex flex-wrap justify-end gap-2"
@@ -574,6 +587,19 @@ export default function Home() {
 
 // Vista resumida de um módulo "salvo" (colapsado): preview + dados essenciais.
 function ResumoModulo({ it }: { it: ModuloOrcamento }) {
+  if (it.origem === "placa") {
+    const placa = it.placa;
+    return (
+      <div style={{ fontSize: 13, lineHeight: 1.6 }}>
+        <div style={{ fontWeight: 600 }}>{placa.nome}</div>
+        <div className="muted">
+          Parede {placa.parede ?? "A"} · {placa.largura}×{placa.altura}×{placa.material.espessura}mm
+        </div>
+        <div className="muted">Material: {placa.material.cor}</div>
+      </div>
+    );
+  }
+
   const box = it.box;
   const coresTamponamento = [
     box.tamponamento?.esquerdo,
