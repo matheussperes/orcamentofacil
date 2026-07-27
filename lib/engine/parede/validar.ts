@@ -44,7 +44,9 @@ function resolveModulo(
   return itens.get(itemId);
 }
 
-function intervalosSobrepoem(aInicio: number, aFim: number, bInicio: number, bFim: number): boolean {
+// Exportado (Task 12.3, lib/engine/conjunto/detectar.ts reaproveita esta
+// checagem de overlap 1D em vez de duplicar a lógica geométrica).
+export function intervalosSobrepoem(aInicio: number, aFim: number, bInicio: number, bFim: number): boolean {
   return aInicio < bFim && bInicio < aFim;
 }
 
@@ -163,7 +165,8 @@ function validarFaixasNaoColidem(
 
 // Tier 2b — item posicionado (retângulo x, Y-derivado, largura, altura) não
 // pode sobrepor nenhum ElementoParede (retângulo x, y, largura, altura).
-function retangulosSobrepoem(
+// Exportado pelo mesmo motivo de `intervalosSobrepoem` acima (Task 12.3).
+export function retangulosSobrepoem(
   ax: number,
   ay: number,
   al: number,
