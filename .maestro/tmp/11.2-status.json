@@ -1,0 +1,9 @@
+{
+  "task_id": "11.2-modelo-dados-multitenant",
+  "status": "aprovada",
+  "current_assignee": "maestro",
+  "progress": 100,
+  "blockers": [],
+  "notes": "9 tabelas criadas e aplicadas ao projeto real (ioakptuwhfvlirvrciwg), RLS + politicas em cada migration. Code Auditor (build+lint) e auditoria de seguranca do Maestro (get_advisors zero achados, leitura manual das 9 migrations, sem secrets) aprovados. Pronta para merge.",
+  "last_update": "2026-07-27T00:00:00Z"
+}
