@@ -65,14 +65,33 @@ function mapearSentido(s: SentidoPortaAntiga | undefined, tipoCarcaca: BoxModule
 }
 
 /** Migra o `content` de UM vão-folha pro formato atual: frente fica só
- * "vazio"/"gaveta" (portas são extraídas à parte, ver `coletarPortasEFundo`)
- * e o campo `fundo` por vão é descartado (vira `box.temFundo` global). */
-function migrarContent(raw: unknown): BayContent {
+ * "vazio"/"gaveta" (portas são extraídas à parte, ver `coletarPortasEFundo`),
+ * o campo `fundo` por vão é descartado (vira `box.temFundo` global) e o
+ * branch `tipo: "tamponamento"` é descartado com aviso (Modelo de Domínio,
+ * Seção 3.6 — tamponamento ESTRUTURAL saiu do `BayContent`, substituído pelo
+ * Elemento Contínuo unificado da Task 12.4). `vaoId` é só pra mensagem de
+ * aviso mais útil (identifica QUAL vão perdeu o conteúdo). */
+function migrarContent(raw: unknown, vaoId?: string): BayContent {
   if (!raw) return { tipo: "espaco", frente: { tipo: "vazio" } };
 
   if (ehFormatoNovo(raw)) {
     const c = raw as ContentAntigo;
-    if (c.tipo === "tamponamento") return c as unknown as BayContent;
+    if (c.tipo === "tamponamento") {
+      // Descarte-com-aviso: pré-lançamento, dado só em localStorage, e não há
+      // informação suficiente num BayContent antigo (só lado/material/sarrafo)
+      // pra reconstruir automaticamente um `ElementoContinuo` (falta o
+      // alvo — conjuntoId/moduloId — que o BayContent antigo nunca guardou).
+      // Sem precedente de warning/log nas migrações anteriores deste arquivo
+      // (elas só transformam silenciosamente); `console.warn` foi a escolha
+      // de menor impacto — não muda a assinatura de `migrarBayNode`/
+      // `migrarBoxModule` (usadas por `lib/boxPresets.ts`) nem exige uma
+      // segunda saída (lista de avisos) só pra esse caso único.
+      console.warn(
+        `[migrate] Vão "${vaoId ?? "desconhecido"}" tinha tamponamento estrutural (BayContent) — ` +
+          `descartado (Modelo de Domínio 3.6, saiu do modelo). Vão volta a vazio; recrie como Elemento Contínuo tipo "tamponamento" se necessário.`
+      );
+      return { tipo: "espaco", frente: { tipo: "vazio" } };
+    }
     // c.tipo === "espaco": pode ter frente "portas" (extraída à parte) e/ou fundo (descartado aqui).
     const frenteAntiga = c.frente;
     const frente: FrenteConteudo =
@@ -134,7 +153,7 @@ export function migrarBayNode(node: BayNode): BayNode {
       children: node.children.map(migrarBayNode),
     };
   }
-  return { ...node, content: migrarContent(node.content) };
+  return { ...node, content: migrarContent(node.content, node.id) };
 }
 
 interface PortaColetada {

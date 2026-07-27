@@ -452,3 +452,22 @@ describe("box — tamponamento de instância por lado (soma à largura, doc 12)"
     expect(tampDireito!.espessura_mm).toBe(18);
   });
 });
+
+describe("box — BayContent sem o branch de tamponamento estrutural (Task 12.4, Modelo de Domínio 3.6)", () => {
+  it("explode normalmente uma árvore só com vãos 'espaco' (única forma restante de BayContent)", () => {
+    const raiz: BayNode = {
+      id: "r",
+      split: "vertical",
+      qtdDivisorias: 1,
+      children: [
+        espaco("a", { tipo: "vazio" }, { prateleiras: { qtd: 2, recuo: 20 } }),
+        espaco("b", { tipo: "gaveta", qtd: 2, profundidade: 500, interna: false }),
+      ],
+    };
+    const box = caixaVazia("inferior", raiz);
+    expect(() => explodeBox(box)).not.toThrow();
+    const r = explodeBox(box);
+    expect(nomes(r)).not.toContain("Tamponamento");
+    expect(r.pecas.some((p) => p.nome === "Prateleira")).toBe(true);
+  });
+});

@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { migrarBayNode, migrarBoxModule } from "./migrate";
 import { explodeBox } from "./explode";
 import type { BayNode, BoxModule } from "./types";
@@ -60,13 +60,20 @@ describe("migrarBayNode — formatos antigos de conteúdo", () => {
     expect(novo.content).toEqual({ tipo: "espaco", frente: { tipo: "vazio" } });
   });
 
-  it("não altera tamponamento (mesmo formato antes e depois)", () => {
+  it("descarta bay de tamponamento estrutural com aviso (Modelo de Domínio 3.6 — saiu do BayContent, Task 12.4)", () => {
     const node = {
       id: "r", split: "none", qtdDivisorias: 0,
       content: { tipo: "tamponamento", lado: "direito", material: { cor: "Branco TX", espessura: 15 }, sarrafo: false },
     } as unknown as BayNode;
+
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
     const novo = migrarBayNode(node);
-    expect(novo.content).toEqual(node.content);
+
+    expect(novo.content).toEqual({ tipo: "espaco", frente: { tipo: "vazio" } });
+    expect(warnSpy).toHaveBeenCalledTimes(1);
+    expect(warnSpy.mock.calls[0][0]).toMatch(/tamponamento/i);
+    expect(warnSpy.mock.calls[0][0]).toContain("r"); // id do vão na mensagem
+    warnSpy.mockRestore();
   });
 
   it("não altera conteúdo já no formato novo (idempotente)", () => {
@@ -187,6 +194,39 @@ describe("migrarBoxModule — portas/fundo legados viram entidades globais", () 
     expect(r.pecas.some((p) => p.nome === "Porta")).toBe(true);
     expect(migrado.tamponamento?.esquerdo.ativo).toBe(true);
     expect(migrado.tamponamento?.esquerdo.material.cor).toBe("Madeirado");
+  });
+
+  it("preset com bay de tamponamento estrutural (BayContent) é migrado descartando esse conteúdo, sem quebrar o resto do preset", () => {
+    const boxAntigo = {
+      id: "b1", nome: "Guarda-roupa com tamponamento estrutural", tipo: "torre",
+      largura: 1600, altura: 2200, profundidade: 550,
+      caixa: { cor: "Branco TX", espessura: 15 },
+      raiz: {
+        id: "r", split: "vertical", qtdDivisorias: 1,
+        children: [
+          {
+            id: "a", split: "none", qtdDivisorias: 0,
+            content: { tipo: "espaco", frente: { tipo: "vazio" } },
+          },
+          {
+            id: "b", split: "none", qtdDivisorias: 0,
+            content: { tipo: "tamponamento", lado: "direito", material: { cor: "Branco TX", espessura: 15 }, sarrafo: false },
+          },
+        ],
+      },
+    } as unknown as BoxModule;
+
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const migrado = migrarBoxModule(boxAntigo);
+
+    expect(warnSpy).toHaveBeenCalledTimes(1);
+    expect(migrado.raiz.children![0].content).toEqual({ tipo: "espaco", frente: { tipo: "vazio" } });
+    expect(migrado.raiz.children![1].content).toEqual({ tipo: "espaco", frente: { tipo: "vazio" } });
+    // resto do preset (largura/altura/profundidade/caixa) intacto
+    expect(migrado.largura).toBe(1600);
+    expect(migrado.caixa.cor).toBe("Branco TX");
+    warnSpy.mockRestore();
+    expect(() => explodeBox(migrado)).not.toThrow();
   });
 
   it("explodeBox no formato ANTIGO (sem migrar) de fato lançava exceção — prova do bug", () => {
