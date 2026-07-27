@@ -1058,6 +1058,22 @@ jornada do cliente, agora sobre Tailwind + shadcn/ui).
     globais aos grupos fica pra quando a integração da Fase C ligar isso;
     não afeta o invariante soma==total (rateio normaliza pela soma dos
     grupos).
+- **Task 12.7** — ✅ **Concluído (2026-07-27**, mesclada em
+  `feature/12.7-integracao-elemento-continuo`, aprovada por verificação
+  independente do Maestro — 0 divergência do contrato, conferida linha a
+  linha). **Resolve a Dívida B1** (registrada na Task 12.6): liga
+  `ElementoContinuo` (Task 12.4) ao pipeline `calcularOrcamentoMisto`
+  (`lib/orcamento.ts`) — cada elemento explodido vira um `ResultadoModulo`
+  **sintético** empurrado em `porModulo` (mesmo padrão de `BoxModule`/`Placa`,
+  **não** em `globais`/`PecaLinear`, formato antigo V1 incompatível de
+  shape — achado do Maestro antes de despachar, evitou quebrar
+  `lib/insumos.ts`). `CalcMistoInput.elementosContinuos?` novo campo,
+  opcional/retrocompatível. `AlvoResolvido` continua sendo responsabilidade
+  do CHAMADOR resolver (Conjunto/Parede → dimensões é I/O de domínio, fora
+  do motor puro) — fica pra Task 13.2, quando a Fase C tiver os dados reais.
+  168/168 testes (5 novos), build/lint/typecheck limpos. Trabalho de motor
+  puro, sem UI — por isso pôde ser feito antes da Stage 13, diferente das
+  Dívidas A e B2 (ver nota na Stage 13 abaixo). 🟡 Média · Sonnet.
 
 ## Pipeline Stage 13 — Reconstrução da experiência (Fase C)
 
