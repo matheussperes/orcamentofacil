@@ -15,9 +15,10 @@ aprovada pelo operador. Fase B (motor + dados) em andamento**: Task 10.1
 Task 11.2 (modelo de dados multi-tenant completo — 9 tabelas com RLS),
 Task 11.3 (teste de isolamento por tabela, 11/11 tabelas multi-tenant) e
 Task 11.4 (estratégia de catálogo — cópia de produtos no signup + fork de
-gabarito) já concluídas, mescladas e publicadas. **Stage 11 (persistência
-multi-tenant) está completa.** Próximo passo: **Stage 12** (extensões do
-motor — Placa, Parede/Ambiente, elementos contínuos, veio, precificação/rateio).
+gabarito) e Task 12.1 (primitiva `Placa` no motor V3) já concluídas,
+mescladas e publicadas. **Stage 11 (persistência multi-tenant) está
+completa; Stage 12 (extensões do motor) iniciada.** Próximo passo: **Task
+12.2** (Parede/Ambiente + posicionamento 1D).
 
 ## 2. Como orientar-se (leia nesta ordem)
 
@@ -52,9 +53,14 @@ motor — Placa, Parede/Ambiente, elementos contínuos, veio, precificação/rat
   extraída de `engine.ts` (V1) porque era compartilhada com o caminho de
   caixa. É o ponto de consolidação de BOM hoje.
 - `lib/orcamento.ts`: `ModuloOrcamento` é union discriminada por `origem` —
-  hoje só `{ origem: "custom_box"; box: BoxModule }` (união de 1 membro; a
-  Task 12.1 adiciona `{ origem: "placa"; placa: Placa }`, **não colapsar em
-  tipo único**).
+  agora com 2 membros: `{ origem: "custom_box"; box: BoxModule }` e
+  `{ origem: "placa"; placa: Placa }` (Task 12.1). **Não colapsar em tipo
+  único.**
+- `lib/engine/placa/*` (novo — Task 12.1): primitiva `Placa` (peça plana sem
+  carcaça/vãos — prateleira, fechamento, painel, ripado) + `explodePlaca()`,
+  mesmo padrão puro de `box/explode.ts`. Reaproveita `BoxMaterial` (não criou
+  `MaterialRef`). `app/page.tsx` ainda não tem editor de Placa (fica pra Fase
+  C) — só o glue mínimo de tipagem pra continuar compilando.
 - **O motor V1 de templates foi removido por completo** (Task 10.1, 2026-07-24):
   `lib/engine/engine.ts` (calcularEngine), `templates.ts`, `evaluator.ts`,
   `lib/templateOverrides.ts`, `lib/validation/templates.ts`,
@@ -138,17 +144,13 @@ requisito explícito da V2, não um débito à parte.
 
 ## 6. Pendência em aberto agora (prioridade atual)
 
-**Stage 11 (persistência multi-tenant) completa.** Próxima task: **12.1 —
-Primitiva `Placa` + modificadores** (`ItemOrcamento` union `BoxModule |
-Placa`), início da Stage 12 (extensões do motor). Ver
-`docs/Modelo-de-Dominio.md` Seção 2.1 (engrossada vs. dobrada, seleção de
-lados, fita derivada da espessura final) — usar como especificação, a versão
-antiga do doc estava errada. Testes obrigatórios: reproduzir os 6 exemplos
-trabalhados do operador + casos de engrossamento parcial + validação de
-nível máximo por base. **Decisão fechada (2026-07-27)**: base 18 mm vai até
-nível 2 (54 mm) só — nível 3 (72 mm) excede a fita disponível e não é
-oferecido para essa base; base 15 mm mantém os 3 níveis. Não é mais
-pendência, a task só implementa a validação.
+**Stage 12 (extensões do motor) em andamento.** Task 12.1 (primitiva `Placa`)
+concluída. Próxima task: **12.2 — Parede/Ambiente + posicionamento 1D com
+faixas + validação Tier 1 e 2** (`docs/Modelo-de-Dominio.md` Seção 3.1/3.2).
+Note: como Task 12.1, isso é lógica de motor/domínio (TypeScript puro), não
+UI nem banco — não se encaixa no Frontend Engineer nem no Backend Engineer
+do framework `.maestro/` (lacuna conhecida do framework, contornada
+despachando como engenharia geral ancorada nas convenções do próprio motor).
 
 `supabase/tests/isolamento-tenant.sql` (Task 11.3) é o teste de isolamento
 permanente: script `begin;...rollback;`, seguro de rodar contra o projeto
