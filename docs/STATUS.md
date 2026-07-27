@@ -12,10 +12,12 @@ produto**: painel de orçamento para marceneiros, motor de caixa (V3)
 estendido, persistência real multi-tenant via Supabase. **Fase A (discovery)
 aprovada pelo operador. Fase B (motor + dados) em andamento**: Task 10.1
 (remoção do motor V1), Task 11.1 (Supabase Auth + RLS, Prisma removido),
-Task 11.2 (modelo de dados multi-tenant completo — 9 tabelas com RLS) e
-Task 11.3 (teste de isolamento por tabela, 11/11 tabelas multi-tenant) já
-concluídas, mescladas e publicadas. Próximo passo: **Task 11.4** (estratégia
-de catálogo).
+Task 11.2 (modelo de dados multi-tenant completo — 9 tabelas com RLS),
+Task 11.3 (teste de isolamento por tabela, 11/11 tabelas multi-tenant) e
+Task 11.4 (estratégia de catálogo — cópia de produtos no signup + fork de
+gabarito) já concluídas, mescladas e publicadas. **Stage 11 (persistência
+multi-tenant) está completa.** Próximo passo: **Stage 12** (extensões do
+motor — Placa, Parede/Ambiente, elementos contínuos, veio, precificação/rateio).
 
 ## 2. Como orientar-se (leia nesta ordem)
 
@@ -136,19 +138,29 @@ requisito explícito da V2, não um débito à parte.
 
 ## 6. Pendência em aberto agora (prioridade atual)
 
-**Próxima task: 11.4 — Estratégia de catálogo** (D-15): produtos = cópia no
-signup; gabaritos = base global read-only + fork na edição. As tabelas já
-suportam isso (Task 11.2) — falta só a lógica de população/fork.
+**Stage 11 (persistência multi-tenant) completa.** Próxima task: **12.1 —
+Primitiva `Placa` + modificadores** (`ItemOrcamento` union `BoxModule |
+Placa`), início da Stage 12 (extensões do motor). Ver
+`docs/Modelo-de-Dominio.md` Seção 2.1 (engrossada vs. dobrada, seleção de
+lados, fita derivada da espessura final) — usar como especificação, a versão
+antiga do doc estava errada. Testes obrigatórios: reproduzir os 6 exemplos
+trabalhados do operador + casos de engrossamento parcial; resolver a
+pendência da placa-base de 18mm antes de implementar.
 
 `supabase/tests/isolamento-tenant.sql` (Task 11.3) é o teste de isolamento
 permanente: script `begin;...rollback;`, seguro de rodar contra o projeto
 real quantas vezes quiser, sem resíduo e sem precisar de `service_role_key`.
 Rode de novo depois de qualquer alteração de RLS futura.
 
-Depois da Stage 11: Stage 12 (extensões do motor — Placa, Parede/Ambiente,
-elementos contínuos, veio, precificação/rateio) e só então Stage 13 (telas da
-Fase C). **Não pular para a Fase C antes do modelo de dados estar de pé** — é
-regra explícita do briefing.
+`produto`/`gabarito` (Task 11.4) já têm mecanismo de população (cópia no
+signup + fork), mas os ~380 padrões reais de MDF do operador ainda não foram
+cadastrados — decisão explícita dele de esperar a tela de catálogo da Fase C
+(Stage 13) ou usar o Supabase Table Editor diretamente antes disso, sem
+pressa.
+
+Depois da Stage 12: Stage 13 (telas da Fase C). **Não pular para a Fase C
+antes do modelo de dados estar de pé** — é regra explícita do briefing (já
+cumprida: Stage 11 fechada).
 
 ## 7. Convenções operacionais desta sessão (para a próxima também)
 

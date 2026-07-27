@@ -857,8 +857,29 @@ jornada do cliente, agora sobre Tailwind + shadcn/ui).
   aceitou o relato do executor) e confirmou zero resíduo em `auth.users` e
   `gabarito` depois. 🔴 Alta · Sonnet. **Critério de aceitação, não
   follow-up — cumprido.**
-- **Task 11.4** — Estratégias de catálogo (D-15): Produtos = cópia no signup;
-  Gabaritos = base global read-only + fork. 🟡 Média · Sonnet.
+- **Task 11.4** — ✅ **Concluído (2026-07-27**, mesclada em
+  `feature/11.4-estrategia-catalogo`, aprovada por Code Auditor + verificação
+  independente do Maestro). Duas migrations: (1) `seed_produtos_padrao()` +
+  trigger `on_organizacao_created` (AFTER INSERT em `organizacao`, separada
+  de `handle_new_user` de propósito — não mistura responsabilidades) copia o
+  catálogo padrão pra cada org nova: 8 chapas (`lib/catalog.ts`
+  `CATALOGO_PADRAO.mdf`) + 10 ferragens + 1 fita (`lib/engine/prices.ts`
+  `PRECOS_REFERENCIA`) = 19 linhas em `produto`. `led`/`acessorio` nascem
+  vazios (sem dado de referência hoje). `montagemPorM2`/`freteFixo`
+  propositalmente **não** migrados (D-23/D-26 — já viraram
+  `organizacao.modo_montagem_padrao`/`orcamento.frete`). (2)
+  `fork_gabarito(uuid)` (SECURITY INVOKER — leitura via RLS normal do
+  chamador, escrita cria linha própria com `origem_gabarito_id` de linhagem);
+  sem seed de gabaritos globais (não existe biblioteca "oficial" de módulos
+  no código ainda — fica para quando o operador definir). `get_advisors`
+  security zero achados. Maestro rodou o teste transacional de novo por
+  conta própria (contagem exata 8/10/1/0/0/19, fork validado, exceção
+  correta para id inexistente, zero resíduo). 🟡 Média · Sonnet.
+  - **Nota do operador**: os ~380 padrões reais de MDF do operador (tem em
+    Excel) ficam para depois — via Supabase Table Editor diretamente
+    (`produto` já tem RLS completa por org) ou, preferencialmente, quando a
+    tela de catálogo da Fase C existir (Stage 13). Não adiantado aqui por
+    decisão explícita do operador.
 
 ## Pipeline Stage 12 — Extensões do motor (Fase B)
 
