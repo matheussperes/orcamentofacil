@@ -7,6 +7,13 @@ export type CarcassType = "aereo" | "inferior" | "torre";
 export interface BoxMaterial {
   cor: string;
   espessura: number; // mm
+  // Veio de chapa (Modelo de Domínio, Seção 8 — Task 12.5). Opcional: ausente
+  // (`undefined`) tem semântica "sem veio" (mesmo tratamento que `false`) —
+  // decisão pra não quebrar os presets/fixtures existentes (`boxPresets.ts`,
+  // testes) que já criam `BoxMaterial` sem esse campo. Leia sempre via
+  // `material.temVeio ?? false`, nunca acesse direto quando o valor puder
+  // decidir algo booleano.
+  temVeio?: boolean;
 }
 
 // A "frente" de um vão-folha: o que cobre a abertura visível (ou nada).

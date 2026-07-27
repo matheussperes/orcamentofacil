@@ -293,6 +293,12 @@ function push(pecas: Peca[], nome: string, quantidade: number, material: BoxMate
     // Fita de borda por espessura final é regra de catálogo (Seção 2.1) — fora
     // de escopo (pricing/catálogo), mesma decisão de Placa.
     fita_m: 0,
+    // Veio de chapa (Seção 8, Task 12.5): Elemento Contínuo também não tem
+    // UI/editor pra escolher o sentido ainda (Fase C / Stage 13) — mesmo
+    // PLACEHOLDER documentado de lib/engine/placa/explode.ts: herda
+    // `temVeio` do material real, sentido default "comprimento".
+    temVeio: material.temVeio ?? false,
+    sentidoVeio: "comprimento",
   });
 }
 

@@ -20,6 +20,14 @@ export function todasAsPecas(engine: EngineOutput): Peca[] {
       largura_mm: g.comprimento_mm,
       area_m2: g.area_m2,
       fita_m: g.fita_m,
+      // Veio de chapa (Seção 8, Task 12.5): `PecaLinear` (tampo/rodapé
+      // contínuo, motor de templates V2) não carrega `BoxMaterial`, só
+      // cor/espessura já resolvidas — não há de onde ler `temVeio`.
+      // PLACEHOLDER documentado, mesmo padrão de Placa/Elemento Contínuo:
+      // `temVeio: false` (sem veio até esse motor ganhar o campo) e
+      // `sentidoVeio: "comprimento"` (ignorado enquanto `temVeio` é false).
+      temVeio: false,
+      sentidoVeio: "comprimento",
     });
   }
   return pecas;

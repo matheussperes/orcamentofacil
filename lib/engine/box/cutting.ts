@@ -12,8 +12,9 @@ export const CHAPA_ALTURA_MM = 1840;
 export interface PecaRetangular {
   id: string;
   nome: string;
-  w: number; // largura (mm)
-  h: number; // altura (mm)
+  w: number; // largura (mm) — eixo X da chapa, até `larguraChapa` (comprimento, Seção 8)
+  h: number; // altura (mm) — eixo Y da chapa, até `alturaChapa` (largura-da-chapa, Seção 8)
+  temVeio: boolean; // Seção 8 (Task 12.5): com veio, `empacotarChapas` não gira a peça
 }
 
 export interface PecaPosicionada extends PecaRetangular {
@@ -36,16 +37,31 @@ export interface GrupoChapas {
   pecasForaDaChapa: PecaRetangular[]; // maiores que a chapa em qualquer orientação
 }
 
-/** Expande peças (com quantidade agrupada) em retângulos individuais. */
+/**
+ * Expande peças (com quantidade agrupada) em retângulos individuais.
+ *
+ * Seção 8 (Task 12.5) — veio de chapa: quando `p.temVeio`, `p.sentidoVeio`
+ * FIXA a orientação aqui, antes do empacotamento, sem deixar
+ * `empacotarChapas` decidir nada de rotação pra essa peça:
+ * - `sentidoVeio: "comprimento"` → mantém a orientação já usada por este
+ *   código antes desta task (`w = largura_mm`, `h = altura_mm`).
+ * - `sentidoVeio: "largura"` → inverte (`w = altura_mm`, `h = largura_mm`).
+ * Sem veio (`!p.temVeio`), a orientação de saída continua a mesma de sempre
+ * — quem decide se gira é `empacotarChapas` (rotação livre), como já era.
+ */
 function expandirPecas(pecas: Peca[]): PecaRetangular[] {
   const out: PecaRetangular[] = [];
   pecas.forEach((p, i) => {
+    const inverte = p.temVeio && p.sentidoVeio === "largura";
+    const w = inverte ? p.altura_mm : p.largura_mm;
+    const h = inverte ? p.largura_mm : p.altura_mm;
     for (let q = 0; q < p.quantidade; q++) {
       out.push({
         id: `${i}-${q}`,
         nome: p.nome,
-        w: p.largura_mm,
-        h: p.altura_mm,
+        w,
+        h,
+        temVeio: p.temVeio,
       });
     }
   });
@@ -63,19 +79,23 @@ export function empacotarChapas(
   larguraChapa = CHAPA_LARGURA_MM,
   alturaChapa = CHAPA_ALTURA_MM
 ): { chapas: Chapa[]; foraDaChapa: PecaRetangular[] } {
-  const cabe = (p: PecaRetangular) =>
-    (p.w <= larguraChapa && p.h <= alturaChapa) ||
-    (p.h <= larguraChapa && p.w <= alturaChapa);
+  const cabeSemGirar = (p: PecaRetangular) => p.w <= larguraChapa && p.h <= alturaChapa;
+  const cabeGirada = (p: PecaRetangular) => p.h <= larguraChapa && p.w <= alturaChapa;
+
+  // Seção 8 (Task 12.5): com veio (`p.temVeio`), a orientação já foi FIXADA
+  // em `expandirPecas` (conforme `sentidoVeio`) — a peça só pode ser
+  // posicionada nessa orientação exata, nunca girada (giraria o veio
+  // fisicamente). Sem veio, aceita a orientação original OU girada, como
+  // sempre.
+  const cabe = (p: PecaRetangular) => (p.temVeio ? cabeSemGirar(p) : cabeSemGirar(p) || cabeGirada(p));
 
   const foraDaChapa = entrada.filter((p) => !cabe(p));
-  // Gira a peça se necessário para caber na largura da chapa.
+  // Gira a peça se necessário para caber — só quando `!temVeio` (rotação
+  // livre). Peças com veio que passaram no filtro `cabe` acima já cabem sem
+  // girar (senão teriam ido pra `foraDaChapa`), então nunca entram neste `map`.
   const validas = entrada
     .filter(cabe)
-    .map((p) =>
-      p.w <= larguraChapa && p.h <= alturaChapa
-        ? p
-        : { ...p, w: p.h, h: p.w }
-    );
+    .map((p) => (!p.temVeio && !cabeSemGirar(p) ? { ...p, w: p.h, h: p.w } : p));
 
   const ordenadas = [...validas].sort((a, b) => b.h - a.h || b.w - a.w);
 
