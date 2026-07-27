@@ -900,6 +900,24 @@ jornada do cliente, agora sobre Tailwind + shadcn/ui).
   base, nas duas técnicas. Base 15 mm mantém os 3 níveis. Não é mais
   pendência — a task implementa a validação, não decide o valor
   (`docs/Modelo-de-Dominio.md` Seção 2.1).
+  - ✅ **Concluído (2026-07-27**, mesclada em `feature/12.1-primitiva-placa`,
+    aprovada por verificação independente do Maestro — checagem manual da
+    matemática dos 6 exemplos contra o código, não só o relato do executor).
+    Novo módulo `lib/engine/placa/` (`types.ts`, `explode.ts`, `explode.test.ts`,
+    `index.ts`): `Placa` reaproveita `BoxMaterial` (não criou `MaterialRef`
+    novo); `explodePlaca()` no mesmo estilo puro de `box/explode.ts`.
+    `ModuloOrcamento` em `lib/orcamento.ts` virou union real de 2 membros;
+    `app/page.tsx` só ganhou o glue mínimo de tipagem pra continuar
+    compilando (sem editor de Placa — fica pra Fase C, de propósito). 83/83
+    testes (14 novos, 0 regressão), build/lint/typecheck limpos.
+    **Decisões de design sem resposta explícita na spec** (documentadas no
+    código, revisadas pelo Maestro): `material_tipo: "prateleira"` pra `Peca`
+    de placa (enum compartilhado com V1, não alterado sem validar);
+    `AcabamentoBorda = { presente: boolean }` (largura da fita é metadado de
+    pricing futuro, não alimenta `Peca` ainda); `fita_m` sempre 0 em peças de
+    Placa (mesmo motivo); ripado tem precedência sobre engrossamento quando
+    ambos setados (combinação fora dos 6 exemplos trabalhados); fórmula do
+    ripado: N ripas cobrindo a dimensão menor, espaçamento derivado da maior.
 - **Task 12.2** — Parede/Ambiente + posicionamento 1D com faixas + validação
   Tier 1 e 2. 🔴 Alta · Sonnet.
 - **Task 12.3** — Detecção de conjuntos adjacentes + override (união/quebra).
