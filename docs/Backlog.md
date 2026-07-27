@@ -993,11 +993,39 @@ jornada do cliente, agora sobre Tailwind + shadcn/ui).
   (Stage 13) vai consumir quando as telas novas existirem — resolver a
   duplicidade (substituir ou aposentar `TamponamentoInstancia`) faz parte do
   planejamento da Fase C, não desta Stage. 🔴 Alta · Sonnet.
-- **Task 12.5** — Veio de chapa: flag `temVeio` no material + **`sentidoVeio`
-  por peça** (qual dimensão corre nos 2720mm), com defaults para módulos-caixa
-  (altura/largura→2720, profundidade→1820) e **exibição/alteração visual para
-  placas**. Rotação do bin-packing só quando `!temVeio` (`cutting.ts:75-77`).
-  🟡 Média · Sonnet. **Avisar operador que o aproveitamento vai mudar.**
+- **Task 12.5** — ✅ **Concluído (2026-07-27**, mesclada em
+  `feature/12.5-veio-chapa`, aprovada por verificação independente do
+  Maestro — reclassificação manual da regra em todas as famílias de peça
+  conferidas + validação da mecânica de `cutting.ts`). **Escopo reduzido por
+  decisão do operador**: só motor nesta task — "exibição/alteração visual
+  para placas" fica pra quando o editor de Placa existir (Fase C), não
+  furamos "não pular pra Fase C" por causa disso.
+  `BoxMaterial.temVeio?: boolean` (opcional, ausente = sem veio);
+  `Peca.temVeio`/`sentidoVeio` (obrigatórios, denormalizados do material —
+  mesmo padrão de `cor`/`espessura_mm`). **22 pontos de peça em
+  `lib/engine/box/explode.ts` classificados individualmente** (Lateral,
+  Base, Tampo, Prateleira, Portas, Gavetas, Fundo, Tamponamento de
+  instância...), cada um com comentário explicando o raciocínio — regra
+  verificada: a dimensão que É a profundidade do módulo sempre cai no eixo
+  curto da chapa (1840mm), a que vem de altura/largura sempre no eixo longo
+  (2750mm), não importa em qual campo (`altura_mm`/`largura_mm`) da `Peca`
+  ela esteja armazenada. `Placa`/`ElementoContinuo` usam placeholder
+  documentado (`sentidoVeio:"comprimento"`, `temVeio` herdado do material
+  quando existe) até a Fase C ter UI.
+  `lib/engine/box/cutting.ts`: com `temVeio`, a orientação é fixada em
+  `expandirPecas` (conforme `sentidoVeio`) **antes** do empacotamento —
+  `empacotarChapas` nunca tenta a rotação alternativa pra essas peças; se a
+  orientação fixa não cabe, vai pra `foraDaChapa` sem forçar. Peças sem veio
+  continuam com rotação livre, sem mudança de comportamento. 142/142 testes,
+  build/lint/typecheck limpos.
+  **⚠️ Aviso ao operador (não é regressão)**: o aproveitamento de chapas pra
+  materiais com `temVeio: true` vai **piorar** a partir de agora — antes, o
+  bin-packing girava qualquer peça sem restrição pra caber; agora peças com
+  veio que só cabem rotacionadas contam como "fora da chapa". É o
+  comportamento fisicamente correto (girar quebraria o sentido do veio).
+  Hoje nenhum preset/material cadastrado usa `temVeio: true`, então não há
+  impacto visível ainda — só passa a valer quando algum material ganhar essa
+  flag (cadastro de catálogo, Task 11.4+ ou Fase C). 🟡 Média · Sonnet.
 - **Task 12.6** — Modos de precificação (1 no 1º corte, arquitetura p/ 4) +
   rateio por custo alocado + frete/montagem + congelamento. 🔴 Alta · Opus
   (regra financeira). **Testes obrigatórios**: soma das linhas == total
