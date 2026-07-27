@@ -963,11 +963,36 @@ jornada do cliente, agora sobre Tailwind + shadcn/ui).
   vizinho unido não aparece no resultado (é referenciado depois via
   `moduloId` direto, não via um `conjuntoId` de 1). 112/112 testes,
   build/lint/typecheck limpos. 🟡 Média · Sonnet.
-- **Task 12.4** — Elementos contínuos unificados — **4 tipos: tampo, rodapé,
-  tamponamento (4 posições), fechamento** (`docs/Modelo-de-Dominio.md` 3.4/3.5,
-  corrigido na auditoria); dimensões derivadas com override em rodapé/
-  fechamento; tampo engrossável/dobrável. Tamponamento sai do `BayContent`;
-  migração de presets (`migrate.ts`, descarte com aviso). 🔴 Alta · Sonnet.
+- **Task 12.4** — ✅ **Concluído (2026-07-27**, mesclada em
+  `feature/12.4-elementos-continuos`, aprovada por verificação independente
+  do Maestro — matemática dos 4 tipos conferida à mão, com destaque pro
+  resgate de A-06/A-07 da auditoria de domínio pra fechar duas ambiguidades
+  reais da tabela da Seção 3.4). Novo módulo `lib/engine/elemento-continuo/`
+  (`types.ts`, `explode.ts`, `explode.test.ts`, `index.ts`): `ElementoContinuo`
+  unificado (tampo/rodapé/tamponamento/fechamento) com dimensão derivada por
+  tipo — tampo (largura=soma, profundidade=maior+30mm, engrossável/dobrável
+  via `explodePlaca` reaproveitado da Task 12.1), rodapé (largura=total−30mm,
+  altura=150mm padrão, ambos editáveis via `override`), fechamento (sarrafo
+  na largura ou altura total conforme posição, 50mm padrão, editável),
+  tamponamento (deriva do módulo da extremidade — Seção 3.5 — `override`
+  sempre ignorado, única exceção "nunca digitável"). Validação de posição por
+  tipo (`validarPosicao`, lança `Error` em combinação inválida).
+  `BayContent` deixa de ser union — tamponamento ESTRUTURAL sai (Seção 3.6),
+  substituído por este módulo; `migrate.ts` descarta presets antigos com esse
+  bay, com `console.warn` identificando o vão. 131/131 testes,
+  build/lint/typecheck limpos.
+  **Pendência registrada, não resolvida nesta task** (decisão do Maestro,
+  não do executor — ele reportou em vez de decidir sozinho, como instruído):
+  o campo antigo `BoxModule.tamponamento`/`TamponamentoInstancia`
+  (tamponamento de INSTÂNCIA, doc 12 — usado por `larguraInstalacaoBox()`,
+  `BoxCanvas.tsx`, ainda ativo na página única `app/page.tsx`) **continua
+  coexistindo, intocado**, com o novo `ElementoContinuo` tipo "tamponamento".
+  A Seção 3.6 só cobre o tamponamento estrutural do `BayContent` — não
+  resolve esse segundo mecanismo. Decisão do Maestro: não mexer agora (serve
+  o fluxo atual de página única); o `ElementoContinuo` é o que a Fase C
+  (Stage 13) vai consumir quando as telas novas existirem — resolver a
+  duplicidade (substituir ou aposentar `TamponamentoInstancia`) faz parte do
+  planejamento da Fase C, não desta Stage. 🔴 Alta · Sonnet.
 - **Task 12.5** — Veio de chapa: flag `temVeio` no material + **`sentidoVeio`
   por peça** (qual dimensão corre nos 2720mm), com defaults para módulos-caixa
   (altura/largura→2720, profundidade→1820) e **exibição/alteração visual para

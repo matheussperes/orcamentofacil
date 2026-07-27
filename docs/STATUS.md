@@ -16,10 +16,11 @@ Task 11.2 (modelo de dados multi-tenant completo — 9 tabelas com RLS),
 Task 11.3 (teste de isolamento por tabela, 11/11 tabelas multi-tenant) e
 Task 11.4 (estratégia de catálogo — cópia de produtos no signup + fork de
 gabarito), Task 12.1 (primitiva `Placa` no motor V3), Task 12.2
-(Parede/Ambiente + posicionamento 1D + validação Tier 1/2) e Task 12.3
-(detecção de conjuntos adjacentes + override) já concluídas, mescladas e
-publicadas. **Stage 11 completa; Stage 12 em andamento.** Próximo passo:
-**Task 12.4** (elementos contínuos unificados).
+(Parede/Ambiente + posicionamento 1D + validação Tier 1/2), Task 12.3
+(detecção de conjuntos adjacentes + override) e Task 12.4 (elementos
+contínuos unificados) já concluídas, mescladas e publicadas. **Stage 11
+completa; Stage 12 em andamento.** Próximo passo: **Task 12.5** (veio de
+chapa).
 
 ## 2. Como orientar-se (leia nesta ordem)
 
@@ -75,6 +76,17 @@ publicadas. **Stage 11 completa; Stage 12 em andamento.** Próximo passo:
   manual. **`Conjunto` nunca tem tamanho 1** (módulo isolado usa `moduloId`
   direto, Seção 3.4) — corrigido numa rodada de revisão do Maestro após a
   primeira entrega incluir conjuntos de 1 por engano.
+- `lib/engine/elemento-continuo/*` (novo — Task 12.4): `ElementoContinuo`
+  unificado (tampo/rodapé/tamponamento/fechamento), dimensão derivada por
+  tipo (tampo reaproveita `explodePlaca` da Task 12.1 pra engrossamento/
+  dobra). `BayContent` deixa de ser union — tamponamento ESTRUTURAL saiu
+  (Seção 3.6), `migrate.ts` descarta presets antigos com esse bay, com aviso.
+  **Pendência arquitetural registrada** (não resolvida, decisão consciente):
+  `BoxModule.tamponamento`/`TamponamentoInstancia` (tamponamento de
+  INSTÂNCIA, doc 12) continua ativo e coexistindo com o novo
+  `ElementoContinuo` tipo "tamponamento" — a Seção 3.6 só cobria o
+  estrutural. Resolver essa duplicidade é trabalho de planejamento da Fase C
+  (Stage 13), não desta Stage.
 - **O motor V1 de templates foi removido por completo** (Task 10.1, 2026-07-24):
   `lib/engine/engine.ts` (calcularEngine), `templates.ts`, `evaluator.ts`,
   `lib/templateOverrides.ts`, `lib/validation/templates.ts`,
@@ -158,14 +170,19 @@ requisito explícito da V2, não um débito à parte.
 
 ## 6. Pendência em aberto agora (prioridade atual)
 
-**Stage 12 (extensões do motor) em andamento.** Tasks 12.1 (primitiva
-`Placa`), 12.2 (Parede/Ambiente + posicionamento 1D + Tier 1/2) e 12.3
-(conjuntos adjacentes + override) concluídas. Próxima task: **12.4 —
-Elementos contínuos unificados** (tampo/rodapé/tamponamento 4
-posições/fechamento, `docs/Modelo-de-Dominio.md` Seção 3.4/3.5). Mesma
-situação das anteriores: lógica de motor/domínio — usar o **Motor Engineer**
-(`.maestro/agents/motor-engineer.md`, não versionado no repo por decisão do
-operador — framework .maestro/ é tooling pontual, removido depois de usar).
+**Stage 12 (extensões do motor) em andamento.** Tasks 12.1-12.4 concluídas.
+Próxima task: **12.5 — Veio de chapa**: flag `temVeio` no material +
+`sentidoVeio` por peça (qual dimensão corre nos 2720mm da chapa), defaults
+pra módulos-caixa (altura/largura→2720, profundidade→1820), rotação do
+bin-packing só quando `!temVeio` (`lib/engine/box/cutting.ts:75-77` hoje
+rotaciona sem restrição — vai piorar o aproveitamento pra ficar correto, não
+é regressão, avisar o operador). **Diferente das Tasks 12.1-12.4**: o
+Backlog pede também "exibição/alteração visual para placas" — isso é UI
+(Frontend Engineer), não só motor. Mas o editor de Placa ainda não existe
+(Task 12.1 deixou pra Fase C, Stage 13, de propósito) — antes de despachar,
+o Maestro precisa decidir com o operador ONDE esse controle visual de veio
+aparece nesta task (ex.: no Laboratório `/modulo` já existente?) sem furar a
+regra "não pular pra Fase C".
 framework com um terceiro papel pra isso).
 
 `supabase/tests/isolamento-tenant.sql` (Task 11.3) é o teste de isolamento
