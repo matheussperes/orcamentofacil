@@ -1026,10 +1026,38 @@ jornada do cliente, agora sobre Tailwind + shadcn/ui).
   Hoje nenhum preset/material cadastrado usa `temVeio: true`, então não há
   impacto visível ainda — só passa a valer quando algum material ganhar essa
   flag (cadastro de catálogo, Task 11.4+ ou Fase C). 🟡 Média · Sonnet.
-- **Task 12.6** — Modos de precificação (1 no 1º corte, arquitetura p/ 4) +
-  rateio por custo alocado + frete/montagem + congelamento. 🔴 Alta · Opus
-  (regra financeira). **Testes obrigatórios**: soma das linhas == total
-  (arredondamento), segregação por material, congelamento no fechamento.
+- **Task 12.6** — ✅ **Concluído (2026-07-27**, mesclada em
+  `feature/12.6-precificacao-rateio`, aprovada por auditoria financeira
+  independente do Maestro em Opus — exemplo do briefing conferido número a
+  número à mão, invariante soma==total validado por construção). Executada
+  pelo **Motor Engineer em Opus** (regra financeira). Módulo NOVO
+  `lib/engine/precificacao/` (`types.ts`, `custo-material.ts`, `modos.ts`,
+  `rateio.ts`, `precificacao.test.ts`, `index.ts`) — `pricing.ts` V1
+  **intocado** (coexistência até a Fase C, ainda ativo em 4 telas).
+  **Decisão de negócio confirmada com o operador**: markup do modo de
+  precificação incide **só sobre o custo de material**; montagem e frete
+  somados por cima sem markup (`precoFinal = precoMoveis + montagem + frete`,
+  coerente com D-07 e o Lucro final da Seção 5.5). 4 modos de precificação
+  (multiplicador/percentual/por_chapa/fixo) + 3 de montagem
+  (percentual_material/por_chapa/manual). **Rateio modular por componente**:
+  móveis e frete por custo alocado; montagem pela base que acompanha seu modo
+  (custo, ou chapas alocadas se por_chapa — regra de coerência do briefing).
+  **Exemplo trabalhado do briefing reproduzido em teste, número a número**:
+  Caso 1 (19 chapas → 7,4/11,3/0,3) e Caso 2 (20 chapas → 7,789/11,895/0,316,
+  banheiro R$78,95). Arredondamento: cada componente com resíduo na última
+  linha, totais pré-arredondados a centavos → `Σ valorRateado == precoFinal`
+  exato (testado com 19000/3). `RateioSnapshot` = resultado congelável (função
+  pura; persistência é Fase C). Resumo financeiro de 6 campos. 163/163 testes
+  (21 novos), build/lint/typecheck limpos. **Fecha a Stage 12.** 🔴 Alta ·
+  Opus.
+  - **Notas de escopo documentadas**: (a) "acessórios/LED" não têm categoria
+    separada no `EngineOutput` hoje — entram via `ferragens`; campo
+    `custoAcessorios` fica =0 até a categoria existir. (b) `engine.globais`
+    (elementos contínuos no consolidado) é sempre `[]` no caminho V2 atual
+    (`calcularOrcamentoMisto` nunca popula) — a atribuição de custo dos
+    globais aos grupos fica pra quando a integração da Fase C ligar isso;
+    não afeta o invariante soma==total (rateio normaliza pela soma dos
+    grupos).
 
 ## Pipeline Stage 13 — Reconstrução da experiência (Fase C)
 
