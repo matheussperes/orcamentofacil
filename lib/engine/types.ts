@@ -4,6 +4,16 @@
 export type MaterialTipo = "caixa" | "frente" | "fundo" | "prateleira";
 export type Categoria = "inferior" | "superior" | "torre" | "complemento";
 
+// Veio de chapa (Modelo de Domínio, Seção 8 — Task 12.5). Qual dimensão da
+// peça se alinha ao COMPRIMENTO da chapa (o eixo maior — `CHAPA_LARGURA_MM`
+// em lib/engine/box/cutting.ts, apesar do nome da constante; ver nota de
+// nomenclatura lá): "comprimento" = a peça mantém a orientação "natural" que
+// `largura_mm`/`altura_mm` já tinham antes desta task (largura_mm no eixo do
+// comprimento da chapa); "largura" = orientação invertida (altura_mm no eixo
+// do comprimento da chapa). Só importa quando `Peca.temVeio` é `true` — com
+// `false`, o bin-packing ignora o campo e gira livremente.
+export type SentidoVeio = "comprimento" | "largura";
+
 export interface FitaBorda {
   lados_altura: number;
   lados_largura: number;
@@ -119,6 +129,16 @@ export interface Peca {
   largura_mm: number;
   area_m2: number; // já multiplicada pela quantidade
   fita_m: number; // metros de fita da peça (já × quantidade)
+  // Veio de chapa (Seção 8, Task 12.5). Denormalizado do `BoxMaterial` de
+  // origem (mesmo padrão de `cor`/`espessura_mm`, que já são cópias e não
+  // referência) — evita lookup externo em `lib/engine/box/cutting.ts`, que só
+  // enxerga `Peca`, não o `BoxModule`/`BoxMaterial` de onde ela veio.
+  // Obrigatório (não opcional): módulos que ainda não têm UI de veio (Placa,
+  // Elemento Contínuo — Fase C/Stage 13) setam `temVeio: false` e
+  // `sentidoVeio: "comprimento"` como placeholder (o valor de `sentidoVeio` é
+  // ignorado pelo bin-packing quando `temVeio` é `false`).
+  temVeio: boolean;
+  sentidoVeio: SentidoVeio;
 }
 
 export interface ItemQtd {

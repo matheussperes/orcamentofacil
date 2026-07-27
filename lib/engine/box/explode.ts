@@ -1,4 +1,4 @@
-import type { ItemQtd, Peca } from "../types";
+import type { ItemQtd, Peca, SentidoVeio } from "../types";
 import type { BayNode, BoxMaterial, BoxModule, TipoPuxador } from "./types";
 import { retanguloVaos, tamanhosFilhos } from "./tree";
 
@@ -52,6 +52,34 @@ function addPuxador(ctx: Ctx, comprimentoMm: number) {
   else if (ctx.puxador === "perfil") addFerragem(ctx, "perfil_puxador_m", round4(comprimentoMm / 1000));
 }
 
+/**
+ * Classificação de `sentidoVeio` por família de peça (Seção 8, Task 12.5):
+ * cada chamada de `push` abaixo passa o valor explicitamente, seguindo esta
+ * regra geral (derivada da regra literal da spec — "peças de altura/largura
+ * do módulo → comprimento da chapa; peças de profundidade → largura da
+ * chapa" — combinada com a nomenclatura real de `cutting.ts`, onde
+ * `PecaRetangular.w` corre no eixo do COMPRIMENTO e `.h` no eixo da
+ * LARGURA-DA-CHAPA):
+ *
+ * - Quando o valor de PROFUNDIDADE do módulo (ou um equivalente — a medida
+ *   que "entra" no móvel) é passado no parâmetro `largura` desta função
+ *   (isto é, vai para `Peca.largura_mm`): `sentidoVeio: "largura"` — isso
+ *   INVERTE a orientação padrão em `cutting.ts` (`w = altura_mm`,
+ *   `h = largura_mm`), pra que a profundidade (em `largura_mm`) caia no eixo
+ *   Y = largura-da-chapa, como a regra exige. Ex.: Lateral (altura_mm =
+ *   altura do módulo, largura_mm = profundidade).
+ * - Quando a profundidade (se houver) é passada no parâmetro `altura` desta
+ *   função (`Peca.altura_mm`), ou quando a peça não tem componente de
+ *   profundidade nenhum (deriva só de altura/largura do módulo, ex.: Fundo):
+ *   `sentidoVeio: "comprimento"` — mantém a orientação padrão já usada por
+ *   `expandirPecas` hoje (`w = largura_mm`, `h = altura_mm`), que já deixa a
+ *   profundidade (quando presente, em `altura_mm`) no eixo Y.
+ *
+ * Ou seja: o nome do valor não descreve "qual dimensão física é maior", e
+ * sim "qual dos dois campos (`altura_mm`/`largura_mm`) vai para o eixo X
+ * (comprimento) da chapa" — ver `expandirPecas`/`empacotarChapas` em
+ * `lib/engine/box/cutting.ts`.
+ */
 function push(
   ctx: Ctx,
   nome: string,
@@ -61,7 +89,8 @@ function push(
   altura: number,
   largura: number,
   fitaAltura: number,
-  fitaLargura: number
+  fitaLargura: number,
+  sentidoVeio: SentidoVeio
 ) {
   if (quantidade <= 0 || altura <= 0 || largura <= 0) return;
   ctx.pecas.push({
@@ -74,6 +103,8 @@ function push(
     largura_mm: Math.round(largura),
     area_m2: round4((altura * largura * quantidade) / 1e6),
     fita_m: round4(((fitaAltura * altura + fitaLargura * largura) * quantidade) / 1000),
+    temVeio: material.temVeio ?? false,
+    sentidoVeio,
   });
 }
 
@@ -83,22 +114,31 @@ function gerarCarcaca(ctx: Ctx, box: BoxModule) {
   const t = caixa.espessura;
   const larguraInterna = box.largura - 2 * t;
 
-  // Laterais (sempre inteiriças).
-  push(ctx, "Lateral", 2, caixa, "caixa", box.altura, box.profundidade, 1, 0);
-  // Base (sempre inteiriça).
-  push(ctx, "Base", 1, caixa, "caixa", box.profundidade, larguraInterna, 0, 1);
+  // Laterais (sempre inteiriças). altura_mm = altura do módulo, largura_mm =
+  // profundidade → profundidade cai em largura_mm → "largura" (inverte a
+  // orientação padrão pra profundidade ir pro eixo Y/largura-da-chapa).
+  push(ctx, "Lateral", 2, caixa, "caixa", box.altura, box.profundidade, 1, 0, "largura");
+  // Base (sempre inteiriça). altura_mm = profundidade, largura_mm = largura
+  // do módulo → profundidade já em altura_mm → "comprimento" (padrão).
+  push(ctx, "Base", 1, caixa, "caixa", box.profundidade, larguraInterna, 0, 1, "comprimento");
 
   if (box.tipo === "inferior") {
     // Topo = 2 travessas rasas (deitadas, como a base — ver TRAVESSA_PROFUNDIDADE),
     // não um tampo inteiriço. Cada travessa é uma tira de TRAVESSA_PROFUNDIDADE
     // de profundidade × larguraInterna, uma junto à frente, outra ao fundo.
-    push(ctx, "Travessa Superior Frontal", 1, caixa, "caixa", TRAVESSA_PROFUNDIDADE, larguraInterna, 0, 1);
-    push(ctx, "Travessa Superior Traseira", 1, caixa, "caixa", TRAVESSA_PROFUNDIDADE, larguraInterna, 0, 1);
+    // Mesmo padrão da Base (profundidade em altura_mm) → "comprimento".
+    push(ctx, "Travessa Superior Frontal", 1, caixa, "caixa", TRAVESSA_PROFUNDIDADE, larguraInterna, 0, 1, "comprimento");
+    push(ctx, "Travessa Superior Traseira", 1, caixa, "caixa", TRAVESSA_PROFUNDIDADE, larguraInterna, 0, 1, "comprimento");
   } else {
-    push(ctx, "Tampo", 1, caixa, "caixa", box.profundidade, larguraInterna, 0, 1);
+    // Tampo: mesmo padrão da Base (profundidade em altura_mm) → "comprimento".
+    push(ctx, "Tampo", 1, caixa, "caixa", box.profundidade, larguraInterna, 0, 1, "comprimento");
   }
   if (box.tipo === "torre") {
-    push(ctx, "Rodapé Frontal", 1, caixa, "caixa", RODAPE_H, larguraInterna, 0, 1);
+    // Rodapé Frontal: altura_mm = RODAPE_H (constante, não deriva de
+    // profundidade), largura_mm = largura do módulo → sem componente de
+    // profundidade → "comprimento" (mesmo tratamento de peças derivadas só
+    // de altura/largura do módulo).
+    push(ctx, "Rodapé Frontal", 1, caixa, "caixa", RODAPE_H, larguraInterna, 0, 1, "comprimento");
   }
 }
 
@@ -108,7 +148,9 @@ function explodeVao(ctx: Ctx, node: BayNode, W: number, H: number, D: number) {
 
   if (node.split === "vertical" && node.qtdDivisorias > 0) {
     const recuo = node.recuoFrontal ?? RECUO_DIVISORIA_PADRAO;
-    push(ctx, "Divisória Vertical", node.qtdDivisorias, ctx.caixa, "caixa", H, D - recuo, 1, 0);
+    // altura_mm = H (altura do vão), largura_mm = D-recuo (profundidade) →
+    // profundidade em largura_mm → "largura" (mesmo padrão da Lateral).
+    push(ctx, "Divisória Vertical", node.qtdDivisorias, ctx.caixa, "caixa", H, D - recuo, 1, 0, "largura");
     const larguras = tamanhosFilhos(node, W, t);
     const filhos = node.children ?? [];
     filhos.forEach((filho, i) => explodeVao(ctx, filho, larguras[i], H, D));
@@ -117,7 +159,9 @@ function explodeVao(ctx: Ctx, node: BayNode, W: number, H: number, D: number) {
 
   if (node.split === "horizontal" && node.qtdDivisorias > 0) {
     const recuo = node.recuoFrontal ?? RECUO_DIVISORIA_PADRAO;
-    push(ctx, "Divisória Horizontal", node.qtdDivisorias, ctx.caixa, "caixa", D - recuo, W, 0, 1);
+    // altura_mm = D-recuo (profundidade), largura_mm = W (largura do vão) →
+    // profundidade já em altura_mm → "comprimento" (mesmo padrão da Base).
+    push(ctx, "Divisória Horizontal", node.qtdDivisorias, ctx.caixa, "caixa", D - recuo, W, 0, 1, "comprimento");
     const alturas = tamanhosFilhos(node, H, t);
     const filhos = node.children ?? [];
     filhos.forEach((filho, i) => explodeVao(ctx, filho, W, alturas[i], D));
@@ -139,7 +183,9 @@ function aplicarConteudo(ctx: Ctx, node: BayNode, W: number, H: number, D: numbe
   // ambos cobrem 1+ vãos ou a caixa inteira, não o vão-folha isolado.
   aplicarFrente(ctx, c.frente, W, H, D);
   if (c.prateleiras && c.prateleiras.qtd > 0) {
-    push(ctx, "Prateleira", c.prateleiras.qtd, ctx.caixa, "prateleira", D - c.prateleiras.recuo, W - 2, 0, 1);
+    // altura_mm = D-recuo (profundidade), largura_mm = W-2 (largura do vão) →
+    // profundidade já em altura_mm → "comprimento" (mesmo padrão da Base).
+    push(ctx, "Prateleira", c.prateleiras.qtd, ctx.caixa, "prateleira", D - c.prateleiras.recuo, W - 2, 0, 1, "comprimento");
   }
 }
 
@@ -158,23 +204,45 @@ function aplicarFrente(
       const larguraFrente = W - FOLGA_PORTA;
       if (frente.interna) {
         // Frente interna = cor da caixa; + montante interno do guarda-roupa.
-        push(ctx, "Frente Gaveta Interna", frente.qtd, ctx.caixa, "caixa", alturaFrente, larguraFrente, 2, 2);
-        push(ctx, "Lateral Montante", 2, ctx.caixa, "caixa", H, D - 100, 1, 0);
-        push(ctx, "Travessa Montante", 2, ctx.caixa, "caixa", 100, W - 2 * ctx.caixa.espessura, 0, 1);
-        push(ctx, "Afastador Montante", 2, ctx.caixa, "caixa", H, AFASTADOR, 0, 0);
+        // Frente/Montante: painéis de face (altura/largura do vão, sem
+        // componente de profundidade) → "comprimento".
+        push(ctx, "Frente Gaveta Interna", frente.qtd, ctx.caixa, "caixa", alturaFrente, larguraFrente, 2, 2, "comprimento");
+        // Lateral Montante: altura_mm = H, largura_mm = D-100 (profundidade)
+        // → profundidade em largura_mm → "largura" (mesmo padrão da Lateral).
+        push(ctx, "Lateral Montante", 2, ctx.caixa, "caixa", H, D - 100, 1, 0, "largura");
+        // Travessa Montante: altura_mm = 100 (constante, sem profundidade),
+        // largura_mm = largura do vão → "comprimento".
+        push(ctx, "Travessa Montante", 2, ctx.caixa, "caixa", 100, W - 2 * ctx.caixa.espessura, 0, 1, "comprimento");
+        // Afastador Montante: altura_mm = H, largura_mm = AFASTADOR
+        // (constante, sem profundidade) → "comprimento".
+        push(ctx, "Afastador Montante", 2, ctx.caixa, "caixa", H, AFASTADOR, 0, 0, "comprimento");
       } else {
+        // Material ad hoc (pode ser cor/espessura diferente da caixa): não
+        // propaga `temVeio` da caixa — decisão documentada no relatório da
+        // task, `temVeio` só é herdado quando o material É de fato o mesmo
+        // objeto `BoxMaterial` (ctx.caixa/grupo.material/cfg.material).
         const material: BoxMaterial = {
           cor: frente.corFrente ?? ctx.caixa.cor,
           espessura: frente.espessuraFrente ?? 18,
         };
-        push(ctx, "Frente Gaveta Externa", frente.qtd, material, "frente", alturaFrente, larguraFrente, 2, 2);
+        // Painel de face, sem componente de profundidade → "comprimento".
+        push(ctx, "Frente Gaveta Externa", frente.qtd, material, "frente", alturaFrente, larguraFrente, 2, 2, "comprimento");
         // Perfil de gaveta corre ao longo da borda superior da frente (largura).
         for (let i = 0; i < frente.qtd; i++) addPuxador(ctx, larguraFrente);
       }
       // Caixote da gaveta (comum às duas).
-      push(ctx, "Lateral de Gaveta", frente.qtd * 2, ctx.caixa, "caixa", GAVETA_LATERAL_H, frente.profundidade, 0, 1);
-      push(ctx, "Frente/Contrafrente Gaveta", frente.qtd * 2, ctx.caixa, "caixa", GAVETA_CAIXOTE_H, W - 50, 0, 1);
-      push(ctx, "Fundo de Gaveta", frente.qtd, { cor: ctx.caixa.cor, espessura: GAVETA_FUNDO_ESP }, "fundo", frente.profundidade, W - 35, 0, 0);
+      // Lateral de Gaveta: altura_mm = GAVETA_LATERAL_H (constante),
+      // largura_mm = profundidade da gaveta → profundidade em largura_mm →
+      // "largura" (mesmo padrão da Lateral da carcaça).
+      push(ctx, "Lateral de Gaveta", frente.qtd * 2, ctx.caixa, "caixa", GAVETA_LATERAL_H, frente.profundidade, 0, 1, "largura");
+      // Frente/Contrafrente Gaveta: painel de face (altura_mm constante,
+      // largura_mm = largura do vão, sem profundidade) → "comprimento".
+      push(ctx, "Frente/Contrafrente Gaveta", frente.qtd * 2, ctx.caixa, "caixa", GAVETA_CAIXOTE_H, W - 50, 0, 1, "comprimento");
+      // Fundo de Gaveta: altura_mm = profundidade da gaveta, largura_mm =
+      // largura do vão → profundidade já em altura_mm → "comprimento" (mesmo
+      // padrão da Base). Material ad hoc (espessura de fundo, ver nota acima
+      // sobre não herdar `temVeio` da caixa).
+      push(ctx, "Fundo de Gaveta", frente.qtd, { cor: ctx.caixa.cor, espessura: GAVETA_FUNDO_ESP }, "fundo", frente.profundidade, W - 35, 0, 0, "comprimento");
       addFerragem(ctx, "corredica_par", frente.qtd);
       return;
     }
@@ -203,7 +271,8 @@ function aplicarGruposPortas(ctx: Ctx, box: BoxModule, interiorW: number, interi
     const material = ctx.overridePortas ?? grupo.material;
     const larguraPorta = W / grupo.qtd - FOLGA_PORTA;
     const alturaPorta = H - FOLGA_PORTA_V;
-    push(ctx, "Porta", grupo.qtd, material, "frente", alturaPorta, larguraPorta, 2, 2);
+    // Painel de face (altura/largura da porta, sem profundidade) → "comprimento".
+    push(ctx, "Porta", grupo.qtd, material, "frente", alturaPorta, larguraPorta, 2, 2, "comprimento");
 
     const basculante = grupo.sentido === "basculante_pia" || grupo.sentido === "basculante_aereo";
     // Perfil corre na borda onde o puxador ficaria: horizontal (largura) na
@@ -255,7 +324,11 @@ function gerarFundoGlobal(ctx: Ctx, box: BoxModule) {
   if (!ctx.temFundo) return;
   const colunas = box.largura > LARGURA_FUNDO_LIMITE ? Math.max(1, contarColunasVerticais(box.raiz)) : 1;
   const larguraPorPeca = box.largura / colunas;
-  push(ctx, "Fundo", colunas, { cor: ctx.caixa.cor, espessura: FUNDO_ESP_PADRAO }, "fundo", box.altura, larguraPorPeca, 0, 0);
+  // Fundo: altura_mm = altura do módulo, largura_mm = largura do módulo —
+  // deriva só de altura+largura (sem profundidade), exemplo literal da
+  // Seção 8 → "comprimento". Material ad hoc (espessura de fundo fixa, ver
+  // nota em "Fundo de Gaveta" sobre não herdar `temVeio` da caixa).
+  push(ctx, "Fundo", colunas, { cor: ctx.caixa.cor, espessura: FUNDO_ESP_PADRAO }, "fundo", box.altura, larguraPorPeca, 0, 0, "comprimento");
 }
 
 /**
@@ -281,10 +354,18 @@ function gerarTamponamentoInstancia(ctx: Ctx, box: BoxModule) {
     const cfg = t[l.lado];
     if (!cfg.ativo) continue;
     if (cfg.sarrafo) {
-      push(ctx, `Sarrafo tamponamento (${l.lado})`, 2, cfg.material, "frente", l.comp, SARRAFO_LARGURA, 0, 0);
-      push(ctx, `Sarrafo tamponamento (${l.lado})`, 2, cfg.material, "frente", profundidade - 2 * SARRAFO_LARGURA, SARRAFO_LARGURA, 0, 0);
+      // 1º sarrafo: altura_mm = l.comp (altura ou largura do módulo, sem
+      // profundidade), largura_mm = SARRAFO_LARGURA (constante) → "comprimento".
+      push(ctx, `Sarrafo tamponamento (${l.lado})`, 2, cfg.material, "frente", l.comp, SARRAFO_LARGURA, 0, 0, "comprimento");
+      // 2º sarrafo: altura_mm = profundidade (derivada de box.profundidade),
+      // largura_mm = SARRAFO_LARGURA (constante) → profundidade já em
+      // altura_mm → "comprimento" (mesmo padrão da Base).
+      push(ctx, `Sarrafo tamponamento (${l.lado})`, 2, cfg.material, "frente", profundidade - 2 * SARRAFO_LARGURA, SARRAFO_LARGURA, 0, 0, "comprimento");
     } else {
-      push(ctx, `Tamponamento ${l.lado}`, 1, cfg.material, "frente", l.comp, profundidade, 1, 0);
+      // Tamponamento inteiriço: altura_mm = l.comp (altura/largura do
+      // módulo), largura_mm = profundidade → profundidade em largura_mm →
+      // "largura" (mesmo padrão da Lateral).
+      push(ctx, `Tamponamento ${l.lado}`, 1, cfg.material, "frente", l.comp, profundidade, 1, 0, "largura");
     }
   }
 }

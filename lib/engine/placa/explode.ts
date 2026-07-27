@@ -52,6 +52,14 @@ function push(
     // "Fita de borda por espessura final") — não implementada nesta task
     // (fora de escopo: pricing/catálogo). fita_m fica 0 para peças de Placa.
     fita_m: 0,
+    // Veio de chapa (Seção 8, Task 12.5): Placa ainda não tem UI/editor pra
+    // escolher o sentido (Fase C / Stage 13, ainda não existe — fora de
+    // escopo desta task, que é só motor). PLACEHOLDER temporário até lá:
+    // herda `temVeio` do material (já é o `BoxMaterial` real, não um objeto
+    // ad hoc) e usa "comprimento" como sentido default documentado — o campo
+    // não pode ficar `undefined` porque `Peca.sentidoVeio` é obrigatório.
+    temVeio: material.temVeio ?? false,
+    sentidoVeio: "comprimento",
   });
 }
 

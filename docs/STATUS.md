@@ -18,9 +18,10 @@ Task 11.4 (estratégia de catálogo — cópia de produtos no signup + fork de
 gabarito), Task 12.1 (primitiva `Placa` no motor V3), Task 12.2
 (Parede/Ambiente + posicionamento 1D + validação Tier 1/2), Task 12.3
 (detecção de conjuntos adjacentes + override) e Task 12.4 (elementos
-contínuos unificados) já concluídas, mescladas e publicadas. **Stage 11
-completa; Stage 12 em andamento.** Próximo passo: **Task 12.5** (veio de
-chapa).
+contínuos unificados) e Task 12.5 (veio de chapa — restrição no
+bin-packing) já concluídas, mescladas e publicadas. **Stage 11 completa;
+Stage 12 em andamento.** Próximo passo: **Task 12.6** (modos de
+precificação + rateio — tag **Opus**, não Sonnet).
 
 ## 2. Como orientar-se (leia nesta ordem)
 
@@ -87,6 +88,17 @@ chapa).
   `ElementoContinuo` tipo "tamponamento" — a Seção 3.6 só cobria o
   estrutural. Resolver essa duplicidade é trabalho de planejamento da Fase C
   (Stage 13), não desta Stage.
+- `lib/engine/box/{types,explode,cutting}.ts` + `lib/engine/types.ts` (Task
+  12.5 — veio de chapa): `BoxMaterial.temVeio?`, `Peca.temVeio`/`sentidoVeio`
+  (denormalizados). 22 pontos de peça em `box/explode.ts` classificados
+  individualmente (comentário por peça). `cutting.ts`: com veio, orientação
+  fixada em `expandirPecas` antes do empacotamento — `empacotarChapas` nunca
+  rotaciona essas peças, vão pra `foraDaChapa` se não couberem na orientação
+  fixa. **Escopo reduzido por decisão do operador**: só motor, sem UI —
+  "exibição/alteração visual para placas" do Backlog original fica pra
+  quando o editor de Placa existir (Fase C). **⚠️ Aviso**: aproveitamento de
+  chapas com `temVeio: true` vai piorar (ficar correto) — sem impacto visível
+  hoje, nenhum material cadastrado usa a flag ainda.
 - **O motor V1 de templates foi removido por completo** (Task 10.1, 2026-07-24):
   `lib/engine/engine.ts` (calcularEngine), `templates.ts`, `evaluator.ts`,
   `lib/templateOverrides.ts`, `lib/validation/templates.ts`,
@@ -170,20 +182,15 @@ requisito explícito da V2, não um débito à parte.
 
 ## 6. Pendência em aberto agora (prioridade atual)
 
-**Stage 12 (extensões do motor) em andamento.** Tasks 12.1-12.4 concluídas.
-Próxima task: **12.5 — Veio de chapa**: flag `temVeio` no material +
-`sentidoVeio` por peça (qual dimensão corre nos 2720mm da chapa), defaults
-pra módulos-caixa (altura/largura→2720, profundidade→1820), rotação do
-bin-packing só quando `!temVeio` (`lib/engine/box/cutting.ts:75-77` hoje
-rotaciona sem restrição — vai piorar o aproveitamento pra ficar correto, não
-é regressão, avisar o operador). **Diferente das Tasks 12.1-12.4**: o
-Backlog pede também "exibição/alteração visual para placas" — isso é UI
-(Frontend Engineer), não só motor. Mas o editor de Placa ainda não existe
-(Task 12.1 deixou pra Fase C, Stage 13, de propósito) — antes de despachar,
-o Maestro precisa decidir com o operador ONDE esse controle visual de veio
-aparece nesta task (ex.: no Laboratório `/modulo` já existente?) sem furar a
-regra "não pular pra Fase C".
-framework com um terceiro papel pra isso).
+**Stage 12 (extensões do motor) em andamento.** Tasks 12.1-12.5 concluídas —
+motor V3 agora tem Placa, Parede/Ambiente+Tier1/2, Conjuntos, Elementos
+Contínuos e veio de chapa. Próxima task: **12.6 — Modos de precificação +
+rateio por custo alocado + frete/montagem + congelamento**
+(`docs/Modelo-de-Dominio.md` Seção 5). **Tag do Backlog: Opus, não Sonnet**
+("regra financeira") — trocar o modelo antes de despachar (ver
+`docs/Backlog.md`/memória do projeto sobre model routing). Testes
+obrigatórios explícitos no Backlog: soma das linhas == total
+(arredondamento), segregação por material, congelamento no fechamento.
 
 `supabase/tests/isolamento-tenant.sql` (Task 11.3) é o teste de isolamento
 permanente: script `begin;...rollback;`, seguro de rodar contra o projeto

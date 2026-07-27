@@ -471,3 +471,57 @@ describe("box — BayContent sem o branch de tamponamento estrutural (Task 12.4,
     expect(r.pecas.some((p) => p.nome === "Prateleira")).toBe(true);
   });
 });
+
+describe("box — veio de chapa (Modelo de Domínio Seção 8, Task 12.5)", () => {
+  const CAIXA_COM_VEIO = { cor: "Louro Freijó", espessura: 15, temVeio: true };
+
+  it("BoxMaterial.temVeio: true propaga até Peca.temVeio (Lateral, caixa com veio)", () => {
+    const box = caixaVazia("inferior");
+    box.caixa = CAIXA_COM_VEIO;
+    const r = explodeBox(box);
+    expect(peca(r, "Lateral")!.temVeio).toBe(true);
+    expect(peca(r, "Base")!.temVeio).toBe(true);
+  });
+
+  it("BoxMaterial sem temVeio (ausente) propaga temVeio: false (default 'sem veio')", () => {
+    const r = explodeBox(caixaVazia("inferior")); // caixa = { cor, espessura } — sem temVeio
+    expect(peca(r, "Lateral")!.temVeio).toBe(false);
+  });
+
+  it("Lateral (derivada de altura+profundidade do módulo, profundidade em largura_mm) → sentidoVeio 'largura'", () => {
+    // caixaVazia default: altura=720, profundidade=550.
+    const r = explodeBox(caixaVazia("inferior"));
+    const lateral = peca(r, "Lateral")!;
+    expect(lateral.altura_mm).toBe(720);
+    expect(lateral.largura_mm).toBe(550);
+    expect(lateral.sentidoVeio).toBe("largura");
+  });
+
+  it("Base (derivada de profundidade+largura do módulo, profundidade em altura_mm) → sentidoVeio 'comprimento'", () => {
+    // caixaVazia default: profundidade=550, largura=800 (larguraInterna = 800 - 2*15 = 770).
+    const r = explodeBox(caixaVazia("inferior"));
+    const base = peca(r, "Base")!;
+    expect(base.altura_mm).toBe(550);
+    expect(base.largura_mm).toBe(770);
+    expect(base.sentidoVeio).toBe("comprimento");
+  });
+
+  it("Prateleira (derivada de profundidade+largura do vão, profundidade em altura_mm) → sentidoVeio 'comprimento'", () => {
+    const raiz = espaco("r", { tipo: "vazio" }, { prateleiras: { qtd: 1, recuo: 20 } });
+    const r = explodeBox(caixaVazia("aereo", raiz));
+    const prateleira = peca(r, "Prateleira")!;
+    // Vão interno: W = 800 - 2*15 = 770 (menos 2mm de folga = 768);
+    // D = profundidade = 550, recuo 20 → altura_mm = 550 - 20 = 530.
+    expect(prateleira.altura_mm).toBe(530);
+    expect(prateleira.largura_mm).toBe(768);
+    expect(prateleira.sentidoVeio).toBe("comprimento");
+  });
+
+  it("todas as peças recebem sentidoVeio setado (nunca undefined), mesmo sem veio", () => {
+    const r = explodeBox(caixaVazia("torre", espaco("r", { tipo: "vazio" }, { prateleiras: { qtd: 1, recuo: 20 } }), { temFundo: true }));
+    for (const p of r.pecas) {
+      expect(p.sentidoVeio === "comprimento" || p.sentidoVeio === "largura").toBe(true);
+      expect(typeof p.temVeio).toBe("boolean");
+    }
+  });
+});
