@@ -918,8 +918,26 @@ jornada do cliente, agora sobre Tailwind + shadcn/ui).
     Placa (mesmo motivo); ripado tem precedência sobre engrossamento quando
     ambos setados (combinação fora dos 6 exemplos trabalhados); fórmula do
     ripado: N ripas cobrindo a dimensão menor, espaçamento derivado da maior.
-- **Task 12.2** — Parede/Ambiente + posicionamento 1D com faixas + validação
-  Tier 1 e 2. 🔴 Alta · Sonnet.
+- **Task 12.2** — ✅ **Concluído (2026-07-27**, mesclada em
+  `feature/12.2-parede-ambiente-posicionamento`, aprovada por verificação
+  independente do Maestro — matemática dos casos de teste conferida à mão).
+  Novo módulo `lib/engine/parede/` (`types.ts`, `validar.ts`,
+  `validar.test.ts`, `index.ts`): `Parede`, `Ambiente`, `ElementoParede`,
+  `ItemPosicionado`, `Faixa`, `AlturasFaixas`. `derivarY(faixa, alturas)`
+  deriva Y sem input digitado (D-20) — fórmula adotada: `inferior`/`torre` =
+  0 (chão), `bancada`/`aereo` = altura configurada da faixa.
+  `validarParedeTier1`/`validarParedeTier2` retornam `EngineWarning[]`
+  (reaproveita o canal já existente em `EngineOutput.warnings`, antes nunca
+  populado). Tier 1: cabe na parede (largura/altura) + itens não se
+  sobrepõem na mesma faixa. Tier 2: faixas não colidem entre si (checagem
+  por item contra o teto configurado da faixa seguinte) + itens não
+  sobrepõem elementos da parede (janela/porta/tomada/ponto hidráulico,
+  overlap 2D). Tier 3 (folgas/ergonomia) propositalmente não implementado.
+  100/100 testes (17 novos), build/lint/typecheck limpos.
+  **Decisão de design documentada**: `alturaRodape` faz parte de
+  `AlturasFaixas` (exigido pela spec) mas não participa da geometria desta
+  task — reservado para a derivação futura do elemento contínuo "rodapé"
+  (Task 12.4). 🔴 Alta · Sonnet.
 - **Task 12.3** — Detecção de conjuntos adjacentes + override (união/quebra).
   🟡 Média · Sonnet.
 - **Task 12.4** — Elementos contínuos unificados — **4 tipos: tampo, rodapé,
