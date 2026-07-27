@@ -144,8 +144,11 @@ Placa`), início da Stage 12 (extensões do motor). Ver
 `docs/Modelo-de-Dominio.md` Seção 2.1 (engrossada vs. dobrada, seleção de
 lados, fita derivada da espessura final) — usar como especificação, a versão
 antiga do doc estava errada. Testes obrigatórios: reproduzir os 6 exemplos
-trabalhados do operador + casos de engrossamento parcial; resolver a
-pendência da placa-base de 18mm antes de implementar.
+trabalhados do operador + casos de engrossamento parcial + validação de
+nível máximo por base. **Decisão fechada (2026-07-27)**: base 18 mm vai até
+nível 2 (54 mm) só — nível 3 (72 mm) excede a fita disponível e não é
+oferecido para essa base; base 15 mm mantém os 3 níveis. Não é mais
+pendência, a task só implementa a validação.
 
 `supabase/tests/isolamento-tenant.sql` (Task 11.3) é o teste de isolamento
 permanente: script `begin;...rollback;`, seguro de rodar contra o projeto

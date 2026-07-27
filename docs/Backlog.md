@@ -893,8 +893,13 @@ jornada do cliente, agora sobre Tailwind + shadcn/ui).
   `{30→2, 45→3, 60→4}`; **seleção de quais lados engrossar**; **fita derivada
   da espessura final** (15/18→22 · 30→35 · 45/60→65).
   **Testes obrigatórios**: reproduzir os 6 exemplos trabalhados do operador
-  (peça a peça) + casos de engrossamento parcial. Resolver a pendência da
-  placa-base de 18 mm antes de implementar.
+  (peça a peça) + casos de engrossamento parcial + validação de nível máximo
+  por base (ver nota abaixo).
+  **Decisão fechada (2026-07-27)**: base 18 mm tem nível máximo **2** (54 mm)
+  — nível 3 (72 mm) excede a fita disponível e não é oferecido para essa
+  base, nas duas técnicas. Base 15 mm mantém os 3 níveis. Não é mais
+  pendência — a task implementa a validação, não decide o valor
+  (`docs/Modelo-de-Dominio.md` Seção 2.1).
 - **Task 12.2** — Parede/Ambiente + posicionamento 1D com faixas + validação
   Tier 1 e 2. 🔴 Alta · Sonnet.
 - **Task 12.3** — Detecção de conjuntos adjacentes + override (união/quebra).

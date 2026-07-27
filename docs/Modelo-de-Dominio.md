@@ -106,7 +106,12 @@ espessuraFinal = espessuraBase × (1 + nivel)
 |---|---|---|
 | 1 | 30 mm | 36 mm |
 | 2 | 45 mm | 54 mm |
-| 3 | 60 mm | 72 mm |
+| 3 | 60 mm | **indisponível** (72 mm excede a fita; ver nota abaixo) |
+
+> **Decisão do operador (2026-07-27)**: para base 18 mm, o **nível máximo é 2**
+> (54 mm). Nível 3 não é oferecido para base 18 mm — não é uma pendência em
+> aberto, é regra de negócio fechada. Válido para as duas técnicas
+> (engrossada e dobrada). Base 15 mm continua com os 3 níveis normalmente.
 
 ```ts
 type Engrossamento =
@@ -181,11 +186,12 @@ final**. Fitas de larguras diferentes são produtos distintos no catálogo.
 | 30 mm | **35 mm** |
 | 36 mm · 45 mm · 54 mm · 60 mm | **65 mm** |
 
-> ⚠️ **Borda do domínio**: base 18 mm no nível 3 dá **72 mm**, que excede a
-> maior fita da tabela (65 mm). Nenhuma fita cobre esse caso. Tratar como
-> combinação **não oferecida na UI** (nível 3 indisponível para base 18 mm),
-> a menos que exista fita mais larga no catálogo do marceneiro — decidir na
-> Task 12.1.
+> ✅ **Borda do domínio resolvida (2026-07-27)**: base 18 mm no nível 3 daria
+> **72 mm**, que excede a maior fita da tabela (65 mm). Decisão do operador:
+> **nível máximo para base 18 mm é 2** (54 mm) — nível 3 simplesmente não é
+> oferecido para essa base, em nenhuma das duas técnicas. Regra fechada, não
+> pendência — a Task 12.1 implementa a validação (rejeitar ou não oferecer
+> nível 3 quando `espessuraBase === 18`), não decide o valor.
 
 #### 2.1.1 Seleção de lados a engrossar (requisito de UX)
 
@@ -627,7 +633,7 @@ barato de corrigir agora e caro depois de implementado:
 
 Todas as assunções estão confirmadas. Nenhuma pendência bloqueante para a Fase B.
 
-**Nova borda de domínio descoberta**: base 18 mm no nível 3 = **72 mm**, acima
-da maior fita da tabela (65 mm). Ver o aviso na Seção 2.1 — tratar como
-combinação não oferecida, salvo fita mais larga no catálogo. Decidir na Task
-12.1.
+**Borda de domínio resolvida (2026-07-27)**: base 18 mm tem **nível máximo 2**
+(54 mm) — nível 3 (72 mm) excede a maior fita do catálogo (65 mm) e não é
+oferecido para essa base. Ver Seção 2.1. Decisão fechada do operador, não
+pendência para a Task 12.1 (que só implementa a validação).
