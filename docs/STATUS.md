@@ -1,7 +1,7 @@
 # Status Atual, Decisões, Pendências e Próximos Passos
 
 > Atualizado em 2026-07-28 (handoff de sessão — Stage 13/Fase C em
-> andamento, Tasks 13.0 e 13.1 concluídas). Este arquivo é o ponto de partida de
+> andamento, Tasks 13.0, 13.1 e 13.2a concluídas). Este arquivo é o ponto de partida de
 > qualquer sessão nova — leia antes de assumir o que já existe. O projeto
 > virou V2 em 2026-07-24 (ver Seção 1) — não confie em nada anterior a essa
 > data sobre arquitetura/motor sem checar contra os documentos da Seção 7.
@@ -25,11 +25,11 @@ pipeline). 168 testes verdes.
 (2026-07-27)**: as 8 tasks (13.0-13.7) estão detalhadas com critério de
 aceitação e ordem de dependência no `docs/Backlog.md`, e as duas dívidas
 arquiteturais que ficaram em aberto (ver Seção 6) já têm decisão fechada,
-amarradas a tasks específicas — não é mais "pendência vaga". **Próximo
-passo real: começar a executar a Task 13.0** (pré-requisito de canvas). É a
-mudança de fase mais significativa desde o início da V2 — sai de
-motor/dados puro e entra em UI (**Frontend Engineer** volta a ser o
-executor principal, UX Auditor de volta no loop).
+amarradas a tasks específicas — não é mais "pendência vaga". Tasks 13.0,
+13.1 e 13.2a concluídas; **próximo passo real: executar a Task 13.2b**
+(Conjuntos + handle de junção). É a mudança de fase mais significativa
+desde o início da V2 — sai de motor/dados puro e entra em UI (**Frontend
+Engineer** volta a ser o executor principal, UX Auditor de volta no loop).
 
 ## 2. Como orientar-se (leia nesta ordem)
 
@@ -253,12 +253,25 @@ Detalhe completo (descrição, critérios de aceitação, arquivos) já escrito 
   pronta da Task 12.7; remove `TamponamentoConfig` de `app/page.tsx` e o
   desenho antigo em `BoxCanvas.tsx`).
 
-**Próximo passo real: executar a Task 13.2a** (primeira da sequência
-13.2a → 13.2b → 13.2c). Depende de 13.0 e 13.1 (ambas feitas). Ordem
-restante: **13.2a → 13.2b → 13.2c → 13.3 → {13.4, 13.5} → 13.6 → 13.7**
-(13.7 é isolada, pode andar em paralelo a qualquer momento). Ver
-`docs/Backlog.md` Seção "Pipeline Stage 13" pro critério de aceitação
-completo de cada sub-task.
+**Task 13.2a concluída (2026-07-28)**: nova rota `/ambientes` (laboratório
+local, sem Supabase) — régua de largura + 4 faixas com alturas do perfil
+configuráveis, elementos de parede (janela/porta/tomada/hidráulico),
+itens posicionados via `lib/boxPresets.ts` atualizando o `BoxCanvas` modo
+conjunto (Task 13.0) ao vivo. `validarParedeTier1`/`Tier2` rodando a cada
+mudança com aviso em lista **e** destaque visual (nova prop
+`itensComAviso` em `BoxCanvasPropsConjunto`, reaproveitando
+`geometriaConjunto`). Validado ao vivo pelo Maestro (não só relato):
+destaque visual conferido por leitura de pixel do canvas (`#DC2626`),
+0 overflow em 3 breakpoints, sem erros de console. 196/196 testes.
+Achado não bloqueante durante a auditoria (sobreposição exata entre 2
+itens esconde o destaque de um deles — caso sintético, registrado no
+Backlog, não corrigido). Detalhe completo em `docs/Backlog.md`, Task 13.2a.
+
+**Próximo passo real: executar a Task 13.2b** (Conjuntos + handle de
+junção). Depende de 13.2a (feita). Ordem restante: **13.2b → 13.2c → 13.3 →
+{13.4, 13.5} → 13.6 → 13.7** (13.7 é isolada, pode andar em paralelo a
+qualquer momento). Ver `docs/Backlog.md` Seção "Pipeline Stage 13" pro
+critério de aceitação completo de cada sub-task.
 
 **Mudança de fase importante**: as tasks da Stage 13 são majoritariamente UI
 — o **Frontend Engineer** volta a ser o executor principal, com **UX

@@ -182,3 +182,23 @@ describe("geometriaConjunto — lista vazia", () => {
     expect(geometriaConjunto([], alturas)).toEqual([]);
   });
 });
+
+// Task 13.2a — `itemId` foi adicionado a `GeoItemConjunto` (correlaciona a
+// geometria desenhada ao `EngineWarning.moduloId` para o destaque visual de
+// aviso/erro em `/ambientes`). Garante que cada geometria carrega o
+// `posicao.itemId` de origem, na mesma ordem dos itens de entrada.
+describe("geometriaConjunto — itemId (Task 13.2a, destaque de aviso)", () => {
+  it("carrega o itemId de cada posicao na geometria correspondente", () => {
+    const b1 = box({ id: "b1", largura: 600, altura: 700 });
+    const b2 = box({ id: "b2", largura: 400, altura: 700 });
+    const itens: ItemDoConjunto[] = [
+      { item: { origem: "custom_box", box: b1 }, posicao: { itemId: "instancia-a", x: 0, faixa: "inferior" } },
+      { item: { origem: "custom_box", box: b2 }, posicao: { itemId: "instancia-b", x: 600, faixa: "inferior" } },
+    ];
+
+    const [g1, g2] = geometriaConjunto(itens, alturas);
+
+    expect(g1.itemId).toBe("instancia-a");
+    expect(g2.itemId).toBe("instancia-b");
+  });
+});

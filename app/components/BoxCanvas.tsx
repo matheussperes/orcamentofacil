@@ -84,6 +84,11 @@ export interface ItemDoConjunto {
 
 interface GeoItemConjunto {
   item: ModuloOrcamento;
+  // Task 13.2a — carregado a partir de `posicao.itemId` (não existia antes,
+  // Task 13.0 não precisava correlacionar geometria a um item específico).
+  // Necessário para o destaque de aviso/erro (ver `itensComAviso` abaixo),
+  // que precisa saber QUAL retângulo desenhado corresponde a qual warning.
+  itemId: string;
   scale: number;
   ox: number;
   oy: number;
@@ -111,7 +116,7 @@ export function geometriaConjunto(itens: ItemDoConjunto[], alturas: AlturasFaixa
     const largura = larguraDoItem(item);
     const altura = alturaDoItem(item);
     const y = derivarY(posicao.faixa, alturas);
-    return { item, x: posicao.x, largura, y, topo: y + altura };
+    return { item, itemId: posicao.itemId, x: posicao.x, largura, y, topo: y + altura };
   });
 
   const boundingLeft = Math.min(...medidas.map((m) => m.x));
@@ -128,6 +133,7 @@ export function geometriaConjunto(itens: ItemDoConjunto[], alturas: AlturasFaixa
 
   return medidas.map((m) => ({
     item: m.item,
+    itemId: m.itemId,
     scale,
     ox: ox + (m.x - boundingLeft) * scale,
     oy: oy + (boundingTopo - m.topo) * scale,
@@ -409,9 +415,43 @@ function desenharItemConjunto(ctx: CanvasRenderingContext2D, g: GeoItemConjunto)
   }
 }
 
-function desenharConjunto(ctx: CanvasRenderingContext2D, itens: ItemDoConjunto[], alturas: AlturasFaixas) {
+// Task 13.2a — Nota de Escopo do contrato: `BoxCanvasPropsConjunto` (Task
+// 13.0) não tinha nenhuma prop de interatividade/destaque porque não havia
+// consumidor real ainda. Esta task É o primeiro consumidor (`/ambientes`) e
+// precisa destacar visualmente o item com erro/aviso (`EngineWarning.
+// moduloId` -> `ItemPosicionado.itemId`). Decisão de implementação (rota 1
+// das duas propostas pelo contrato): estender `BoxCanvasPropsConjunto` com
+// `itensComAviso` e desenhar o contorno DENTRO do canvas, reaproveitando
+// `geometriaConjunto` (que agora carrega `itemId`) em vez de um overlay
+// HTML/SVG por cima — evita duplicar o cálculo de geometria numa segunda
+// camada de posicionamento.
+const ERRO = "#DC2626"; // Design-System 2.3 (semânticas — erro)
+const ERRO_SUBTLE = "rgba(220,38,38,0.12)";
+const AVISO = "#D97706"; // Design-System 2.3 (semânticas — aviso)
+const AVISO_SUBTLE = "rgba(217,119,6,0.12)";
+
+function desenharDestaqueItem(ctx: CanvasRenderingContext2D, g: GeoItemConjunto, severidade: "erro" | "aviso") {
+  const { item, scale, ox, oy } = g;
+  const largura = larguraDoItem(item) * scale;
+  const altura = alturaDoItem(item) * scale;
+  const cor = severidade === "erro" ? ERRO : AVISO;
+  ctx.fillStyle = severidade === "erro" ? ERRO_SUBTLE : AVISO_SUBTLE;
+  ctx.fillRect(ox, oy, largura, altura);
+  ctx.strokeStyle = cor;
+  ctx.lineWidth = 3;
+  ctx.strokeRect(ox + 1.5, oy + 1.5, largura - 3, altura - 3);
+}
+
+function desenharConjunto(
+  ctx: CanvasRenderingContext2D,
+  itens: ItemDoConjunto[],
+  alturas: AlturasFaixas,
+  itensComAviso?: Map<string, "erro" | "aviso">
+) {
   for (const g of geometriaConjunto(itens, alturas)) {
     desenharItemConjunto(ctx, g);
+    const severidade = itensComAviso?.get(g.itemId);
+    if (severidade) desenharDestaqueItem(ctx, g, severidade);
   }
 }
 
@@ -432,6 +472,7 @@ interface BoxCanvasPropsItemUnico {
   box: BoxModule;
   itens?: undefined;
   alturas?: undefined;
+  itensComAviso?: undefined;
   /** Modo bonito para cards do orçamento — sem bordas/rótulos técnicos, não interativo. */
   comercial?: boolean;
   modoSelecao?: ModoSelecao;
@@ -455,6 +496,11 @@ interface BoxCanvasPropsConjunto {
   /** As 4 alturas do perfil da organização, necessárias pra derivar Y a
    * partir da faixa de cada item (`lib/engine/parede::AlturasFaixas`). */
   alturas: AlturasFaixas;
+  /** Task 13.2a — item.itemId -> pior severidade de warning que o atinge
+   * (`EngineWarning.moduloId` é o `ItemPosicionado.itemId`). Desenha contorno
+   * + fundo tintado por cima do item (ver `desenharDestaqueItem`). Opcional:
+   * sem esta prop, o modo conjunto se comporta exatamente como na Task 13.0. */
+  itensComAviso?: Map<string, "erro" | "aviso">;
   comercial?: undefined;
   modoSelecao?: undefined;
   vaosSelecionados?: undefined;
@@ -474,6 +520,7 @@ export function BoxCanvas(props: BoxCanvasProps) {
     box,
     itens,
     alturas,
+    itensComAviso,
     comercial: comercialProp = false,
     modoSelecao = "vaos",
     vaosSelecionados = [],
@@ -500,7 +547,7 @@ export function BoxCanvas(props: BoxCanvasProps) {
     ctx.clearRect(0, 0, W, H);
 
     if (itens && alturas) {
-      desenharConjunto(ctx, itens, alturas);
+      desenharConjunto(ctx, itens, alturas, itensComAviso);
       return;
     }
     if (!box) return;
@@ -624,7 +671,7 @@ export function BoxCanvas(props: BoxCanvasProps) {
         ctx.fillRect(px(0), py(0) + box.altura * g.scale, box.largura * g.scale, faixa);
       }
     }
-  }, [box, itens, alturas, comercial, modoSelecao, vaosSelecionados, divisaoSelecionada, portaSelecionada, vaoGavetaSelecionado, hoverId]);
+  }, [box, itens, alturas, itensComAviso, comercial, modoSelecao, vaosSelecionados, divisaoSelecionada, portaSelecionada, vaoGavetaSelecionado, hoverId]);
 
   function clique(e: React.MouseEvent<HTMLCanvasElement>) {
     if (comercial || !box) return; // preview comercial / modo conjunto não é interativo
