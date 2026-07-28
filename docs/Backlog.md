@@ -1383,3 +1383,93 @@ jornada do cliente, agora sobre Tailwind + shadcn/ui).
 
 **Gate de saída da Fase A**: aprovação do operador sobre PRD + Modelo de
 Domínio + Mapa de Telas antes de iniciar a Stage 10 (Fase B).
+
+---
+
+## Backlog futuro (pós-MVP — avaliado, não agendado)
+
+> Registrado em 2026-07-28 pelo Maestro a pedido do operador, depois de uma
+> conversa dele com o ChatGPT sobre diferenciais de produto. **Nada aqui
+> está agendado nem autorizado pra execução** — é só pra não perder a ideia.
+> Quando (e se) alguma entrada virar task real, ela segue o mesmo processo
+> de sempre: contrato, modelo recomendado, branch efêmera, auditoria.
+
+### Preview 3D leve e sincronizado (ideia com maior maturidade)
+
+O operador quer um preview 3D **estático** (sem órbita de câmera livre) da
+parede sendo montada em `/ambientes`, derivado dos **mesmos dados** do
+canvas 2D (`Parede.itens[]`, `ItemPosicionado`, material) — nunca modelado
+à mão, nunca uma segunda fonte de verdade. Objetivo é só **conseguir ver em
+3D o que já foi configurado em 2D**, não impressionar visualmente: **sem
+iluminação realista/PBR, sem texture mapping fiel** — geometria simples
+(caixas por módulo, com portas/gavetas/prateleiras como sub-formas) com cor
+sólida aproximada do material, luz plana/ambiente básica só pra dar volume
+mínimo (distinguir face/topo/lateral). Sincronizado com a seleção: marcar
+um módulo no 2D destaca o mesmo módulo no preview 3D (e vice-versa, se
+fizer sentido).
+
+**Importante — isto não reabre a decisão "sem 3D" de hoje**: o
+Design-System v3 (Seção 9) mantém `BoxCanvas`/`ElevacaoParede`/
+`PlanoCorteCanvas` estritamente 2D, para sempre — essa regra continua
+valendo e não deve ser violada por esta ideia. O preview 3D, se e quando
+for construído, é um **componente novo e adicional** (ex.: painel
+"3D Live" ao lado da elevação, canto da aba Ambientes), não uma
+substituição nem uma segunda versão dos canvases 2D existentes. Stack
+sugerida (não decidida): React Three Fiber + Three.js (padrão do
+ecossistema React, mas isso é decisão de execução, não deste registro).
+
+**Nota de escopo vs. a proposta original do ChatGPT** (colada pelo operador
+— não confundir os dois): o texto do ChatGPT sugeria PBR/materiais
+realistas e "clique expande pra tela cheia com órbita de câmera" — o
+operador **não** endossou essa parte; a instrução real dele foi "3D
+estático, sem movimentação livre" e "não precisa de iluminação pra tentar
+ser realista". A versão que vale, se isto virar task, é a do parágrafo
+acima, não a do ChatGPT.
+
+**Pré-requisito de PRD**: `docs/PRD.md` diz hoje "sem exigir modelagem 3D"
+como frase de posicionamento de produto — quando (e se) esta ideia virar
+task real, essa frase precisa de uma revisão explícita do operador antes
+(não é modelagem 3D *exigida do usuário*, é um preview *gerado
+automaticamente*, mas a frase do PRD merece releitura consciente, não
+presumida).
+
+### Telas adicionais sugeridas (não desenhadas no Mapa-de-Telas atual)
+
+- **`/clientes`** — tela dedicada de CRUD/lista/busca de clientes. Hoje o
+  Mapa-de-Telas só cobre captura de cliente **inline** no fluxo de "Novo
+  Orçamento" (Task 13.3) — não existe uma tela própria de gestão de
+  clientes (histórico de orçamentos por cliente, edição isolada, etc.).
+- **Histórico de Orçamentos** (timeline de alterações/versões de um
+  orçamento) — hoje só existe o registro de auditoria de baixo nível
+  (Stage de logging, login/exclusão/nova versão), não uma UI de timeline
+  voltada ao usuário.
+- **Central de Ajuda** (tutoriais/onboarding) — não existe nenhuma versão
+  disso hoje, nem básica.
+- *(Já cobertos, não são novidade)*: "Novo Orçamento" e "Seleção de
+  Cliente" já têm alguma cobertura dentro do escopo da Task 13.3 (fluxo de
+  criação captura cliente) — se a ideia acima for além disso (ex.: busca
+  com autocomplete, criação inline sem sair do fluxo), precisa comparar com
+  o que a 13.3 entregar antes de virar task nova, pra não duplicar escopo.
+
+### Componentes "premium" sugeridos (nível de polish, não de fluxo)
+
+Lista trazida pelo operador, sem sequenciamento nem prioridade definida:
+Command Palette (⌘K, busca global de módulos/produtos/clientes/orçamentos/
+comandos), Centro de notificações (além do sino simples — aprovação de
+orçamento, proposta visualizada, atualização de catálogo, convite de
+usuário), Histórico lateral de atividade dentro do orçamento aberto,
+Breadcrumb (Dashboard > Orçamentos > Cliente > Ambiente > Módulo), Painel
+de propriedades contextual ao selecionar item/parede/conjunto (nota: isto
+já existe **parcialmente** como padrão nas Tasks 13.2a-c — o painel lateral
+de elemento contínuo ao selecionar um Conjunto já é esse conceito; a ideia
+aqui é generalizar o padrão pra qualquer seleção, não é 100% nova), Empty
+states ilustrados em todas as telas, Tour guiado de primeiro acesso,
+Skeleton loading (em vez de spinner), Atalhos de teclado globais (N, Ctrl+S,
+Delete, Ctrl+K, Esc, Ctrl+P), Modo foco (esconde sidebar/header/painéis
+laterais na aba Ambientes).
+
+**Como tratar daqui pra frente**: se o operador quiser priorizar algum item
+desta lista, ele vira uma task normal do Backlog (contrato + modelo
+recomendado + branch), inserida na ordem que fizer sentido em relação às
+Stages em andamento — nenhuma automatização ou agendamento implícito só por
+estar registrada aqui.
