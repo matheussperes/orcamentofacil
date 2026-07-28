@@ -1326,6 +1326,22 @@ jornada do cliente, agora sobre Tailwind + shadcn/ui).
   (Task 11.2, RLS já pronta). Depende de 13.2a/b/c pra ter algo real dentro
   do shell (a aba "Ambientes" migra de `/ambientes` pra cá; `/modulo` migra
   pro Editor de Item em `/orcamento/[id]/item/[itemId]`). 🟡 Média · Sonnet.
+  **Dívida de retrofit visual (2026-07-28, decisão do operador)**:
+  `docs/Design-System.md` foi reescrito integralmente nesta data (v3 —
+  sidebar navy/laranja a partir de 12 mockups + logo oficial, substitui o
+  tema claro/neutro da v2). As telas já mescladas antes dessa mudança
+  (Task 13.0/13.1 `/modulo`, Task 13.2a `/ambientes`) ainda usam os tokens
+  v2 (`accent` azul, cinza técnico no canvas) — **não foram retrofitadas
+  ainda, de propósito**: como `/modulo` e `/ambientes` migram pro shell real
+  nesta própria task (13.3), reskinar antes seria trabalho duplicado. É
+  **aqui** que o Frontend Engineer aplica o v3 (sidebar/topbar/cards) pela
+  primeira vez em código real, e também corrige o único ponto pontual já
+  identificado: `app/components/BoxCanvas.tsx` hardcoda `AVISO = "#D97706"`
+  (Task 13.2a) — deve passar a consumir `aviso.DEFAULT`/`aviso.subtle`
+  (`#A16207`/`#FFFBEB`, Design-System v3 Seção 2.4) para não colidir
+  visualmente com `accent.vivid` (contorno de seleção/marca, mesmo hex
+  antigo). Ver `docs/Design-System.md` Seção 9 pra paleta de material do
+  canvas técnico (2D elegante, sem 3D — decisão fechada do operador).
 - **Task 13.4** — Corte & Material (pré-pedido, adição manual, congelamento
   em `lista_material` — tabela já existe, Task 11.2 — extração texto/CSV,
   D-08). Reaproveita `PlanoCorteCanvas`/`montarLinhasInsumos`; plano de corte
