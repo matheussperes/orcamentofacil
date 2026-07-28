@@ -1,7 +1,7 @@
 # Status Atual, Decisões, Pendências e Próximos Passos
 
-> Atualizado em 2026-07-28 (handoff de sessão — Stage 13/Fase C iniciada,
-> Task 13.0 concluída). Este arquivo é o ponto de partida de
+> Atualizado em 2026-07-28 (handoff de sessão — Stage 13/Fase C em
+> andamento, Tasks 13.0 e 13.1 concluídas). Este arquivo é o ponto de partida de
 > qualquer sessão nova — leia antes de assumir o que já existe. O projeto
 > virou V2 em 2026-07-24 (ver Seção 1) — não confie em nada anterior a essa
 > data sobre arquitetura/motor sem checar contra os documentos da Seção 7.
@@ -223,13 +223,29 @@ calcula escala/origem pela bounding box do conjunto inteiro (X por
 testes (8 novos), lint/typecheck/build verdes, `/modulo` conferido ao vivo
 sem regressão. Detalhe completo em `docs/Backlog.md`, Task 13.0.
 
-**Próximo passo real: executar a Task 13.1** (Editor de Item — módulo +
-placa, dirigido por capacidade). Depende de 13.0 (feito) pro canvas de
-seleção. Ordem restante: **13.1 → 13.2 → 13.3 → {13.4, 13.5} → 13.6 → 13.7**
-(13.7 é isolada, pode andar em paralelo a qualquer momento). Ver
-`docs/Backlog.md` Seção "Pipeline Stage 13" pro critério de aceitação
-completo da 13.1 (schema de capacidades por `origem`, seletor de lados do
-engrossamento, sentido do veio visível/alterável pra Placa).
+**Task 13.1 concluída (2026-07-28)**: `/modulo` virou o Editor de Item
+dirigido por capacidade — edita `BoxModule` OU `Placa` via toggle, seções de
+Placa (dimensões/material/orientação/borda/engrossamento/ripado) derivadas
+do schema `CAPACIDADES` (`lib/orcamento.ts`, Modelo de Domínio Seção 4),
+seletor de lados do engrossamento com BOM ao vivo (`PlacaVisual.tsx`),
+sentido do veio visível/alterável (`Placa.sentidoVeio`, novo — fecha o
+placeholder que a Task 12.5 deixou em aberto de propósito), painel
+custo/peças/plano de corte unificado via `calcularOrcamentoMisto` (absorve
+a Task 7.3, nunca executada isoladamente). Sequenciada Motor → Frontend na
+mesma branch; 1 rodada de correção (grid blowout de SVG em mobile, mesma
+causa-raiz da Task 6.3b) revalidada pelo Maestro ao vivo. 185/185 testes.
+Detalhe completo em `docs/Backlog.md`, Task 13.1.
+
+**Próximo passo real: executar a Task 13.2** (Ambientes e Paredes — elevação
+2D, posicionamento, validação, conjuntos, elementos contínuos). É a tela
+mais densa da Stage — o próprio Backlog já sugere considerar quebrar em
+sub-tasks (13.2a elevação+posicionamento, 13.2b conjuntos+handle de junção,
+13.2c elementos contínuos). **Resolve a Dívida A** (remove
+`BoxModule.tamponamento`/`TamponamentoInstancia`, ver Backlog). Depende de
+13.0 e 13.1 (ambas feitas). Ordem restante: **13.2 → 13.3 → {13.4, 13.5} →
+13.6 → 13.7** (13.7 é isolada, pode andar em paralelo a qualquer momento).
+Ver `docs/Backlog.md` Seção "Pipeline Stage 13" pro critério de aceitação
+completo.
 
 **Mudança de fase importante**: as tasks da Stage 13 são majoritariamente UI
 — o **Frontend Engineer** volta a ser o executor principal, com **UX

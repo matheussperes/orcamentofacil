@@ -1141,6 +1141,29 @@ jornada do cliente, agora sobre Tailwind + shadcn/ui).
   `sentidoVeio`/`temVeio` do material vira controle visual); módulos-caixa
   usam os defaults sem exigir escolha. Depende de 13.0 pro canvas de
   seleção. 🔴 Alta · Sonnet.
+  **Status**: ✅ Concluído (2026-07-28, mesclada em
+  `feature/13.1-editor-de-item`; sequenciada Motor Engineer → Frontend
+  Engineer, mesma branch). Motor: `Placa.sentidoVeio?: SentidoVeio` novo,
+  `explodePlaca` deixa de hardcodar `"comprimento"` (placeholder da Task
+  12.5 fechado). Frontend: `CAPACIDADES` (`lib/orcamento.ts`) é a fonte
+  única de verdade de seções visíveis — `app/modulo/secoes.ts` deriva a
+  lista de seções de Placa filtrando por esse schema (não uma lista fixa
+  coincidente, com teste-guarda contra divergência); `/modulo` ganhou toggle
+  Módulo-caixa/Placa preservando estado dos dois lados; `PlacaVisual.tsx`
+  (novo) resolve o seletor de lados do engrossamento (matemática conferida
+  ao vivo contra a Seção 2.1.1 — sarrafo do eixo maior = comprimento cheio,
+  eixo menor = dimensão − 70×perpendiculares selecionados) e o indicador/
+  inversor de veio, condicionado a `material.temVeio`; painel direito
+  (custo/peças/plano de corte) migrado para os tokens 6.5/7.2, absorvendo a
+  7.3. Fora de escopo, reportado e não inventado: Placa sem biblioteca de
+  presets (`lib/boxPresets.ts` é tipado a `BoxModule`). **1 rodada de
+  correção** (circuit breaker tentativa 1): grid blowout no `<svg>` de
+  `PlacaVisual` (atributos `width`/`height` HTML participando do min-content
+  do grid legado sem `min-width:0` — mesma causa-raiz da Task 6.3b, agora
+  num SVG em vez de `<canvas>`) causava 19px de overflow horizontal em
+  375px só no modo Placa; corrigido (viewBox + CSS puro) e revalidado pelo
+  Maestro via `getBoundingClientRect`/`scrollWidth` ao vivo, não só relato.
+  185/185 testes, lint/typecheck limpos.
 - **Task 13.2** — Ambientes e Paredes (elevação 2D, posicionamento,
   validação, conjuntos, elementos contínuos) — **a tela mais densa da
   Stage**, considerar quebrar em sub-tasks se ficar grande demais pra uma
