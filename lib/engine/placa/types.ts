@@ -4,6 +4,7 @@
 // `ModuloOrcamento` (ver lib/orcamento.ts).
 
 import type { BoxMaterial } from "../box/types";
+import type { SentidoVeio } from "../types";
 
 export type LadoPlaca = "superior" | "inferior" | "esquerda" | "direita";
 
@@ -59,6 +60,10 @@ export interface Placa {
   // — a espessura final deriva do `engrossamento`, quando presente (Seção 2.1).
   material: BoxMaterial;
   orientacao: OrientacaoPlaca;
+  // Veio de chapa (Seção 8, Task 12.5). Sentido do veio, escolhido no editor
+  // (Task 13.1); quando ausente, `explodePlaca` usa "comprimento" como
+  // default. Só relevante quando `material.temVeio` é `true`.
+  sentidoVeio?: SentidoVeio;
   bordaPorLado?: BordaPorLado;
   engrossamento?: Engrossamento; // engrossada OU dobrada — mutuamente exclusivas
   ripado?: Ripado; // gerador de peças — ver explodePlaca para precedência

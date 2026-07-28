@@ -213,3 +213,46 @@ describe("explodePlaca — placa simples (sem modificadores)", () => {
     expect(r.ferragens).toEqual([]);
   });
 });
+
+describe("explodePlaca — sentidoVeio (Seção 8, Task 13.1)", () => {
+  it("omitir sentidoVeio mantém default 'comprimento' em toda peça (caso simples)", () => {
+    const r = explodePlaca(placaBase());
+    expect(r.pecas.length).toBeGreaterThan(0);
+    expect(r.pecas.every((p) => p.sentidoVeio === "comprimento")).toBe(true);
+  });
+
+  it("sentidoVeio: 'largura' na Placa propaga para toda peça gerada (caso simples)", () => {
+    const r = explodePlaca(placaBase({ sentidoVeio: "largura" }));
+    expect(r.pecas.length).toBeGreaterThan(0);
+    expect(r.pecas.every((p) => p.sentidoVeio === "largura")).toBe(true);
+  });
+
+  it("sentidoVeio: 'largura' propaga para todas as peças de um caso de engrossamento (múltiplas peças)", () => {
+    const r = explodePlaca(
+      placaBase({
+        sentidoVeio: "largura",
+        engrossamento: {
+          tecnica: "engrossada",
+          nivel: 1,
+          lados: ["superior", "inferior", "esquerda", "direita"],
+        },
+      })
+    );
+    expect(r.pecas.reduce((s, p) => s + p.quantidade, 0)).toBe(5);
+    expect(r.pecas.every((p) => p.sentidoVeio === "largura")).toBe(true);
+  });
+
+  it("omitir sentidoVeio num caso de engrossamento continua default 'comprimento' em todas as peças", () => {
+    const r = explodePlaca(
+      placaBase({
+        engrossamento: {
+          tecnica: "engrossada",
+          nivel: 1,
+          lados: ["superior", "inferior", "esquerda", "direita"],
+        },
+      })
+    );
+    expect(r.pecas.reduce((s, p) => s + p.quantidade, 0)).toBe(5);
+    expect(r.pecas.every((p) => p.sentidoVeio === "comprimento")).toBe(true);
+  });
+});
