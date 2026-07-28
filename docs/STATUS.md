@@ -236,16 +236,29 @@ mesma branch; 1 rodada de correção (grid blowout de SVG em mobile, mesma
 causa-raiz da Task 6.3b) revalidada pelo Maestro ao vivo. 185/185 testes.
 Detalhe completo em `docs/Backlog.md`, Task 13.1.
 
-**Próximo passo real: executar a Task 13.2** (Ambientes e Paredes — elevação
-2D, posicionamento, validação, conjuntos, elementos contínuos). É a tela
-mais densa da Stage — o próprio Backlog já sugere considerar quebrar em
-sub-tasks (13.2a elevação+posicionamento, 13.2b conjuntos+handle de junção,
-13.2c elementos contínuos). **Resolve a Dívida A** (remove
-`BoxModule.tamponamento`/`TamponamentoInstancia`, ver Backlog). Depende de
-13.0 e 13.1 (ambas feitas). Ordem restante: **13.2 → 13.3 → {13.4, 13.5} →
-13.6 → 13.7** (13.7 é isolada, pode andar em paralelo a qualquer momento).
-Ver `docs/Backlog.md` Seção "Pipeline Stage 13" pro critério de aceitação
-completo.
+**Task 13.2 quebrada em 3 sub-tasks (2026-07-28, planejamento do Maestro)**:
+era "a tela mais densa da Stage", grande demais pra uma branch efêmera só.
+Detalhe completo (descrição, critérios de aceitação, arquivos) já escrito em
+`docs/Backlog.md`:
+- **13.2a** — Elevação 2D + posicionamento + validação Tier 1/2. Rota nova
+  `/ambientes` (lab local, sem Supabase ainda — mesmo espírito de
+  `/modulo`). Só Frontend, toda a lógica pura já existe
+  (`validarParedeTier1`/`Tier2`, `BoxCanvas` modo conjunto da Task 13.0).
+- **13.2b** — Conjuntos + handle de junção. Backend (coluna
+  `parede.overrides_juncao jsonb`) → Frontend
+  (`detectarConjuntos`/`aplicarOverrides`, já existem desde a Task 12.3).
+- **13.2c** — Elementos contínuos + **resolve a Dívida A**: Motor (remove
+  `BoxModule.tamponamento`/`TamponamentoInstancia`) → Frontend (painel
+  lateral de elemento contínuo ao selecionar Conjunto, usa a integração já
+  pronta da Task 12.7; remove `TamponamentoConfig` de `app/page.tsx` e o
+  desenho antigo em `BoxCanvas.tsx`).
+
+**Próximo passo real: executar a Task 13.2a** (primeira da sequência
+13.2a → 13.2b → 13.2c). Depende de 13.0 e 13.1 (ambas feitas). Ordem
+restante: **13.2a → 13.2b → 13.2c → 13.3 → {13.4, 13.5} → 13.6 → 13.7**
+(13.7 é isolada, pode andar em paralelo a qualquer momento). Ver
+`docs/Backlog.md` Seção "Pipeline Stage 13" pro critério de aceitação
+completo de cada sub-task.
 
 **Mudança de fase importante**: as tasks da Stage 13 são majoritariamente UI
 — o **Frontend Engineer** volta a ser o executor principal, com **UX

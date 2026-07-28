@@ -1081,11 +1081,14 @@ jornada do cliente, agora sobre Tailwind + shadcn/ui).
 > deste recorte, antes vago). Só inicia com o modelo de dados (Stages 11–12)
 > de pé — **cumprido**. Cadência: **validação em lote por conjunto de telas**
 > (decisão do operador), não task-a-task. Ordem de dependência real (não é
-> só numeração): 13.0 → 13.1 → 13.2 → 13.3 → {13.4, 13.5 em paralela} → 13.6
-> → 13.7 (13.7 pode andar em paralelo desde o início, é isolada). A partir
-> daqui, **Frontend Engineer é o executor principal** (Motor/Backend Engineer
-> entram só quando uma task específica pede, ver notas); UX Auditor volta ao
-> loop de validação (`.maestro/pipelines/03-quality.md`).
+> só numeração): 13.0 → 13.1 → **13.2a → 13.2b → 13.2c** → 13.3 → {13.4, 13.5
+> em paralela} → 13.6 → 13.7 (13.7 pode andar em paralelo desde o início, é
+> isolada). **13.0 e 13.1 concluídas (2026-07-28)**; Task 13.2 foi quebrada
+> em 3 sub-tasks nessa mesma data (ver abaixo) por ser densa demais pra uma
+> branch efêmera só. A partir daqui, **Frontend Engineer é o executor
+> principal** (Motor/Backend Engineer entram só quando uma task específica
+> pede, ver notas); UX Auditor volta ao loop de validação
+> (`.maestro/pipelines/03-quality.md`).
 >
 > **Duas dívidas arquiteturais herdadas do motor (Stages 11-12), fechadas
 > como decisão em 2026-07-27, código amarrado às tasks abaixo** (decisão do
@@ -1164,33 +1167,139 @@ jornada do cliente, agora sobre Tailwind + shadcn/ui).
   375px só no modo Placa; corrigido (viewBox + CSS puro) e revalidado pelo
   Maestro via `getBoundingClientRect`/`scrollWidth` ao vivo, não só relato.
   185/185 testes, lint/typecheck limpos.
-- **Task 13.2** — Ambientes e Paredes (elevação 2D, posicionamento,
-  validação, conjuntos, elementos contínuos) — **a tela mais densa da
-  Stage**, considerar quebrar em sub-tasks se ficar grande demais pra uma
-  branch efêmera só (13.2a elevação+posicionamento, 13.2b conjuntos+handle
-  de junção, 13.2c elementos contínuos — decisão de quem executar).
-  **Resolve a Dívida A** (ver nota acima): remove `BoxModule.tamponamento`/
-  `TamponamentoInstancia` de `lib/engine/box/types.ts`/`explode.ts` e o uso
-  em `BoxCanvas.tsx`; `larguraInstalacaoBox()` deixa de somar tamponamento
-  de instância (tamponamento vira só `ElementoContinuo`, aplicado via
-  Conjunto/módulo extremidade). **Critério de aceitação**: (a) elevação 2D
-  com régua, faixas, elementos de parede; (b) posicionar item por
-  faixa/`x`, validação Tier 1+2 em tempo real (Task 12.2, `EngineWarning[]`
-  já pronto — só falta exibir); (c) conjuntos detectados automaticamente
-  (Task 12.3) com contorno visual + handle de junção clicável
-  (união/quebra via `aplicarOverrides`) — **override do usuário precisa de
-  persistência**: não existe tabela `conjunto` (decisão consciente da Task
-  11.2/12.3) — esta task provavelmente precisa de uma coluna/tabela pequena
-  pros overrides de junção (ex.: `parede.overrides_juncao jsonb`, ou tabela
-  dedicada); se for esse o caso, **envolve Backend Engineer** pra essa fatia
-  específica antes do Frontend consumir; (d) elementos contínuos
-  (tampo/rodapé/tamponamento/fechamento) com painel lateral ao selecionar um
-  conjunto, usando a integração da Task 12.7. Depende de 13.0, 13.1. 🔴 Alta.
+- **Task 13.2 — quebrada em 3 sub-tasks** (2026-07-28, decisão do Maestro a
+  pedido do operador: era "a tela mais densa da Stage", grande demais pra
+  uma branch efêmera só). Ordem de dependência real: **13.2a → 13.2b →
+  13.2c**. Todas ainda dependem de 13.0 (canvas de lista) e 13.1 (biblioteca
+  de itens editáveis) — ambas concluídas. Rota temporária **`/ambientes`**
+  (lab novo, mesmo espírito de `/modulo`/`/biblioteca`: estado local, sem
+  Supabase ainda) — a integração ao shell `/orcamento/[id]` (com dados reais
+  do orçamento) é Task 13.3, não aqui. **Nota de escopo**: a "biblioteca" de
+  itens posicionáveis em 13.2a só tem módulos-caixa por enquanto
+  (`lib/boxPresets.ts`) — Placa não tem persistência/preset ainda (relatado
+  explicitamente como fora de escopo na Task 13.1); posicionar uma Placa na
+  parede fica pra quando essa lacuna for fechada (task futura de dados, não
+  desta Stage).
+
+  ### Task 13.2a — Elevação 2D + posicionamento + validação Tier 1/2
+  - **Status**: ⏱️ Planejado
+  - **Modelo Recomendado**: Sonnet
+  - **Prioridade**: 🔴 Alta
+  - **Executor**: Frontend Engineer
+  - **Descrição objetiva**: Nova rota `/ambientes` (estado local: uma
+    `Parede` editável — largura/altura — com `elementos: ElementoParede[]`
+    adicionados manualmente e `itens: ItemPosicionado[]` posicionados a
+    partir da biblioteca de presets existente). Toda a lógica pura já existe
+    e só precisa ser consumida, não reimplementada:
+    `lib/engine/parede::derivarY`, `validarParedeTier1`, `validarParedeTier2`
+    (retornam `EngineWarning[]`, Task 12.2) e o `BoxCanvas` modo "conjunto"
+    (`itens`+`alturas`, Task 13.0) pra desenhar todos os itens posicionados
+    juntos — não é render de 1 item por vez.
+  - **Critérios de aceitação**:
+    - [ ] Régua de largura da parede + as 4 faixas (inferior/bancada/aéreo/
+          torre) desenhadas, com as alturas do perfil (`AlturasFaixas`)
+          configuráveis na própria tela (não há tela de perfil da
+          organização ainda — input local mesmo).
+    - [ ] Elementos de parede (janela/porta/tomada/ponto hidráulico)
+          adicionáveis com posição/dimensão (x, y, largura, altura) e
+          desenhados como retângulos na elevação.
+    - [ ] Escolher um preset da biblioteca e posicionar por faixa + `x`
+          (drag ou input numérico — decisão de UX do executor) atualiza o
+          `BoxCanvas` modo conjunto em tempo real.
+    - [ ] `validarParedeTier1`/`validarParedeTier2` rodam a cada mudança de
+          posicionamento; avisos/erros (`EngineWarning[]`) aparecem como
+          lista legível E destaque visual (ex.: contorno de erro) no item
+          problemático — nenhum dos dois canais sozinho basta.
+    - [ ] `npm run lint`/typecheck/test passam; testado em 3 breakpoints.
+
+  ### Task 13.2b — Conjuntos + handle de junção (persistência de override)
+  - **Status**: ⏱️ Planejado
+  - **Modelo Recomendado**: Sonnet (Backend) + Sonnet (Frontend)
+  - **Prioridade**: 🔴 Alta
+  - **Executores**: Backend Engineer (fatia pequena) → Frontend Engineer,
+    mesma branch, nessa ordem — depende de 13.2a (precisa de itens
+    posicionados reais pra detectar conjunto sobre eles).
+  - **Descrição objetiva**: Toda a lógica pura já existe
+    (`lib/engine/conjunto::detectarConjuntos`/`aplicarOverrides`, Task 12.3;
+    tipo `OverrideJuncao = { itemIdA, itemIdB, forcar: "unido"|"quebrado" }`
+    já definido em `lib/engine/conjunto/types.ts`) — falta só persistir o
+    override e desenhar o handle. **Backend**: adicionar coluna
+    `parede.overrides_juncao jsonb not null default '[]'` (migration nova;
+    `parede` já tem RLS pronta via `organizacao_id` denormalizado, Task
+    11.2 — não precisa de política nova, só a coluna). **Frontend**: em
+    `/ambientes` (13.2a), rodar `detectarConjuntos` sobre os itens da
+    parede, desenhar contorno/colchete visual acima de cada bloco
+    detectado, e um handle clicável entre cada par de itens adjacentes que
+    alterna união/separação chamando `aplicarOverrides` com o array de
+    `OverrideJuncao` (persistido via a coluna nova).
+  - **Critérios de aceitação**:
+    - [ ] Migration cria `parede.overrides_juncao` (jsonb, default `[]`);
+          `get_advisors` (security) roda zero achados novos depois dela.
+    - [ ] Conjuntos automáticos (2+ itens adjacentes, mesma faixa, sem
+          elemento bloqueante — regra já implementada) aparecem com
+          contorno/colchete visual distinto do item avulso.
+    - [ ] Clicar no handle entre dois itens adjacentes alterna união/quebra;
+          o resultado reflete exatamente `aplicarOverrides` (ex.: quebrar um
+          conjunto de 3 no meio gera 2 conjuntos de 2, não sobra um de 1 —
+          já é a regra da função, só confirmar que a UI não a contorna).
+    - [ ] Recarregar a tela mantém o override (lido da coluna persistida,
+          não volta pro automático puro).
+    - [ ] `npm run lint`/typecheck/test passam.
+
+  ### Task 13.2c — Elementos contínuos + resolve a Dívida A
+  - **Status**: ⏱️ Planejado
+  - **Modelo Recomendado**: Sonnet (Motor) + Sonnet (Frontend)
+  - **Prioridade**: 🔴 Alta
+  - **Executores**: Motor Engineer (remove o mecanismo antigo) → Frontend
+    Engineer (UI do mecanismo novo), mesma branch — depende de 13.2b
+    (painel lateral abre ao selecionar um Conjunto, que só existe depois
+    dessa task).
+  - **Descrição objetiva — Motor (resolve a Dívida A)**: remover
+    `TamponamentoInstancia`/`TamponamentoLado`/`BoxModule.tamponamento` de
+    `lib/engine/box/types.ts` (hoje linhas ~90-121) e todo uso em
+    `lib/engine/box/explode.ts` se houver; `larguraInstalacaoBox()` perde a
+    soma de tamponamento — avaliar se ainda se justifica como função
+    própria ou se `lib/orcamento.ts::larguraDoItem` passa a usar
+    `box.largura` direto para `custom_box` (decisão do executor, documentar
+    a escolha). Migração de presets antigos com `tamponamento` setado:
+    mesmo padrão já usado em `lib/engine/box/migrate.ts` pra descarte com
+    aviso (Task 12.4 já fez isso pro branch `BayContent` "tamponamento" —
+    reaproveitar o padrão, não inventar um novo).
+  - **Descrição objetiva — Frontend (mecanismo novo)**: remover o bloco de
+    desenho de `box.tamponamento` em `BoxCanvas.tsx` (hoje ~linhas 409-430)
+    e o `TamponamentoConfig` de `app/page.tsx` (UI do mecanismo antigo,
+    ligada ao campo que está sendo removido). Adicionar, em `/ambientes`
+    (13.2a/b), um painel lateral que abre ao selecionar um Conjunto (ou
+    módulo isolado): lista os `ElementoContinuo` aplicáveis (tampo/rodapé/
+    tamponamento/fechamento — `POSICOES_VALIDAS` já define quais posições
+    valem por tipo, `lib/engine/elemento-continuo/types.ts`), usando a
+    integração já pronta da Task 12.7 (`calcularOrcamentoMisto` aceita
+    `elementosContinuos?: ElementoContinuoResolvido[]`). **Tamponamento só
+    nas extremidades expostas**: decisão de qual lado de um bloco/módulo
+    conta como "extremidade exposta" (não encostada em outro item nem
+    fazendo parte do meio do bloco) não está fechada na spec — é decisão de
+    UX/domínio a fechar durante a execução, documentar a escolha no código
+    (mesmo padrão de "decisão sem resposta explícita" dos outros
+    executores).
+  - **Critérios de aceitação**:
+    - [ ] `grep` por `TamponamentoInstancia`/`TamponamentoLado` no projeto
+          inteiro retorna vazio (tipo removido, não só deixado de usar).
+    - [ ] Presets antigos com tamponamento de instância migram com aviso,
+          sem quebrar (mesmo padrão de `migrate.ts`).
+    - [ ] Selecionar um Conjunto abre o painel lateral; adicionar um tampo/
+          rodapé/fechamento reflete no BOM/custo ao vivo (mesma integração
+          da Task 12.7, já testada no motor — aqui é só ligar à UI).
+    - [ ] Tamponamento só é oferecido nas extremidades expostas do bloco
+          (não em todo módulo do meio) — testar num bloco de 3+ itens.
+    - [ ] `npm run lint`/typecheck/test passam (motor: nenhum teste
+          existente de `box.tamponamento` sobra órfão — remover ou migrar
+          os testes que cobriam o mecanismo antigo).
 - **Task 13.3** — Shell `/orcamento/[id]` com abas + Dashboard `/` + fluxo de
   novo orçamento/cliente (captura nome/telefone/endereço + prazo de entrega
   na criação, `docs/Mapa-de-Telas.md` 3.2). Reaproveita `cliente`/`orcamento`
-  (Task 11.2, RLS já pronta). Depende de 13.2 pra ter algo real dentro do
-  shell. 🟡 Média · Sonnet.
+  (Task 11.2, RLS já pronta). Depende de 13.2a/b/c pra ter algo real dentro
+  do shell (a aba "Ambientes" migra de `/ambientes` pra cá; `/modulo` migra
+  pro Editor de Item em `/orcamento/[id]/item/[itemId]`). 🟡 Média · Sonnet.
 - **Task 13.4** — Corte & Material (pré-pedido, adição manual, congelamento
   em `lista_material` — tabela já existe, Task 11.2 — extração texto/CSV,
   D-08). Reaproveita `PlanoCorteCanvas`/`montarLinhasInsumos`; plano de corte
