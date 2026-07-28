@@ -1,7 +1,7 @@
 # Status Atual, Decisões, Pendências e Próximos Passos
 
-> Atualizado em 2026-07-27 (handoff de sessão — Fases A e B completas,
-> planejamento da Fase C pronto). Este arquivo é o ponto de partida de
+> Atualizado em 2026-07-28 (handoff de sessão — Stage 13/Fase C iniciada,
+> Task 13.0 concluída). Este arquivo é o ponto de partida de
 > qualquer sessão nova — leia antes de assumir o que já existe. O projeto
 > virou V2 em 2026-07-24 (ver Seção 1) — não confie em nada anterior a essa
 > data sobre arquitetura/motor sem checar contra os documentos da Seção 7.
@@ -215,15 +215,21 @@ multi-tenant está de pé (Stage 11) e o motor V3 tem todas as extensões da V2
 veio de chapa, precificação+rateio, e a integração de tudo isso ao pipeline
 principal via Task 12.7). 168 testes verdes.
 
-**Próximo passo real: executar a Task 13.0** (Fase C — Stage 13,
-reconstrução da experiência). O discovery/planejamento da Stage 13 **já foi
-feito** (2026-07-27, Maestro) — não precisa ser refeito, só ler
-`docs/Backlog.md` Seção "Pipeline Stage 13" (tem critério de aceitação e
-ordem de dependência por task) e `docs/Mapa-de-Telas.md` (telas/fluxos).
-Ordem: **13.0 → 13.1 → 13.2 → 13.3 → {13.4, 13.5} → 13.6 → 13.7** (13.7 é
-isolada, pode andar em paralelo a qualquer momento). Primeira task: **13.0 —
-pré-requisito de canvas**: refatorar `BoxCanvas.geometria` para aceitar
-lista de itens posicionados (render de conjunto). 🔴 Alta · Sonnet.
+**Task 13.0 concluída (2026-07-28)**: `BoxCanvas` ganhou um modo "conjunto"
+(`itens: {item, posicao}[]` + `alturas: AlturasFaixas`, aditivo — o modo
+`box` existente não mudou) via nova função pura `geometriaConjunto`, que
+calcula escala/origem pela bounding box do conjunto inteiro (X por
+`posicao.x`, Y por `derivarY(faixa, alturas)`, nunca digitado). 176/176
+testes (8 novos), lint/typecheck/build verdes, `/modulo` conferido ao vivo
+sem regressão. Detalhe completo em `docs/Backlog.md`, Task 13.0.
+
+**Próximo passo real: executar a Task 13.1** (Editor de Item — módulo +
+placa, dirigido por capacidade). Depende de 13.0 (feito) pro canvas de
+seleção. Ordem restante: **13.1 → 13.2 → 13.3 → {13.4, 13.5} → 13.6 → 13.7**
+(13.7 é isolada, pode andar em paralelo a qualquer momento). Ver
+`docs/Backlog.md` Seção "Pipeline Stage 13" pro critério de aceitação
+completo da 13.1 (schema de capacidades por `origem`, seletor de lados do
+engrossamento, sentido do veio visível/alterável pra Placa).
 
 **Mudança de fase importante**: as tasks da Stage 13 são majoritariamente UI
 — o **Frontend Engineer** volta a ser o executor principal, com **UX

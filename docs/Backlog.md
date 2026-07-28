@@ -1111,6 +1111,24 @@ jornada do cliente, agora sobre Tailwind + shadcn/ui).
   N módulos/placas lado a lado a partir de `ItemPosicionado[]` (posição `x` +
   `faixa`, Y via `derivarY` da Task 12.2), sem regressão visual do render de
   item único usado hoje em `/modulo`. 🔴 Alta · Sonnet.
+  **Status**: ✅ Concluído (2026-07-28, mesclada em
+  `feature/13.0-canvas-lista-itens`, Frontend Engineer/Sonnet). Nova função
+  pura `geometriaConjunto` (exportada, testada isoladamente — 8 testes novos,
+  176/176 no total) calcula escala/origem pela bounding box do conjunto (X =
+  `posicao.x`, Y = `derivarY(faixa, alturas)`, nunca digitado); com 1 item na
+  faixa "torre"/x=0 a conta se reduz matematicamente à fórmula antiga —
+  prova de equivalência pixel-a-pixel, não só alegação. `BoxCanvas` ganhou um
+  segundo shape de props (`itens`+`alturas`) aditivo — o modo `box` existente
+  (usado em `/modulo` e nos cards de `app/page.tsx`) ficou intocado. Item
+  `custom_box` no modo conjunto reaproveita as mesmas funções de desenho do
+  modo comercial (sem duplicar lógica); item `placa` (sem editor próprio
+  ainda — Task 13.1) desenha só um retângulo com a cor do material, por
+  escopo. Sem régua/elementos de parede/handle de junção — isso é a Task
+  13.2, propositalmente fora daqui. Validado pelo Maestro de forma
+  independente (não só relato do executor): lint/typecheck/build/test
+  rodados de novo, e `/modulo` conferido ao vivo via browser (canvas com
+  73,7% de pixels não-vazios, sem erro de console) — screenshot indisponível
+  neste ambiente (limitação conhecida), evidência via `getImageData`.
 - **Task 13.1** — Editor de Item (módulo + placa, dirigido por capacidade,
   `docs/Modelo-de-Dominio.md` Seção 4) — base em `/modulo` (Tasks 7.1/7.2).
   Absorve a 7.3 (painel de custo/peças ao vivo). **Critério de aceitação**:
