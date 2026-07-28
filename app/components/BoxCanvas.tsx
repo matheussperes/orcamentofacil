@@ -11,6 +11,8 @@ import {
   type DivisoriaRect,
 } from "@/lib/engine/box/tree";
 import { corParaHex } from "./ModulePreview";
+import { alturaDoItem, corExternaDoItem, larguraDoItem, type ModuloOrcamento } from "@/lib/orcamento";
+import { derivarY, type AlturasFaixas, type ItemPosicionado } from "@/lib/engine/parede";
 
 // V3 — Canvas 2D do módulo-caixa, em dois modos:
 //  - Laboratório (padrão): vãos com borda técnica, rótulo do conteúdo,
@@ -24,6 +26,16 @@ import { corParaHex } from "./ModulePreview";
 // Em ambos os modos, os grupos de porta (`box.portas`) são desenhados por
 // cima dos vãos — são independentes da árvore e podem cobrir 1+ vãos ou a
 // caixa inteira.
+//
+// Task 13.0 — terceiro modo "conjunto": lista de itens posicionados
+// (`itens` + `alturas`, em vez de `box`), usado pelas telas futuras da
+// Stage 13 (Ambientes/Paredes, Linhas de Proposta) pra desenhar N itens
+// lado a lado numa mesma parede/faixa. Sempre "bonito" (sem interatividade,
+// sem bordas técnicas — equivalente ao modo comercial) porque não há
+// seleção/edição por item nesta task (isso é 13.2). A escala/origem do
+// canvas passam a ser calculadas pela bounding box do CONJUNTO, não mais
+// por um único módulo — mas com 1 item só (faixa "torre", x=0) o resultado
+// é matematicamente idêntico ao modo item único (ver `geometriaConjunto`).
 
 const W = 380;
 const H = 360;
@@ -60,6 +72,66 @@ function geometria(box: BoxModule): Geo {
   const interiorW = box.largura - 2 * t;
   const rects = layoutVaos(box.raiz, t, interiorTop, interiorW, interiorH, t);
   return { scale, ox, oy, interiorTop, interiorH, interiorW, t, rects };
+}
+
+/** Um item do modo "conjunto" — o módulo/placa (via `ModuloOrcamento`, que já
+ * cobre `custom_box` e `placa`, `lib/orcamento.ts`) e sua posição na parede
+ * (`ItemPosicionado`: x + faixa — nunca Y digitado, D-20). */
+export interface ItemDoConjunto {
+  item: ModuloOrcamento;
+  posicao: ItemPosicionado;
+}
+
+interface GeoItemConjunto {
+  item: ModuloOrcamento;
+  scale: number;
+  ox: number;
+  oy: number;
+}
+
+// Geometria do modo "conjunto": mesma ideia de `geometria(box)` (escala +
+// origem centralizando um retângulo no canvas W×H com padding 24), mas o
+// retângulo ajustado é a BOUNDING BOX do conjunto inteiro, não de um módulo
+// só. Eixo X: `posicao.x` já é o offset da borda esquerda da parede (mesmo
+// referencial dos itens). Eixo Y: `derivarY(faixa, alturas)` devolve a
+// altura-do-chão (0 = chão, cresce pra cima) — o INVERSO do sentido do
+// canvas (cresce pra baixo) — por isso o topo de cada item (maior
+// altura-do-chão do conjunto) vira a origem Y=0 do canvas, e cada item é
+// posicionado por (boundingTopo - topoDoItem), não por y direto.
+//
+// Com 1 item só (faixa "torre", x=0): boundingLeft=0, boundingTopo=altura,
+// então totalW/totalH/scale/ox/oy caem exatamente na mesma conta de
+// `geometria(box)` — é assim que a task garante o modo lista "pixel-idêntico"
+// ao modo item único quando N=1 (ver `BoxCanvas.test.ts`).
+export function geometriaConjunto(itens: ItemDoConjunto[], alturas: AlturasFaixas): GeoItemConjunto[] {
+  if (itens.length === 0) return [];
+  const pad = 24;
+
+  const medidas = itens.map(({ item, posicao }) => {
+    const largura = larguraDoItem(item);
+    const altura = alturaDoItem(item);
+    const y = derivarY(posicao.faixa, alturas);
+    return { item, x: posicao.x, largura, y, topo: y + altura };
+  });
+
+  const boundingLeft = Math.min(...medidas.map((m) => m.x));
+  const boundingRight = Math.max(...medidas.map((m) => m.x + m.largura));
+  const boundingTopo = Math.max(...medidas.map((m) => m.topo));
+  const boundingBase = Math.min(...medidas.map((m) => m.y));
+
+  const totalW = boundingRight - boundingLeft;
+  const totalH = boundingTopo - boundingBase;
+
+  const scale = Math.min((W - pad * 2) / totalW, (H - pad * 2) / totalH);
+  const ox = (W - totalW * scale) / 2;
+  const oy = (H - totalH * scale) / 2;
+
+  return medidas.map((m) => ({
+    item: m.item,
+    scale,
+    ox: ox + (m.x - boundingLeft) * scale,
+    oy: oy + (boundingTopo - m.topo) * scale,
+  }));
 }
 
 function linha(ctx: CanvasRenderingContext2D, x1: number, y1: number, x2: number, y2: number) {
@@ -263,6 +335,86 @@ function retanguloDoGrupo(
   return retanguloVaos(box.raiz, new Set(grupo.alvo.vaoIds), t, g.interiorTop, g.interiorW, g.interiorH, t);
 }
 
+/** Desenha UM item do conjunto (já com `scale`/`ox`/`oy` resolvidos por
+ * `geometriaConjunto`). `custom_box`: reaproveita as MESMAS funções de
+ * desenho do modo item único (`desenharConteudoBonito`, `desenharGrupoPortas`,
+ * `retanguloDoGrupo`, `corParaHex`) — mesma sequência do modo comercial
+ * (carcaça + conteúdo bonito + portas + tamponamento), sem bordas técnicas
+ * nem rótulos (não há seleção por item nesta task). `placa` (Task 13.1 ainda
+ * não tem editor/render próprio): retângulo simples preenchido pela cor do
+ * material — nada além disso, por escopo desta task. */
+function desenharItemConjunto(ctx: CanvasRenderingContext2D, g: GeoItemConjunto) {
+  const { item, scale, ox, oy } = g;
+  const px = (mmX: number) => ox + mmX * scale;
+  const py = (mmY: number) => oy + mmY * scale;
+
+  if (item.origem === "placa") {
+    const largura = larguraDoItem(item);
+    const altura = alturaDoItem(item);
+    ctx.fillStyle = corParaHex(corExternaDoItem(item));
+    ctx.fillRect(px(0), py(0), largura * scale, altura * scale);
+    return;
+  }
+
+  const box = item.box;
+  const t = box.caixa.espessura;
+  const interiorTop = t;
+  const interiorH = box.altura - 2 * t;
+  const interiorW = box.largura - 2 * t;
+  const geo: Geo = { scale, ox, oy, interiorTop, interiorH, interiorW, t, rects: [] };
+
+  ctx.fillStyle = corParaHex(box.caixa.cor);
+  ctx.fillRect(px(0), py(0), box.largura * scale, box.altura * scale);
+  ctx.strokeStyle = "#1c2430";
+  ctx.lineWidth = 2;
+  ctx.strokeRect(px(0), py(0), box.largura * scale, box.altura * scale);
+
+  desenharConteudoBonito(
+    ctx,
+    box.raiz,
+    px(t),
+    py(interiorTop),
+    interiorW * scale,
+    interiorH * scale,
+    t * scale,
+    box.puxador
+  );
+
+  for (const grupo of box.portas) {
+    const rectMm = retanguloDoGrupo(box, grupo, geo, t);
+    if (!rectMm) continue;
+    const rectPx = { x: px(rectMm.x), y: py(rectMm.y), w: rectMm.w * scale, h: rectMm.h * scale };
+    desenharGrupoPortas(ctx, rectPx, grupo, box.puxador);
+  }
+
+  const tamp = box.tamponamento;
+  if (tamp) {
+    const faixa = 10;
+    if (tamp.esquerdo.ativo) {
+      ctx.fillStyle = corParaHex(tamp.esquerdo.material.cor);
+      ctx.fillRect(px(0) - faixa, py(0), faixa, box.altura * scale);
+    }
+    if (tamp.direito.ativo) {
+      ctx.fillStyle = corParaHex(tamp.direito.material.cor);
+      ctx.fillRect(px(0) + box.largura * scale, py(0), faixa, box.altura * scale);
+    }
+    if (tamp.superior.ativo) {
+      ctx.fillStyle = corParaHex(tamp.superior.material.cor);
+      ctx.fillRect(px(0), py(0) - faixa, box.largura * scale, faixa);
+    }
+    if (tamp.inferior.ativo) {
+      ctx.fillStyle = corParaHex(tamp.inferior.material.cor);
+      ctx.fillRect(px(0), py(0) + box.altura * scale, box.largura * scale, faixa);
+    }
+  }
+}
+
+function desenharConjunto(ctx: CanvasRenderingContext2D, itens: ItemDoConjunto[], alturas: AlturasFaixas) {
+  for (const g of geometriaConjunto(itens, alturas)) {
+    desenharItemConjunto(ctx, g);
+  }
+}
+
 export interface DivisaoSelecionada {
   parentId: string;
   indice: number;
@@ -270,20 +422,16 @@ export interface DivisaoSelecionada {
 
 export type ModoSelecao = "vaos" | "divisoes" | "portas" | "gavetas";
 
-export function BoxCanvas({
-  box,
-  comercial = false,
-  modoSelecao = "vaos",
-  vaosSelecionados = [],
-  onToggleVao,
-  divisaoSelecionada = null,
-  onSelecionarDivisoria,
-  portaSelecionada = null,
-  onSelecionarPorta,
-  vaoGavetaSelecionado = null,
-  onSelecionarVaoGaveta,
-}: {
+// Modo item único (`box`) — props de interatividade/seleção completas, como
+// já existia. Modo conjunto (`itens` + `alturas`) — Task 13.0, aditivo: sem
+// nenhuma prop de interatividade (não há seleção por item nesta task, 13.2).
+// União com os campos do outro modo explicitamente `undefined` (em vez de
+// discriminada por tag própria) pra poder ler qualquer prop direto do objeto
+// sem narrowing manual em cada uso abaixo.
+interface BoxCanvasPropsItemUnico {
   box: BoxModule;
+  itens?: undefined;
+  alturas?: undefined;
   /** Modo bonito para cards do orçamento — sem bordas/rótulos técnicos, não interativo. */
   comercial?: boolean;
   modoSelecao?: ModoSelecao;
@@ -297,7 +445,49 @@ export function BoxCanvas({
   /** Modo "gavetas": seleciona o VÃO cujo conteúdo de gaveta vai editar/excluir. */
   vaoGavetaSelecionado?: string | null;
   onSelecionarVaoGaveta?: (id: string) => void;
-}) {
+}
+
+interface BoxCanvasPropsConjunto {
+  box?: undefined;
+  /** Lista de itens posicionados (conjunto) — cada um com sua faixa/x; Y é
+   * sempre derivado via `derivarY`, nunca digitado (D-20). */
+  itens: ItemDoConjunto[];
+  /** As 4 alturas do perfil da organização, necessárias pra derivar Y a
+   * partir da faixa de cada item (`lib/engine/parede::AlturasFaixas`). */
+  alturas: AlturasFaixas;
+  comercial?: undefined;
+  modoSelecao?: undefined;
+  vaosSelecionados?: undefined;
+  onToggleVao?: undefined;
+  divisaoSelecionada?: undefined;
+  onSelecionarDivisoria?: undefined;
+  portaSelecionada?: undefined;
+  onSelecionarPorta?: undefined;
+  vaoGavetaSelecionado?: undefined;
+  onSelecionarVaoGaveta?: undefined;
+}
+
+type BoxCanvasProps = BoxCanvasPropsItemUnico | BoxCanvasPropsConjunto;
+
+export function BoxCanvas(props: BoxCanvasProps) {
+  const {
+    box,
+    itens,
+    alturas,
+    comercial: comercialProp = false,
+    modoSelecao = "vaos",
+    vaosSelecionados = [],
+    onToggleVao,
+    divisaoSelecionada = null,
+    onSelecionarDivisoria,
+    portaSelecionada = null,
+    onSelecionarPorta,
+    vaoGavetaSelecionado = null,
+    onSelecionarVaoGaveta,
+  } = props;
+  // Conjunto é sempre "bonito"/não interativo (equivalente a `comercial`) —
+  // não há seleção por item nesta task.
+  const comercial = itens ? true : comercialProp;
   const ref = useRef<HTMLCanvasElement>(null);
   // Vão sob o mouse (só nos modos "vaos"/"gavetas", que operam sobre os
   // mesmos retângulos de g.rects) — puramente apresentacional, não afeta
@@ -308,6 +498,12 @@ export function BoxCanvas({
     const ctx = ref.current?.getContext("2d");
     if (!ctx) return;
     ctx.clearRect(0, 0, W, H);
+
+    if (itens && alturas) {
+      desenharConjunto(ctx, itens, alturas);
+      return;
+    }
+    if (!box) return;
 
     const g = geometria(box);
     const px = (mmX: number) => g.ox + mmX * g.scale;
@@ -428,10 +624,10 @@ export function BoxCanvas({
         ctx.fillRect(px(0), py(0) + box.altura * g.scale, box.largura * g.scale, faixa);
       }
     }
-  }, [box, comercial, modoSelecao, vaosSelecionados, divisaoSelecionada, portaSelecionada, vaoGavetaSelecionado, hoverId]);
+  }, [box, itens, alturas, comercial, modoSelecao, vaosSelecionados, divisaoSelecionada, portaSelecionada, vaoGavetaSelecionado, hoverId]);
 
   function clique(e: React.MouseEvent<HTMLCanvasElement>) {
-    if (comercial) return; // preview comercial não é interativo
+    if (comercial || !box) return; // preview comercial / modo conjunto não é interativo
     const canvas = ref.current;
     if (!canvas) return;
     const rectEl = canvas.getBoundingClientRect();
@@ -498,7 +694,7 @@ export function BoxCanvas({
    * nenhum callback de seleção. Restrito aos modos "vaos"/"gavetas", que
    * operam sobre os mesmos retângulos de g.rects. */
   function moverMouse(e: React.MouseEvent<HTMLCanvasElement>) {
-    if (comercial) return;
+    if (comercial || !box) return;
     if (modoSelecao !== "vaos" && modoSelecao !== "gavetas") {
       if (hoverId !== null) setHoverId(null);
       return;
