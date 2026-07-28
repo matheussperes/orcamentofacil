@@ -198,6 +198,17 @@ Seção 7. Destaques que mais afetam código:
   fechamento da proposta é obrigatório.
 - **Cadência de execução visual**: agrupar tasks e validar em lote (decisão
   do operador após a Stage 7) — não task-a-task como nas Stages 1-7.
+- **Design-System v3 (2026-07-28)**: substitui integralmente a v2 (tema
+  claro/neutro). Nova identidade a partir de 12 mockups de referência
+  (`docs/Imagem das Telas/`) + logo oficial (`public/logo/logo-{light,dark}.png`):
+  sidebar navy fixa (não é dark mode) + laranja como cor de destaque.
+  **Sem 3D real** — decisão explícita do operador, o canvas técnico
+  (`BoxCanvas`, `ElevacaoParede`, `PlanoCorteCanvas`) continua 2D, só fica
+  mais elegante (cor de material simulada). Telas já mescladas sob a v2
+  (`/modulo`, `/ambientes`) só recebem o retrofit na Task 13.3 (quando
+  migram pro shell real de qualquer forma) — não antes, pra não duplicar
+  trabalho. Ver `docs/Design-System.md` na íntegra antes de qualquer task
+  visual nova.
 
 ## 5. Lacuna vs. o PRD original (V1) — resolvida pela V2
 
