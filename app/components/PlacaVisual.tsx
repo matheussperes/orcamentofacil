@@ -86,18 +86,34 @@ export function PlacaVisual({
   return (
     <div className="flex flex-col items-center gap-sm">
       <svg
-        width={svgW}
-        height={svgH}
         viewBox={`0 0 ${svgW} ${svgH}`}
-        className="max-w-full"
+        className="h-auto w-full"
+        style={{ maxWidth: svgW }}
         role="group"
         aria-label={`Referência visual da placa, ${largura}×${altura}mm`}
       >
-        {/* `role="group"` (não "img") no <svg> de propósito: um <svg role="img">
-            colapsa os filhos na árvore de acessibilidade (e em ferramentas
-            baseadas nela), escondendo os `<rect>` clicáveis dos lados —
-            achado durante a validação visual desta task. "group" mantém o
-            nome acessível do conjunto sem esconder os botões dos lados. */}
+        {/* Task 13.1 (correção pós-validação do Maestro) — de propósito SEM
+            atributos HTML `width`/`height` no <svg>: um elemento substituído
+            (SVG/img) com `width`/`height` fixos em px participa do cálculo de
+            min-content do grid mesmo com `max-width:100%` em CSS — o legacy
+            `.grid`/`.card` deste projeto não tem `min-width: 0` nos itens
+            (mesma causa-raiz já documentada e corrigida na Task 6.3b para
+            `BoxModuloCard`/`TemplateModuloCard` em app/page.tsx), então o
+            track inteiro crescia pra acomodar o tamanho intrínseco do SVG —
+            "grid blowout", confirmado por medição (374px vs 335px no modo
+            box, overflow horizontal real em 375px). Fix: só `viewBox` define
+            a proporção; o tamanho renderizado vem 100% de CSS (`w-full
+            h-auto`, com `maxWidth: svgW` — o teto em desktop — via `style`
+            porque é um valor calculado por instância, não um token do Design
+            System). Sem width/height attribute, o navegador deriva o aspect
+            ratio do próprio viewBox (SVG2), então `h-auto` continua correto.
+
+            `role="group"` (não "img") no <svg> também de propósito: um <svg
+            role="img"> colapsa os filhos na árvore de acessibilidade (e em
+            ferramentas baseadas nela), escondendo os `<rect>` clicáveis dos
+            lados — achado durante a validação visual desta task. "group"
+            mantém o nome acessível do conjunto sem esconder os botões dos
+            lados. */}
         <rect
           x={x0}
           y={y0}
