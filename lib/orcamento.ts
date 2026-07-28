@@ -50,6 +50,31 @@ export function corExternaDoItem(m: ModuloOrcamento): string | undefined {
   return m.origem === "custom_box" ? m.box.caixa.cor : m.placa.material.cor;
 }
 
+// Schema de capacidades (Modelo de Domínio, Seção 4 — Task 13.1). Cada tipo
+// de item declara quais seções de configuração se aplicam a ele. O Editor de
+// Item (`app/modulo/`) LÊ este schema para decidir quais seções renderizar —
+// é a única fonte de verdade de "o que aparece"; não deve haver
+// `if (origem === "placa")` espalhado escondendo seção por seção no
+// componente. Ver `app/modulo/secoes.ts` para a derivação da lista de
+// seções da UI de Placa a partir deste schema.
+export type Capacidade =
+  | "dimensoes"
+  | "material"
+  | "vaos"
+  | "portas"
+  | "gavetas"
+  | "puxador"
+  | "prateleiras"
+  | "engrossamento"
+  | "ripado"
+  | "orientacao"
+  | "bordaPorLado";
+
+export const CAPACIDADES: Record<ModuloOrcamento["origem"], Capacidade[]> = {
+  custom_box: ["dimensoes", "material", "vaos", "portas", "gavetas", "puxador", "prateleiras"],
+  placa: ["dimensoes", "material", "orientacao", "bordaPorLado", "engrossamento", "ripado"],
+};
+
 // Elemento Contínuo (Task 12.4, lib/engine/elemento-continuo/) + o alvo já
 // resolvido pelo chamador (`AlvoResolvido` — soma/máximo de itens do bloco ou
 // módulo da extremidade). `calcularOrcamentoMisto` não sabe resolver

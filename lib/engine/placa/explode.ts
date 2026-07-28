@@ -1,4 +1,4 @@
-import type { ItemQtd, Peca } from "../types";
+import type { ItemQtd, Peca, SentidoVeio } from "../types";
 import type { BoxMaterial } from "../box/types";
 import type { LadoPlaca, Placa } from "./types";
 
@@ -21,6 +21,10 @@ export interface PlacaResult {
 
 interface Ctx {
   pecas: Peca[];
+  // Sentido do veio da Placa de origem (Seção 8, Task 12.5), resolvido uma
+  // única vez em `explodePlaca` — todas as peças geradas herdam o mesmo
+  // sentido, já que vêm da mesma chapa-mãe.
+  sentidoVeio: SentidoVeio;
 }
 
 function push(
@@ -52,14 +56,14 @@ function push(
     // "Fita de borda por espessura final") — não implementada nesta task
     // (fora de escopo: pricing/catálogo). fita_m fica 0 para peças de Placa.
     fita_m: 0,
-    // Veio de chapa (Seção 8, Task 12.5): Placa ainda não tem UI/editor pra
-    // escolher o sentido (Fase C / Stage 13, ainda não existe — fora de
-    // escopo desta task, que é só motor). PLACEHOLDER temporário até lá:
-    // herda `temVeio` do material (já é o `BoxMaterial` real, não um objeto
-    // ad hoc) e usa "comprimento" como sentido default documentado — o campo
-    // não pode ficar `undefined` porque `Peca.sentidoVeio` é obrigatório.
+    // Veio de chapa (Seção 8, Task 12.5): herda `temVeio` do material (já é
+    // o `BoxMaterial` real, não um objeto ad hoc) e `sentidoVeio` resolvido
+    // em `explodePlaca` a partir de `placa.sentidoVeio` — default
+    // "comprimento" quando o campo não é setado (Placa sem UI de veio
+    // vinculada, ou usuário que não alterou o default). O campo não pode
+    // ficar `undefined` porque `Peca.sentidoVeio` é obrigatório.
     temVeio: material.temVeio ?? false,
-    sentidoVeio: "comprimento",
+    sentidoVeio: ctx.sentidoVeio,
   });
 }
 
@@ -160,7 +164,7 @@ function explodeRipado(ctx: Ctx, placa: Placa): number | undefined {
 }
 
 export function explodePlaca(placa: Placa): PlacaResult {
-  const ctx: Ctx = { pecas: [] };
+  const ctx: Ctx = { pecas: [], sentidoVeio: placa.sentidoVeio ?? "comprimento" };
 
   if (placa.engrossamento) {
     validarNivelEspessuraBase(placa.material.espessura, placa.engrossamento.nivel);
