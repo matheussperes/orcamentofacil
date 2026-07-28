@@ -1182,7 +1182,33 @@ jornada do cliente, agora sobre Tailwind + shadcn/ui).
   desta Stage).
 
   ### Task 13.2a — Elevação 2D + posicionamento + validação Tier 1/2
-  - **Status**: ⏱️ Planejado
+  - **Status**: ✅ Concluído (2026-07-28, mesclada em
+    `feature/13.2a-elevacao-parede`). Nova rota `/ambientes` (laboratório
+    local, sem Supabase): régua de largura + 4 faixas (inferior/bancada/
+    aéreo/torre) com alturas do perfil configuráveis na própria tela;
+    elementos de parede (janela/porta/tomada/hidráulico) desenhados por
+    posição/dimensão absoluta; itens posicionados via `lib/boxPresets.ts` +
+    faixa/x, atualizando o `BoxCanvas` modo conjunto (Task 13.0) ao vivo.
+    `validarParedeTier1`/`Tier2` rodam a cada mudança — avisos aparecem como
+    lista textual **e** destaque visual (contorno + fundo tintado) no item
+    problemático, prop nova `itensComAviso` em `BoxCanvasPropsConjunto`
+    (reaproveita `geometriaConjunto`, que ganhou `itemId`, em vez de overlay
+    HTML/SVG duplicando geometria — decisão documentada no código). Validado
+    ao vivo pelo Maestro: aviso textual conferido, destaque visual **e sua
+    cor (`#DC2626`) conferidos por leitura de pixel do canvas** — achado
+    durante a auditoria (não bloqueante, registrado abaixo) — 0 overflow
+    horizontal em 375/768/1440px, sem erros de console. 196/196 testes (11
+    novos), lint/typecheck limpos.
+    **Achado da auditoria (não bloqueante, aceito como está)**: quando dois
+    itens se sobrepõem EXATAMENTE (mesmo x e largura, caso sintético — não
+    reflete uso real, já que presets diferentes ou X diferentes são o caso
+    comum), o item desenhado por último cobre o destaque visual do primeiro
+    (fill opaco por cima). Só um dos dois itens recebe `moduloId` no
+    warning de qualquer forma (regra pré-existente de `validarParedeTier1`,
+    Task 12.2, fora de escopo desta task). Com sobreposição parcial (caso
+    real testado: x=0 e x=400, largura 800) o destaque aparece corretamente.
+    Não vale a pena corrigir agora — fica de nota para se algum dia virar
+    problema real.
   - **Modelo Recomendado**: Sonnet
   - **Prioridade**: 🔴 Alta
   - **Executor**: Frontend Engineer
