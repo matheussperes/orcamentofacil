@@ -1239,7 +1239,36 @@ jornada do cliente, agora sobre Tailwind + shadcn/ui).
     - [ ] `npm run lint`/typecheck/test passam; testado em 3 breakpoints.
 
   ### Task 13.2b — Conjuntos + handle de junção (persistência de override)
-  - **Status**: ⏱️ Planejado
+  - **Status**: ✅ Concluído (2026-07-28, mesclada em
+    `feature/13.2b-conjuntos-handle-juncao`). Backend: coluna
+    `parede.overrides_juncao jsonb not null default '[]'` aplicada
+    (migration `20260729000749`), `get_advisors` zero achados. Frontend:
+    `/ambientes` roda `detectarConjuntos`/`aplicarOverrides` (Task 12.3,
+    só consumidas) sobre os itens posicionados; `BoxCanvas` modo conjunto
+    ganhou `geometriaHandles`/`geometriaConjuntoBrackets` (geometria pura,
+    testada) + props `conjuntos`/`onToggleJuncao`, desenhando
+    colchete/contorno acima de cada bloco e um handle circular clicável
+    entre cada par adjacente (hit-testing novo em `clique()`, preservando o
+    early-return original quando as props não são passadas — Task 13.0
+    intacta). Override persistido em `localStorage` (não em Supabase nesta
+    task — decisão do Maestro: `/ambientes` não tem `parede.id` real, a
+    coluna fica pronta pra Task 13.3 usar de verdade). Cor do contorno usa
+    `accent` (v2, `#2563EB`, mesmo hex que `informacao` da v3) com
+    comentário no código avisando a Task 13.3 sobre o retrofit. 204/204
+    testes (8 novos), lint/typecheck limpos, 0 overflow em 3 breakpoints.
+    **1 rodada de correção real** (não circuit breaker, achado em auditoria
+    ao vivo do Maestro, não em teste automatizado): o padrão inicial de
+    carga do `localStorage` (efeito separado + ref-guard) tinha uma corrida
+    exposta pelo `reactStrictMode: true` do projeto — o efeito de
+    persistência rodava no mesmo flush do efeito de carga, vendo `overrides`
+    ainda `[]` no closure daquele render, e sobrescrevia o valor real com
+    `[]`. Reproduzido ao vivo (adicionar 3 itens adjacentes, quebrar o
+    handle do meio via clique sintético, confirmar `localStorage`, recarregar
+    de verdade, readicionar os mesmos itens — bracket voltava undido, override
+    perdido). Corrigido trocando pro inicializador preguiçoso do `useState`
+    (mesmo padrão que `parede`/`alturas` já usavam no mesmo arquivo) —
+    revalidado ao vivo pelo Maestro repetindo o mesmo cenário, override
+    sobrevive ao reload real.
   - **Modelo Recomendado**: Sonnet (Backend) + Sonnet (Frontend)
   - **Prioridade**: 🔴 Alta
   - **Executores**: Backend Engineer (fatia pequena) → Frontend Engineer,
