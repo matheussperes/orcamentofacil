@@ -6,8 +6,6 @@ import type {
   FrenteConteudo,
   GrupoPortas,
   SentidoAbrir,
-  TamponamentoInstancia,
-  TamponamentoLado,
 } from "./types";
 
 // Migração de dados persistidos (presets no localStorage) salvos em formatos
@@ -206,31 +204,7 @@ function coletarPortasEFundo(node: BayNode): { portas: PortaColetada[]; algumFun
   return { portas: [], algumFundo: false };
 }
 
-/** Migra o tamponamento de instância: de config única compartilhada por
- * todos os lados (antigo) para config independente por lado (novo). */
-function migrarTamponamento(raw: unknown): TamponamentoInstancia | undefined {
-  if (!raw) return undefined;
-  const t = raw as Record<string, unknown>;
-  if (typeof t.esquerdo === "boolean") {
-    const material = t.material as TamponamentoLado["material"];
-    const sarrafo = Boolean(t.sarrafo);
-    const ladoDe = (ativo: unknown): TamponamentoLado => ({
-      ativo: Boolean(ativo),
-      sarrafo,
-      material,
-    });
-    return {
-      esquerdo: ladoDe(t.esquerdo),
-      direito: ladoDe(t.direito),
-      superior: ladoDe(t.superior),
-      inferior: ladoDe(t.inferior),
-    };
-  }
-  return raw as TamponamentoInstancia;
-}
-
-/** Migra um BoxModule completo (árvore de vãos + portas + fundo global +
- * tamponamento de instância). */
+/** Migra um BoxModule completo (árvore de vãos + portas + fundo global). */
 export function migrarBoxModule(box: BoxModule): BoxModule {
   const { portas: portasAntigas, algumFundo } = coletarPortasEFundo(box.raiz);
   const gruposMigrados: GrupoPortas[] = portasAntigas.map((p, i) => ({
@@ -242,9 +216,27 @@ export function migrarBoxModule(box: BoxModule): BoxModule {
     material: p.material,
   }));
 
-  const legado = box as unknown as { overrideTemFundo?: boolean };
+  const legado = box as unknown as { overrideTemFundo?: boolean; tamponamento?: unknown };
 
-  return {
+  // Descarte-com-aviso do tamponamento de INSTÂNCIA (`BoxModule.tamponamento`,
+  // doc 12) — saiu do modelo (Dívida A resolvida, Task 13.2c): o painel
+  // colado por fora da carcaça agora é um `ElementoContinuo` tipo
+  // "tamponamento" (Modelo de Domínio 3.4/3.5), configurado em `/ambientes`,
+  // não mais uma propriedade de instância do `BoxModule`. Mesmo padrão de
+  // `migrarContent` acima (branch `BayContent` "tamponamento", Task 12.4):
+  // pré-lançamento, dado só em localStorage, sem alvo (conjuntoId/moduloId)
+  // suficiente pra reconstruir automaticamente — descarta com aviso em vez de
+  // tentar migrar.
+  if (legado.tamponamento) {
+    console.warn(
+      `[migrate] Módulo "${box.nome}" (${box.id}) tinha tamponamento de instância ` +
+        `(BoxModule.tamponamento) — descartado (Modelo de Domínio, Dívida A ` +
+        `resolvida na Task 13.2c). Recrie como Elemento Contínuo tipo ` +
+        `"tamponamento" em /ambientes, se necessário.`
+    );
+  }
+
+  const migrado: BoxModule = {
     ...box,
     raiz: migrarBayNode(box.raiz),
     portas: [...(box.portas ?? []), ...gruposMigrados],
@@ -252,6 +244,11 @@ export function migrarBoxModule(box: BoxModule): BoxModule {
     // Antes desta config existir, todo puxador era uma haste física — "haste"
     // preserva o comportamento visual/de ferragem que já estava salvo.
     puxador: box.puxador ?? "haste",
-    tamponamento: migrarTamponamento(box.tamponamento),
   };
+  // `...box` acima copia qualquer propriedade extra que o objeto bruto de
+  // entrada tenha em runtime (TS não bloqueia — `box.tamponamento` não existe
+  // mais no TIPO `BoxModule`, mas o objeto real ainda pode ter a chave) —
+  // remove explicitamente para não vazar o campo descartado no retorno.
+  delete (migrado as unknown as { tamponamento?: unknown }).tamponamento;
+  return migrado;
 }

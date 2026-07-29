@@ -1302,7 +1302,40 @@ jornada do cliente, agora sobre Tailwind + shadcn/ui).
     - [ ] `npm run lint`/typecheck/test passam.
 
   ### Task 13.2c — Elementos contínuos + resolve a Dívida A
-  - **Status**: ⏱️ Planejado
+  - **Status**: ✅ Concluído (2026-07-29, mesclada em
+    `feature/13.2c-elementos-continuos`). **Fecha a Task 13.2 inteira**
+    (13.2a → 13.2b → 13.2c, todas mescladas). Motor: removido por completo
+    `TamponamentoLado`/`TamponamentoInstancia`/`BoxModule.tamponamento`/
+    `larguraInstalacaoBox`/`gerarTamponamentoInstancia` — `larguraDoItem`
+    usa `box.largura` direto; `migrarBoxModule` descarta com aviso
+    (`console.warn`) tamponamento de instância legado em presets antigos,
+    mesmo padrão já usado pro branch `BayContent` "tamponamento" (Task
+    12.4), inclusive removendo a chave do objeto retornado mesmo quando o
+    dado bruto de entrada ainda a carrega em runtime (spread não
+    bastava). Frontend: removidos os dois blocos de desenho de
+    tamponamento em `BoxCanvas.tsx` e o `TamponamentoConfig` de
+    `app/page.tsx`; `/ambientes` ganha o primeiro mecanismo de seleção
+    (lista simples via shadcn `Table` de Conjuntos + itens avulsos — não
+    estendeu o hit-testing do canvas de novo) e um painel lateral de
+    Elemento Contínuo com BOM ao vivo via `calcularOrcamentoMisto`
+    (primeira vez que essa função roda dentro de `/ambientes`).
+    **Decisão de domínio fechada** (extremidade exposta, deixada em
+    aberto na spec): tamponamento sempre mira um módulo específico
+    (`AlvoResolvido.moduloExtremidade`, nunca o bloco inteiro — confirmado
+    em `explode.ts`, que lança erro se receber `{itens}`); esquerda/
+    direita só oferecidos ao módulo daquela ponta do Conjunto (ordenado
+    por x); base/topo oferecidos a qualquer módulo do bloco, já que
+    Conjunto é puramente horizontal. Verificado ao vivo pelo Maestro num
+    bloco de 3 itens: módulo do meio só oferece base/topo, extremidades
+    oferecem seu lado + base/topo, item avulso oferece os 4 lados — bate
+    exatamente com o decidido. 201/201 testes (204 menos 4 órfãos de
+    tamponamento de instância mais 1 novo de migração), lint/typecheck
+    limpos. **1 rodada de correção real** (achada em auditoria ao vivo,
+    não em teste automatizado): overflow horizontal em 375px (mesmo "grid
+    blowout" das Tasks 6.3b/13.1 — grid item sem `min-w-0` deixando o
+    `overflow-x-auto` das tabelas novas sem efeito); corrigido com
+    `min-w-0` nos dois `<section>` novos, revalidado ao vivo com as duas
+    tabelas populadas (0 overflow em 375/768/1440px).
   - **Modelo Recomendado**: Sonnet (Motor) + Sonnet (Frontend)
   - **Prioridade**: 🔴 Alta
   - **Executores**: Motor Engineer (remove o mecanismo antigo) → Frontend

@@ -1,7 +1,8 @@
 # Status Atual, Decisões, Pendências e Próximos Passos
 
 > Atualizado em 2026-07-28 (handoff de sessão — Stage 13/Fase C em
-> andamento, Tasks 13.0, 13.1, 13.2a e 13.2b concluídas). Este arquivo é o ponto de partida de
+> andamento, Tasks 13.0, 13.1, 13.2a, 13.2b e 13.2c concluídas — Task 13.2
+> fechada por completo). Este arquivo é o ponto de partida de
 > qualquer sessão nova — leia antes de assumir o que já existe. O projeto
 > virou V2 em 2026-07-24 (ver Seção 1) — não confie em nada anterior a essa
 > data sobre arquitetura/motor sem checar contra os documentos da Seção 7.
@@ -26,9 +27,9 @@ pipeline). 168 testes verdes.
 aceitação e ordem de dependência no `docs/Backlog.md`, e as duas dívidas
 arquiteturais que ficaram em aberto (ver Seção 6) já têm decisão fechada,
 amarradas a tasks específicas — não é mais "pendência vaga". Tasks 13.0,
-13.1, 13.2a e 13.2b concluídas; **próximo passo real: executar a Task
-13.2c** (Elementos contínuos + resolve a Dívida A). É a mudança de fase
-mais significativa
+13.1, 13.2a, 13.2b e 13.2c concluídas (Task 13.2 fechada por completo);
+**próximo passo real: executar a Task 13.3** (Shell `/orcamento/[id]`). É a
+mudança de fase mais significativa
 desde o início da V2 — sai de motor/dados puro e entra em UI (**Frontend
 Engineer** volta a ser o executor principal, UX Auditor de volta no loop).
 
@@ -295,10 +296,26 @@ handle, recarregar de verdade, confirmar que o estado persiste). 204/204
 testes, lint/typecheck limpos, 0 overflow em 3 breakpoints. Detalhe
 completo em `docs/Backlog.md`, Task 13.2b.
 
-**Próximo passo real: executar a Task 13.2c** (Elementos contínuos +
-resolve a Dívida A). Depende de 13.2b (feita). Ordem restante: **13.2c →
-13.3 → {13.4, 13.5} → 13.6 → 13.7** (13.7 é isolada, pode andar em paralelo
-a qualquer momento). Ver `docs/Backlog.md` Seção "Pipeline Stage 13" pro
+**Task 13.2c concluída (2026-07-29) — fecha a Task 13.2 inteira**
+(13.2a/13.2b/13.2c todas mescladas). Remove por completo o tamponamento de
+instância (`BoxModule.tamponamento`, Dívida A) e liga o `ElementoContinuo`
+unificado a `/ambientes` pela primeira vez: painel lateral com BOM ao vivo,
+mais o primeiro mecanismo de seleção de Conjunto/item da tela (lista, não
+canvas). Decisão de domínio fechada (extremidade exposta): tamponamento
+sempre mira um módulo específico do bloco (nunca o bloco inteiro),
+esquerda/direita só nas pontas do Conjunto, base/topo em qualquer módulo.
+Verificado ao vivo pelo Maestro num bloco de 3 itens — bate exatamente.
+201/201 testes. 1 rodada de correção real (overflow em 375px, mesmo "grid
+blowout" de tasks anteriores, corrigido com `min-w-0`). Detalhe completo em
+`docs/Backlog.md`, Task 13.2c.
+
+**Próximo passo real: executar a Task 13.3** (Shell `/orcamento/[id]` com
+abas + Dashboard `/` + fluxo de novo orçamento/cliente). Depende de
+13.2a/b/c (todas feitas). **É também onde o retrofit visual pra v3
+acontece** (`/modulo` e `/ambientes` migram pro shell real — decisão já
+registrada de não reskinar antes, ver Seção 4). Ordem restante: **13.3 →
+{13.4, 13.5} → 13.6 → 13.7** (13.7 é isolada, pode andar em paralelo a
+qualquer momento). Ver `docs/Backlog.md` Seção "Pipeline Stage 13" pro
 critério de aceitação completo de cada sub-task.
 
 **Mudança de fase importante**: as tasks da Stage 13 são majoritariamente UI

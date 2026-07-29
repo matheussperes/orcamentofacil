@@ -87,23 +87,6 @@ export interface GrupoPortas {
 // frente lisa, sem ferragem de puxador.
 export type TipoPuxador = "haste" | "perfil" | "sem_puxador";
 
-// Tamponamento de INSTÂNCIA (comercial/instalação) — diferente do
-// `BayContent` "tamponamento" (que é estrutural, parte do gabarito). Decidido:
-// o painel é colado POR FORA da carcaça já pronta, somando à largura de
-// instalação do módulo (não altera as peças internas da carcaça). Cada lado
-// tem sua própria montagem (inteiriça/sarrafo) e material.
-export interface TamponamentoLado {
-  ativo: boolean;
-  sarrafo: boolean;
-  material: BoxMaterial;
-}
-export interface TamponamentoInstancia {
-  esquerdo: TamponamentoLado;
-  direito: TamponamentoLado;
-  superior: TamponamentoLado;
-  inferior: TamponamentoLado;
-}
-
 export interface BoxModule {
   id: string;
   nome: string;
@@ -118,17 +101,7 @@ export interface BoxModule {
   portas: GrupoPortas[]; // grupos de porta, independentes da árvore de vãos
   temFundo: boolean; // aplica fundo (espessura fixa) em todos os vãos-folha "espaco"
   puxador: TipoPuxador; // haste | perfil | sem_puxador — vale pra portas e gaveta externa
-  tamponamento?: TamponamentoInstancia; // override de instância (doc 12, Etapa 3)
   overridePortas?: BoxMaterial; // override de instância: cor/espessura de TODAS as portas
-}
-
-/** Espessura lateral extra somada à largura de instalação (doc 12: decisão A). */
-export function larguraInstalacaoBox(box: BoxModule): number {
-  const t = box.tamponamento;
-  if (!t) return box.largura;
-  const esq = t.esquerdo.ativo ? t.esquerdo.material.espessura : 0;
-  const dir = t.direito.ativo ? t.direito.material.espessura : 0;
-  return box.largura + esq + dir;
 }
 
 /** Cria um vão-folha vazio (espaço sem frente, sem prateleiras, sem fundo). */
