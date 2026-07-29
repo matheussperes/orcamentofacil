@@ -12,7 +12,8 @@ import {
 } from "@/lib/engine/box/tree";
 import { corParaHex } from "./ModulePreview";
 import { alturaDoItem, corExternaDoItem, larguraDoItem, type ModuloOrcamento } from "@/lib/orcamento";
-import { derivarY, type AlturasFaixas, type ItemPosicionado } from "@/lib/engine/parede";
+import { derivarY, type AlturasFaixas, type Faixa, type ItemPosicionado } from "@/lib/engine/parede";
+import type { Conjunto } from "@/lib/engine/conjunto/types";
 
 // V3 — Canvas 2D do módulo-caixa, em dois modos:
 //  - Laboratório (padrão): vãos com borda técnica, rótulo do conteúdo,
@@ -138,6 +139,121 @@ export function geometriaConjunto(itens: ItemDoConjunto[], alturas: AlturasFaixa
     ox: ox + (m.x - boundingLeft) * scale,
     oy: oy + (boundingTopo - m.topo) * scale,
   }));
+}
+
+// Task 13.2b — Conjuntos + handle de junção.
+//
+// `geometriaHandles`/`geometriaConjuntoBrackets` são geometria pura (mesmo
+// espírito de `geometriaConjunto`: nada de Canvas aqui, só matemática
+// testável), consumidas pelo desenho (`desenharHandle`/`desenharBracketConjunto`)
+// e pelo hit-test de clique (`clique()`, mais abaixo).
+
+export interface HandleGeo {
+  itemIdA: string;
+  itemIdB: string;
+  cx: number;
+  cy: number;
+}
+
+/** Um handle por par de itens ADJACENTES (consecutivos por x, dentro da
+ * mesma faixa) — independe de os dois já formarem um Conjunto detectado:
+ * o handle serve tanto pra UNIR dois itens que hoje não formam bloco (vão
+ * maior que a tolerância, ou elemento de parede bloqueante entre eles) quanto
+ * pra QUEBRAR dois que formam (ver `aplicarOverrides`,
+ * lib/engine/conjunto/detectar.ts:159-172). Por isso esta função não recebe
+ * `Conjunto[]` — a lista de pares vem só da posição bruta dos itens, nunca do
+ * agrupamento já resolvido.
+ *
+ * Centro do círculo: X = ponto médio entre a borda direita do item à esquerda
+ * e a borda esquerda do item à direita; Y = centro vertical da faixa de
+ * sobreposição entre os dois itens (ambos compartilham a mesma base — mesma
+ * faixa, mesmo `derivarY` — mas podem ter alturas diferentes, então o centro
+ * usa a MENOR altura dos dois, garantindo que o handle sempre caia dentro dos
+ * dois retângulos). */
+export function geometriaHandles(itens: ItemDoConjunto[], alturas: AlturasFaixas): HandleGeo[] {
+  const geos = geometriaConjunto(itens, alturas);
+  const geoPorItem = new Map(geos.map((g) => [g.itemId, g]));
+
+  const porFaixa = new Map<Faixa, { itemId: string; x: number }[]>();
+  for (const { posicao } of itens) {
+    const lista = porFaixa.get(posicao.faixa) ?? [];
+    lista.push({ itemId: posicao.itemId, x: posicao.x });
+    porFaixa.set(posicao.faixa, lista);
+  }
+
+  const handles: HandleGeo[] = [];
+  for (const lista of porFaixa.values()) {
+    const ordenada = [...lista].sort((a, b) => a.x - b.x);
+    for (let i = 0; i < ordenada.length - 1; i++) {
+      const geoA = geoPorItem.get(ordenada[i].itemId);
+      const geoB = geoPorItem.get(ordenada[i + 1].itemId);
+      if (!geoA || !geoB) continue;
+
+      const larguraAPx = larguraDoItem(geoA.item) * geoA.scale;
+      const alturaAPx = alturaDoItem(geoA.item) * geoA.scale;
+      const alturaBPx = alturaDoItem(geoB.item) * geoB.scale;
+
+      const bordaDireitaA = geoA.ox + larguraAPx;
+      const bordaEsquerdaB = geoB.ox;
+      const baseA = geoA.oy + alturaAPx;
+      const baseB = geoB.oy + alturaBPx;
+      const base = (baseA + baseB) / 2; // mesma faixa -> já deveriam coincidir; média por segurança
+      const menorAltura = Math.min(alturaAPx, alturaBPx);
+
+      handles.push({
+        itemIdA: ordenada[i].itemId,
+        itemIdB: ordenada[i + 1].itemId,
+        cx: (bordaDireitaA + bordaEsquerdaB) / 2,
+        cy: base - menorAltura / 2,
+      });
+    }
+  }
+  return handles;
+}
+
+export interface ConjuntoBracket {
+  conjuntoId: string;
+  x1: number;
+  x2: number;
+  yTopo: number;
+  rotulo: string;
+}
+
+const BRACKET_OFFSET_PX = 10; // distância do colchete acima do topo do grupo
+
+/** Contorno/colchete de cada Conjunto JÁ RESOLVIDO (detecção automática +
+ * overrides, `conjuntosFinais` em `/ambientes`) — ao contrário dos handles,
+ * este SÓ desenha sobre os itens que efetivamente estão juntos agora.
+ * Bounding box em px = min/max das geometrias por item (`geometriaConjunto`)
+ * dos itensIds do Conjunto. */
+export function geometriaConjuntoBrackets(
+  itens: ItemDoConjunto[],
+  alturas: AlturasFaixas,
+  conjuntos: Conjunto[]
+): ConjuntoBracket[] {
+  const geos = geometriaConjunto(itens, alturas);
+  const geoPorItem = new Map(geos.map((g) => [g.itemId, g]));
+
+  const brackets: ConjuntoBracket[] = [];
+  conjuntos.forEach((conjunto, index) => {
+    const geosDoConjunto = conjunto.itensIds
+      .map((id) => geoPorItem.get(id))
+      .filter((g): g is GeoItemConjunto => g !== undefined);
+    if (geosDoConjunto.length === 0) return;
+
+    const x1 = Math.min(...geosDoConjunto.map((g) => g.ox));
+    const x2 = Math.max(...geosDoConjunto.map((g) => g.ox + larguraDoItem(g.item) * g.scale));
+    const yTopo = Math.min(...geosDoConjunto.map((g) => g.oy));
+
+    brackets.push({
+      conjuntoId: conjunto.id,
+      x1,
+      x2,
+      yTopo: yTopo - BRACKET_OFFSET_PX,
+      rotulo: `Conjunto ${index + 1} (${conjunto.itensIds.length} módulos)`,
+    });
+  });
+  return brackets;
 }
 
 function linha(ctx: CanvasRenderingContext2D, x1: number, y1: number, x2: number, y2: number) {
@@ -442,16 +558,100 @@ function desenharDestaqueItem(ctx: CanvasRenderingContext2D, g: GeoItemConjunto,
   ctx.strokeRect(ox + 1.5, oy + 1.5, largura - 3, altura - 3);
 }
 
+// Task 13.2b — Design-System.md Seção 9.3 especifica `stroke-informacao`
+// para o contorno/colchete do conjunto e para o handle de junção.
+// `informacao` (Design-System v3, Seção 2.4) ainda NÃO existe em
+// `tailwind.config.ts` — o retrofit de `/ambientes` pra v3 é a Task 13.3
+// (decisão já registrada no Backlog, fora do escopo desta task). Usa-se
+// `accent` (v2, já existente): `#2563EB`, EXATAMENTE o mesmo hex que a Seção
+// 2.4 do Design-System v3 atribui a `informacao` — não é aproximação, é o
+// mesmo valor. ATENÇÃO Task 13.3: quando `tailwind.config.ts` repontar
+// `accent` pra laranja (identidade v3), este uso PRECISA migrar pra
+// `informacao` (que existirá then) — senão o contorno/handle de conjunto vira
+// laranja (cor de ação/seleção) por acidente, colidindo visualmente com o
+// estado "selecionado" do módulo (mesmo risco já documentado acima para
+// `AVISO`/`AVISO_SUBTLE`).
+const CONJUNTO_COR = "#2563EB"; // accent (v2) === informacao (Design-System v3, Seção 2.4)
+
+const HANDLE_RAIO_PX = 10; // círculo de 20px de diâmetro (Design-System 9.3)
+const BRACKET_TICK_PX = 6; // altura da perna do colchete nas extremidades
+
+function desenharBracketConjunto(ctx: CanvasRenderingContext2D, bracket: ConjuntoBracket) {
+  ctx.strokeStyle = CONJUNTO_COR;
+  ctx.lineWidth = 1.5;
+  linha(ctx, bracket.x1, bracket.yTopo, bracket.x2, bracket.yTopo);
+  linha(ctx, bracket.x1, bracket.yTopo, bracket.x1, bracket.yTopo + BRACKET_TICK_PX);
+  linha(ctx, bracket.x2, bracket.yTopo, bracket.x2, bracket.yTopo + BRACKET_TICK_PX);
+
+  ctx.fillStyle = CONJUNTO_COR;
+  ctx.font = "11px sans-serif";
+  ctx.textAlign = "center";
+  ctx.fillText(bracket.rotulo, (bracket.x1 + bracket.x2) / 2, bracket.yTopo - 4);
+}
+
+/** Ícone de elo (Design-System 9.3 pede `Link`/`Unlink` do lucide, 12px) —
+ * Canvas 2D não desenha componentes React/SVG do lucide diretamente (só path
+ * data manual), então aqui aproxima-se com duas formas vetoriais simples
+ * (mesmo padrão já usado neste arquivo pra dobradiça/puxador: forma
+ * reconhecível, não ícone fotográfico). "Unido": dois elos encostados.
+ * "Quebrado": os mesmos dois elos com um vão visível entre eles. */
+function desenharIconeElo(ctx: CanvasRenderingContext2D, cx: number, cy: number, unido: boolean) {
+  const w = 6;
+  const h = 3.5;
+  const raio = 1.5;
+  const gap = unido ? 0.5 : 3.5;
+
+  ctx.strokeStyle = CONJUNTO_COR;
+  ctx.lineWidth = 1.3;
+  for (const sinal of [-1, 1]) {
+    const x = cx + sinal * (gap / 2 + (sinal < 0 ? w : 0));
+    ctx.beginPath();
+    ctx.roundRect(x, cy - h / 2, w, h, raio);
+    ctx.stroke();
+  }
+}
+
+function desenharHandle(ctx: CanvasRenderingContext2D, h: HandleGeo, unido: boolean) {
+  ctx.beginPath();
+  ctx.arc(h.cx, h.cy, HANDLE_RAIO_PX, 0, Math.PI * 2);
+  ctx.fillStyle = "#FFFFFF"; // cinza-0 (Design-System 9.3)
+  ctx.fill();
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = CONJUNTO_COR;
+  ctx.stroke();
+  desenharIconeElo(ctx, h.cx, h.cy, unido);
+}
+
+/** Estado atual do par (unido/quebrado): verifica se os dois itens estão no
+ * MESMO Conjunto já resolvido (detecção automática + overrides,
+ * `conjuntosFinais` em `/ambientes`) — nunca reconstrói essa lógica aqui
+ * (é `aplicarOverrides`, lib/engine/conjunto/detectar.ts, quem decide). */
+function parEstaUnido(itemIdA: string, itemIdB: string, conjuntos: Conjunto[]): boolean {
+  return conjuntos.some((c) => c.itensIds.includes(itemIdA) && c.itensIds.includes(itemIdB));
+}
+
 function desenharConjunto(
   ctx: CanvasRenderingContext2D,
   itens: ItemDoConjunto[],
   alturas: AlturasFaixas,
-  itensComAviso?: Map<string, "erro" | "aviso">
+  itensComAviso?: Map<string, "erro" | "aviso">,
+  conjuntos?: Conjunto[]
 ) {
   for (const g of geometriaConjunto(itens, alturas)) {
     desenharItemConjunto(ctx, g);
     const severidade = itensComAviso?.get(g.itemId);
     if (severidade) desenharDestaqueItem(ctx, g, severidade);
+  }
+
+  if (!conjuntos) return; // sem `conjuntos`, modo conjunto se comporta como nas Tasks 13.0/13.2a
+
+  for (const bracket of geometriaConjuntoBrackets(itens, alturas, conjuntos)) {
+    desenharBracketConjunto(ctx, bracket);
+  }
+  // Handles independem de já formarem Conjunto (ver `geometriaHandles`) — só
+  // o ícone (unido/quebrado) depende do estado atual de `conjuntos`.
+  for (const h of geometriaHandles(itens, alturas)) {
+    desenharHandle(ctx, h, parEstaUnido(h.itemIdA, h.itemIdB, conjuntos));
   }
 }
 
@@ -473,6 +673,8 @@ interface BoxCanvasPropsItemUnico {
   itens?: undefined;
   alturas?: undefined;
   itensComAviso?: undefined;
+  conjuntos?: undefined;
+  onToggleJuncao?: undefined;
   /** Modo bonito para cards do orçamento — sem bordas/rótulos técnicos, não interativo. */
   comercial?: boolean;
   modoSelecao?: ModoSelecao;
@@ -501,6 +703,20 @@ interface BoxCanvasPropsConjunto {
    * + fundo tintado por cima do item (ver `desenharDestaqueItem`). Opcional:
    * sem esta prop, o modo conjunto se comporta exatamente como na Task 13.0. */
   itensComAviso?: Map<string, "erro" | "aviso">;
+  /** Task 13.2b — Conjuntos JÁ RESOLVIDOS (`aplicarOverrides` sobre
+   * `detectarConjuntos`, ver lib/engine/conjunto/detectar.ts). Desenha o
+   * contorno/colchete (Design-System 9.3) acima de cada Conjunto e decide o
+   * ícone (unido/quebrado) de cada handle entre pares adjacentes. Opcional:
+   * sem esta prop, o modo conjunto se comporta como nas Tasks 13.0/13.2a (sem
+   * contorno de conjunto nem handles). */
+  conjuntos?: Conjunto[];
+  /** Task 13.2b — chamado ao clicar num handle de junção (círculo entre dois
+   * itens adjacentes) pra alternar união/quebra do par. Handles só recebem
+   * hit-testing de clique (`clique()`, abaixo) quando ESTA prop E `conjuntos`
+   * estão presentes juntas — com só `conjuntos`, os handles são puramente
+   * visuais (preserva o early-return da Task 13.0 quando as props novas não
+   * são passadas). */
+  onToggleJuncao?: (itemIdA: string, itemIdB: string) => void;
   comercial?: undefined;
   modoSelecao?: undefined;
   vaosSelecionados?: undefined;
@@ -521,6 +737,8 @@ export function BoxCanvas(props: BoxCanvasProps) {
     itens,
     alturas,
     itensComAviso,
+    conjuntos,
+    onToggleJuncao,
     comercial: comercialProp = false,
     modoSelecao = "vaos",
     vaosSelecionados = [],
@@ -532,9 +750,13 @@ export function BoxCanvas(props: BoxCanvasProps) {
     vaoGavetaSelecionado = null,
     onSelecionarVaoGaveta,
   } = props;
-  // Conjunto é sempre "bonito"/não interativo (equivalente a `comercial`) —
-  // não há seleção por item nesta task.
+  // Conjunto é sempre "bonito"/não interativo por padrão (equivalente a
+  // `comercial`) — a ÚNICA interatividade do modo conjunto é o handle de
+  // junção (Task 13.2b), tratado à parte em `clique()`, não por este flag.
   const comercial = itens ? true : comercialProp;
+  // Task 13.2b — só os handles são clicáveis no modo conjunto, e só quando
+  // as duas props novas estão presentes (ver comentário de `onToggleJuncao`).
+  const handlesInterativos = Boolean(itens && conjuntos && onToggleJuncao);
   const ref = useRef<HTMLCanvasElement>(null);
   // Vão sob o mouse (só nos modos "vaos"/"gavetas", que operam sobre os
   // mesmos retângulos de g.rects) — puramente apresentacional, não afeta
@@ -547,7 +769,7 @@ export function BoxCanvas(props: BoxCanvasProps) {
     ctx.clearRect(0, 0, W, H);
 
     if (itens && alturas) {
-      desenharConjunto(ctx, itens, alturas, itensComAviso);
+      desenharConjunto(ctx, itens, alturas, itensComAviso, conjuntos);
       return;
     }
     if (!box) return;
@@ -671,10 +893,36 @@ export function BoxCanvas(props: BoxCanvasProps) {
         ctx.fillRect(px(0), py(0) + box.altura * g.scale, box.largura * g.scale, faixa);
       }
     }
-  }, [box, itens, alturas, itensComAviso, comercial, modoSelecao, vaosSelecionados, divisaoSelecionada, portaSelecionada, vaoGavetaSelecionado, hoverId]);
+  }, [box, itens, alturas, itensComAviso, conjuntos, comercial, modoSelecao, vaosSelecionados, divisaoSelecionada, portaSelecionada, vaoGavetaSelecionado, hoverId]);
 
   function clique(e: React.MouseEvent<HTMLCanvasElement>) {
-    if (comercial || !box) return; // preview comercial / modo conjunto não é interativo
+    // Task 13.2b — modo conjunto: a ÚNICA exceção ao "não interativo" da Task
+    // 13.0 é o handle de junção, e só quando `conjuntos`+`onToggleJuncao`
+    // estão presentes juntas (`handlesInterativos`). Sem essas props novas, o
+    // `return` abaixo preserva EXATAMENTE o comportamento anterior (nenhum
+    // clique faz nada no modo conjunto) — não passa para o hit-test de `box`
+    // logo em seguida, que não existe nesse modo (`box` é sempre `undefined`
+    // quando `itens` está presente).
+    if (itens && alturas) {
+      if (handlesInterativos) {
+        const canvas = ref.current;
+        if (!canvas) return;
+        const rectEl = canvas.getBoundingClientRect();
+        const cx = ((e.clientX - rectEl.left) / rectEl.width) * W;
+        const cy = ((e.clientY - rectEl.top) / rectEl.height) * H;
+        for (const h of geometriaHandles(itens, alturas)) {
+          const dx = cx - h.cx;
+          const dy = cy - h.cy;
+          if (dx * dx + dy * dy <= HANDLE_RAIO_PX * HANDLE_RAIO_PX) {
+            onToggleJuncao?.(h.itemIdA, h.itemIdB);
+            return;
+          }
+        }
+      }
+      return;
+    }
+
+    if (comercial || !box) return; // preview comercial não é interativo
     const canvas = ref.current;
     if (!canvas) return;
     const rectEl = canvas.getBoundingClientRect();
@@ -782,7 +1030,10 @@ export function BoxCanvas(props: BoxCanvasProps) {
           width: "100%",
           maxWidth: W,
           height: "auto",
-          cursor: comercial ? "default" : "pointer",
+          // Task 13.2b — modo conjunto com handles interativos ganha cursor
+          // pointer (feedback de clicabilidade dos handles), mesmo sendo
+          // `comercial`; sem `handlesInterativos`, comportamento inalterado.
+          cursor: comercial && !handlesInterativos ? "default" : "pointer",
         }}
       />
     </div>

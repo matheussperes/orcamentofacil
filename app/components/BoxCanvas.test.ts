@@ -7,11 +7,12 @@
 // que é exatamente o que decide onde cada item é desenhado. A validação
 // visual (não regredir /modulo e os cards) é feita à parte, no browser.
 import { describe, expect, it } from "vitest";
-import { geometriaConjunto, type ItemDoConjunto } from "./BoxCanvas";
+import { geometriaConjunto, geometriaConjuntoBrackets, geometriaHandles, type ItemDoConjunto } from "./BoxCanvas";
 import { vaoVazio, type BoxModule } from "@/lib/engine/box/types";
 import type { ModuloOrcamento } from "@/lib/orcamento";
 import type { AlturasFaixas } from "@/lib/engine/parede";
 import type { Placa } from "@/lib/engine/placa/types";
+import type { Conjunto } from "@/lib/engine/conjunto/types";
 
 const W = 380;
 const H = 360;
@@ -200,5 +201,124 @@ describe("geometriaConjunto — itemId (Task 13.2a, destaque de aviso)", () => {
 
     expect(g1.itemId).toBe("instancia-a");
     expect(g2.itemId).toBe("instancia-b");
+  });
+});
+
+// Task 13.2b — Conjuntos + handle de junção. Geometria pura testável sem
+// jsdom/canvas (mesma justificativa do cabeçalho do arquivo): o que importa
+// garantir é ONDE cada handle/colchete cai, não o desenho em si.
+
+function placaItem(id: string, largura: number, altura = 700): ModuloOrcamento {
+  const placa: Placa = {
+    id,
+    nome: `Item ${id}`,
+    largura,
+    altura,
+    material: { cor: "Branco TX", espessura: 15 },
+    orientacao: "horizontal",
+  };
+  return { origem: "placa", placa };
+}
+
+describe("geometriaHandles", () => {
+  it("2 itens adjacentes na mesma faixa -> exatamente 1 handle, centrado entre as bordas encostadas", () => {
+    const itens: ItemDoConjunto[] = [
+      { item: placaItem("a", 600), posicao: { itemId: "a", x: 0, faixa: "inferior" } },
+      { item: placaItem("b", 400), posicao: { itemId: "b", x: 600, faixa: "inferior" } },
+    ];
+
+    const handles = geometriaHandles(itens, alturas);
+    expect(handles).toHaveLength(1);
+    expect(handles[0].itemIdA).toBe("a");
+    expect(handles[0].itemIdB).toBe("b");
+
+    const [g1, g2] = geometriaConjunto(itens, alturas);
+    const bordaDireitaA = g1.ox + 600 * g1.scale;
+    const bordaEsquerdaB = g2.ox;
+    expect(handles[0].cx).toBeCloseTo((bordaDireitaA + bordaEsquerdaB) / 2, 6);
+  });
+
+  it("3 itens consecutivos na mesma faixa -> 2 handles (um por par consecutivo)", () => {
+    const itens: ItemDoConjunto[] = [
+      { item: placaItem("a", 500), posicao: { itemId: "a", x: 0, faixa: "torre" } },
+      { item: placaItem("b", 500), posicao: { itemId: "b", x: 500, faixa: "torre" } },
+      { item: placaItem("c", 500), posicao: { itemId: "c", x: 1000, faixa: "torre" } },
+    ];
+
+    const handles = geometriaHandles(itens, alturas);
+    expect(handles).toHaveLength(2);
+    expect(handles.map((h) => [h.itemIdA, h.itemIdB])).toEqual([
+      ["a", "b"],
+      ["b", "c"],
+    ]);
+  });
+
+  it("itens de faixas diferentes nunca formam par (handle é só dentro da mesma faixa)", () => {
+    const itens: ItemDoConjunto[] = [
+      { item: placaItem("a", 600), posicao: { itemId: "a", x: 0, faixa: "inferior" } },
+      { item: placaItem("b", 600), posicao: { itemId: "b", x: 0, faixa: "aereo" } },
+    ];
+
+    expect(geometriaHandles(itens, alturas)).toHaveLength(0);
+  });
+
+  it("existe handle mesmo entre itens distantes (vão maior que a tolerância de encoste) — o handle serve pra permitir UNIR, não só refletir o automático", () => {
+    const itens: ItemDoConjunto[] = [
+      { item: placaItem("a", 400), posicao: { itemId: "a", x: 0, faixa: "inferior" } },
+      { item: placaItem("b", 400), posicao: { itemId: "b", x: 900, faixa: "inferior" } }, // vão de 500mm
+    ];
+
+    expect(geometriaHandles(itens, alturas)).toHaveLength(1);
+  });
+
+  it("lista vazia -> nenhum handle", () => {
+    expect(geometriaHandles([], alturas)).toEqual([]);
+  });
+});
+
+describe("geometriaConjuntoBrackets", () => {
+  it("1 Conjunto de 2 itens -> 1 colchete cobrindo a bounding box dos dois, acima do topo", () => {
+    const itens: ItemDoConjunto[] = [
+      { item: placaItem("a", 600), posicao: { itemId: "a", x: 0, faixa: "inferior" } },
+      { item: placaItem("b", 400), posicao: { itemId: "b", x: 600, faixa: "inferior" } },
+    ];
+    const conjuntos: Conjunto[] = [
+      { id: "conjunto-1", paredeId: "parede-1", faixa: "inferior", itensIds: ["a", "b"] },
+    ];
+
+    const [bracket] = geometriaConjuntoBrackets(itens, alturas, conjuntos);
+    const [g1, g2] = geometriaConjunto(itens, alturas);
+
+    expect(bracket.x1).toBeCloseTo(g1.ox, 6);
+    expect(bracket.x2).toBeCloseTo(g2.ox + 400 * g2.scale, 6);
+    expect(bracket.yTopo).toBeLessThan(Math.min(g1.oy, g2.oy));
+    expect(bracket.rotulo).toBe("Conjunto 1 (2 módulos)");
+  });
+
+  it("2 Conjuntos independentes -> 2 colchetes numerados em ordem", () => {
+    const itens: ItemDoConjunto[] = [
+      { item: placaItem("a", 400), posicao: { itemId: "a", x: 0, faixa: "inferior" } },
+      { item: placaItem("b", 400), posicao: { itemId: "b", x: 400, faixa: "inferior" } },
+      { item: placaItem("c", 400), posicao: { itemId: "c", x: 1200, faixa: "inferior" } },
+      { item: placaItem("d", 400), posicao: { itemId: "d", x: 1600, faixa: "inferior" } },
+    ];
+    const conjuntos: Conjunto[] = [
+      { id: "conjunto-1", paredeId: "parede-1", faixa: "inferior", itensIds: ["a", "b"] },
+      { id: "conjunto-2", paredeId: "parede-1", faixa: "inferior", itensIds: ["c", "d"] },
+    ];
+
+    const brackets = geometriaConjuntoBrackets(itens, alturas, conjuntos);
+    expect(brackets).toHaveLength(2);
+    expect(brackets[0].rotulo).toBe("Conjunto 1 (2 módulos)");
+    expect(brackets[1].rotulo).toBe("Conjunto 2 (2 módulos)");
+    // Conjunto 2 fica inteiramente à direita do Conjunto 1 no canvas.
+    expect(brackets[1].x1).toBeGreaterThan(brackets[0].x2);
+  });
+
+  it("sem conjuntos -> lista vazia", () => {
+    const itens: ItemDoConjunto[] = [
+      { item: placaItem("a", 600), posicao: { itemId: "a", x: 0, faixa: "inferior" } },
+    ];
+    expect(geometriaConjuntoBrackets(itens, alturas, [])).toEqual([]);
   });
 });

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -33,9 +33,26 @@ import {
   type Parede,
   type ResolvedorItens,
 } from "@/lib/engine/parede";
+import { aplicarOverrides, detectarConjuntos, type OverrideJuncao } from "@/lib/engine/conjunto";
 import type { EngineWarning } from "@/lib/engine/types";
 import { larguraDoItem, type ModuloOrcamento } from "@/lib/orcamento";
 import { listarPresets, seedPresetsPadrao, type BoxPreset } from "@/lib/boxPresets";
+
+// Task 13.2b — overrides do handle de junção (localStorage nesta task, ver
+// contrato: a coluna `parede.overrides_juncao` já existe no schema, Backend,
+// mas quem persiste de verdade é este laboratório local, igual a
+// `lib/boxPresets.ts` — migra para Supabase quando a task de Fase C que
+// persiste `/ambientes` de verdade chegar).
+const CHAVE_OVERRIDES = "ambientes_overrides_juncao";
+
+function overridesIniciais(): OverrideJuncao[] {
+  if (typeof window === "undefined") return [];
+  try {
+    return JSON.parse(window.localStorage.getItem(CHAVE_OVERRIDES) ?? "[]");
+  } catch {
+    return [];
+  }
+}
 
 // Task 13.2a — `/ambientes`: laboratório local (React state, sem Supabase),
 // mesmo espírito de `/modulo`. Consome inteiramente o motor já existente em
@@ -106,12 +123,30 @@ export default function AmbientesPage() {
   const [faixaSelecionada, setFaixaSelecionada] = useState<Faixa>("inferior");
   const [xItem, setXItem] = useState(0);
 
+  // Task 13.2b — overrides do handle de junção, local-first (mesmo padrão de
+  // `lib/boxPresets.ts`): carrega uma vez do localStorage e persiste a cada
+  // mudança. `overridesCarregadosRef` evita que o efeito de persistência
+  // rode com o array vazio inicial ANTES do efeito de carga concluir (o que
+  // sobrescreveria o localStorage com `[]` por uma fração de render).
+  const [overrides, setOverrides] = useState<OverrideJuncao[]>([]);
+  const overridesCarregadosRef = useRef(false);
+
   useEffect(() => {
     seedPresetsPadrao();
     const lista = listarPresets();
     setPresets(lista);
     if (lista[0]) setPresetSelecionado(lista[0].id);
   }, []);
+
+  useEffect(() => {
+    setOverrides(overridesIniciais());
+    overridesCarregadosRef.current = true;
+  }, []);
+
+  useEffect(() => {
+    if (!overridesCarregadosRef.current) return;
+    window.localStorage.setItem(CHAVE_OVERRIDES, JSON.stringify(overrides));
+  }, [overrides]);
 
   function atualizarParede(patch: Partial<Parede>) {
     setParede((p) => ({ ...p, ...patch }));
@@ -202,6 +237,43 @@ export default function AmbientesPage() {
         .filter((v): v is ItemDoConjunto => v !== null),
     [itensColocados, resolvedor]
   );
+
+  // Task 13.2b — Conjuntos automáticos (detecção pura, sem override) + finais
+  // (override do handle de junção por cima). Nenhuma lógica de agrupamento é
+  // reimplementada aqui — só consome `detectarConjuntos`/`aplicarOverrides`
+  // (lib/engine/conjunto/detectar.ts, já testadas).
+  const conjuntosAutomaticos = useMemo(
+    () => detectarConjuntos(paredeComItens, alturas, resolvedor),
+    [paredeComItens, alturas, resolvedor]
+  );
+
+  const conjuntosFinais = useMemo(
+    () => aplicarOverrides(conjuntosAutomaticos, paredeComItens.itens, overrides),
+    [conjuntosAutomaticos, paredeComItens.itens, overrides]
+  );
+
+  // Alterna união/quebra do par (handle de junção do BoxCanvas modo
+  // conjunto): remove qualquer override existente para o par e adiciona um
+  // novo com `forcar` invertido do estado atual (lido de `conjuntosFinais`,
+  // nunca reconstruído aqui — é `aplicarOverrides` quem decide se o par está
+  // unido). Quebrar um conjunto de 3 no meio vira 2 conjuntos de 2 (nunca
+  // sobra 1) porque essa é a regra de `aplicarOverrides`, não algo garantido
+  // por este callback.
+  function alternarJuncao(itemIdA: string, itemIdB: string) {
+    const unidoAtualmente = conjuntosFinais.some(
+      (c) => c.itensIds.includes(itemIdA) && c.itensIds.includes(itemIdB)
+    );
+    setOverrides((atuais) => [
+      ...atuais.filter(
+        (o) =>
+          !(
+            (o.itemIdA === itemIdA && o.itemIdB === itemIdB) ||
+            (o.itemIdA === itemIdB && o.itemIdB === itemIdA)
+          )
+      ),
+      { itemIdA, itemIdB, forcar: unidoAtualmente ? "quebrado" : "unido" },
+    ]);
+  }
 
   return (
     <div className="wrap">
@@ -517,7 +589,13 @@ export default function AmbientesPage() {
         <section className="rounded-lg border border-cinza-200 bg-cinza-0 p-4 shadow-xs">
           <h2 className="mb-3 text-titulo-secao text-cinza-900">Itens posicionados (conjunto)</h2>
           {itensDoConjunto.length > 0 ? (
-            <BoxCanvas itens={itensDoConjunto} alturas={alturas} itensComAviso={itensComAviso} />
+            <BoxCanvas
+              itens={itensDoConjunto}
+              alturas={alturas}
+              itensComAviso={itensComAviso}
+              conjuntos={conjuntosFinais}
+              onToggleJuncao={alternarJuncao}
+            />
           ) : (
             <p className="text-corpo-pequeno text-cinza-500">Adicione um item para visualizar.</p>
           )}
