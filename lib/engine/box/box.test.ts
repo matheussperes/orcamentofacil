@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { explodeBox, calcularOrcamentoBox } from "./index";
-import { vaoVazio, larguraInstalacaoBox, type BayNode, type BoxModule, type FrenteConteudo, type GrupoPortas, type TamponamentoLado, type TipoPuxador } from "./types";
+import { vaoVazio, type BayNode, type BoxModule, type FrenteConteudo, type GrupoPortas, type TipoPuxador } from "./types";
 import type { Peca } from "../types";
 
 const CAIXA = { cor: "Branco TX", espessura: 15 };
@@ -55,12 +55,6 @@ function grupoPortas(alvo: GrupoPortas["alvo"], opts: Partial<Omit<GrupoPortas, 
     material: opts.material ?? CAIXA,
   };
 }
-
-const ladoInativo = (): TamponamentoLado => ({
-  ativo: false,
-  sarrafo: false,
-  material: { cor: "Madeirado", espessura: 25 },
-});
 
 const nomes = (r: { pecas: { nome: string }[] }) => r.pecas.map((p) => p.nome);
 const qtd = (r: { pecas: { nome: string; quantidade: number }[] }, nome: string) =>
@@ -385,71 +379,6 @@ describe("box — puxador (haste/perfil/sem_puxador)", () => {
     const r = explodeBox(caixaVazia("inferior", raizInterna, { puxador: "haste" }));
     expect(ferr(r, "puxador")).toBe(0);
     expect(ferr(r, "perfil_puxador_m")).toBe(0);
-  });
-});
-
-describe("box — tamponamento de instância por lado (soma à largura, doc 12)", () => {
-  const ladoAtivo = (): TamponamentoLado => ({
-    ativo: true,
-    sarrafo: false,
-    material: { cor: "Madeirado", espessura: 25 },
-  });
-
-  it("sem tamponamento, largura de instalação = largura de fabricação", () => {
-    const box = caixaVazia("inferior");
-    expect(larguraInstalacaoBox(box)).toBe(800);
-  });
-
-  it("soma a espessura apenas dos lados ativos (esquerdo/direito) à largura de instalação", () => {
-    const box: BoxModule = {
-      ...caixaVazia("inferior"),
-      tamponamento: {
-        esquerdo: ladoAtivo(), direito: ladoInativo(), superior: ladoInativo(), inferior: ladoInativo(),
-      },
-    };
-    expect(larguraInstalacaoBox(box)).toBe(825); // 800 + 25
-  });
-
-  it("gera 1 peça inteiriça por lado ativo, sem alterar as peças internas da carcaça", () => {
-    const box: BoxModule = {
-      ...caixaVazia("inferior"),
-      tamponamento: {
-        esquerdo: ladoAtivo(), direito: ladoAtivo(), superior: ladoInativo(), inferior: ladoInativo(),
-      },
-    };
-    const semTamponamento = explodeBox(caixaVazia("inferior"));
-    const comTamponamento = explodeBox(box);
-    const tamponamentos = comTamponamento.pecas.filter((p) => p.nome.startsWith("Tamponamento"));
-    expect(tamponamentos).toHaveLength(2);
-    expect(tamponamentos.every((p) => p.cor === "Madeirado" && p.espessura_mm === 25)).toBe(true);
-    // Peças da carcaça (laterais/base/travessas) permanecem idênticas.
-    const semNomes = semTamponamento.pecas.map((p) => `${p.nome}:${p.largura_mm}x${p.altura_mm}`).sort();
-    const comNomesCarcaca = comTamponamento.pecas
-      .filter((p) => !p.nome.startsWith("Tamponamento") && !p.nome.startsWith("Sarrafo"))
-      .map((p) => `${p.nome}:${p.largura_mm}x${p.altura_mm}`)
-      .sort();
-    expect(comNomesCarcaca).toEqual(semNomes);
-  });
-
-  it("cada lado tem sua própria montagem (um sarrafo, outro inteiriço) e material", () => {
-    const box: BoxModule = {
-      ...caixaVazia("torre"),
-      tamponamento: {
-        esquerdo: { ativo: true, sarrafo: true, material: { cor: "Madeirado", espessura: 25 } },
-        direito: { ativo: true, sarrafo: false, material: { cor: "Branco TX", espessura: 18 } },
-        superior: ladoInativo(),
-        inferior: ladoInativo(),
-      },
-    };
-    const r = explodeBox(box);
-    const sarrafosEsquerdo = r.pecas.filter((p) => p.nome.includes("Sarrafo tamponamento (esquerdo)"));
-    expect(sarrafosEsquerdo.reduce((s, p) => s + p.quantidade, 0)).toBe(4);
-    expect(sarrafosEsquerdo.every((p) => p.cor === "Madeirado")).toBe(true);
-
-    const tampDireito = r.pecas.find((p) => p.nome === "Tamponamento direito");
-    expect(tampDireito).toBeDefined();
-    expect(tampDireito!.cor).toBe("Branco TX");
-    expect(tampDireito!.espessura_mm).toBe(18);
   });
 });
 

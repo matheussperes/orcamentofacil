@@ -180,11 +180,6 @@ describe("migrarBoxModule — portas/fundo legados viram entidades globais", () 
         id: "r", split: "none", qtdDivisorias: 0,
         content: { tipo: "portas", qtd: 2, sentidos: ["esquerda", "direita"], material: { cor: "Louro Freijó", espessura: 18 } },
       },
-      // tamponamento no formato antigo: booleans + material/sarrafo compartilhado
-      tamponamento: {
-        esquerdo: true, direito: false, superior: false, inferior: false,
-        sarrafo: false, material: { cor: "Madeirado", espessura: 18 },
-      },
     } as unknown as BoxModule;
 
     const migrado = migrarBoxModule(boxAntigo);
@@ -192,8 +187,33 @@ describe("migrarBoxModule — portas/fundo legados viram entidades globais", () 
 
     const r = explodeBox(migrado);
     expect(r.pecas.some((p) => p.nome === "Porta")).toBe(true);
-    expect(migrado.tamponamento?.esquerdo.ativo).toBe(true);
-    expect(migrado.tamponamento?.esquerdo.material.cor).toBe("Madeirado");
+  });
+
+  it("descarta tamponamento de instância (BoxModule.tamponamento) com aviso, sem quebrar o resto do preset (Dívida A resolvida, Task 13.2c)", () => {
+    const boxAntigo = {
+      id: "b1", nome: "Balcão com tamponamento de instância", tipo: "inferior",
+      largura: 800, altura: 720, profundidade: 550,
+      caixa: { cor: "Branco TX", espessura: 15 },
+      raiz: { id: "r", split: "none", qtdDivisorias: 0, content: { tipo: "espaco", frente: { tipo: "vazio" } } },
+      // tamponamento de INSTÂNCIA no formato antigo (booleans + material/sarrafo
+      // compartilhado) — campo removido do modelo na Task 13.2c.
+      tamponamento: {
+        esquerdo: true, direito: false, superior: false, inferior: false,
+        sarrafo: false, material: { cor: "Madeirado", espessura: 18 },
+      },
+    } as unknown as BoxModule;
+
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const migrado = migrarBoxModule(boxAntigo);
+
+    expect(warnSpy).toHaveBeenCalledTimes(1);
+    expect(warnSpy.mock.calls[0][0]).toMatch(/tamponamento/i);
+    expect(migrado).not.toHaveProperty("tamponamento");
+    expect(() => explodeBox(migrado)).not.toThrow();
+    // resto do preset intacto
+    expect(migrado.largura).toBe(800);
+    expect(migrado.caixa.cor).toBe("Branco TX");
+    warnSpy.mockRestore();
   });
 
   it("preset com bay de tamponamento estrutural (BayContent) é migrado descartando esse conteúdo, sem quebrar o resto do preset", () => {

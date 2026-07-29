@@ -1,6 +1,6 @@
 import { consolidarResultados } from "./engine/consolidar";
 import { explodeBox } from "./engine/box";
-import { larguraInstalacaoBox, type BoxModule } from "./engine/box/types";
+import type { BoxModule } from "./engine/box/types";
 import { explodePlaca } from "./engine/placa";
 import type { Placa } from "./engine/placa/types";
 import { explodeElementoContinuo } from "./engine/elemento-continuo";
@@ -29,13 +29,15 @@ export function idDoItem(m: ModuloOrcamento): string {
 export function paredeDoItem(m: ModuloOrcamento): string {
   return (m.origem === "custom_box" ? m.box.parede : m.placa.parede) ?? "A";
 }
-// Largura de INSTALAÇÃO (doc 12: tamponamento soma à largura, decisão A) —
-// usada na barra/canvas de ocupação da parede. Não é a largura de fabricação
-// da carcaça (essa fica em `box.largura`, intacta para o cálculo de peças).
-// Placa não tem tamponamento de instância — largura de instalação = largura
-// de face.
+// Largura usada na barra/canvas de ocupação da parede. Até a Task 13.2c
+// existia uma distinção entre "largura de instalação" (largura + tamponamento
+// de instância somado por fora) e "largura de fabricação" (box.largura). O
+// tamponamento de instância saiu do modelo (Dívida A resolvida — ver
+// `docs/Modelo-de-Dominio.md`, tamponamento agora é `ElementoContinuo`, que
+// não altera a largura do item na parede): largura de instalação = largura de
+// fabricação, sem diferença.
 export function larguraDoItem(m: ModuloOrcamento): number {
-  return m.origem === "custom_box" ? larguraInstalacaoBox(m.box) : m.placa.largura;
+  return m.origem === "custom_box" ? m.box.largura : m.placa.largura;
 }
 export function alturaDoItem(m: ModuloOrcamento): number {
   return m.origem === "custom_box" ? m.box.altura : m.placa.altura;

@@ -14,8 +14,6 @@ const TRAVESSA_PROFUNDIDADE = 70;
 const RODAPE_H = 100;
 const FOLGA_PORTA = 3;
 const FOLGA_PORTA_V = 4;
-const TAMPONAMENTO_EXTRA = 25; // 2,5cm maior que a profundidade
-const SARRAFO_LARGURA = 80;
 const GAVETA_LATERAL_H = 120;
 const GAVETA_CAIXOTE_H = 100;
 const GAVETA_FUNDO_ESP = 6;
@@ -331,47 +329,6 @@ function gerarFundoGlobal(ctx: Ctx, box: BoxModule) {
   push(ctx, "Fundo", colunas, { cor: ctx.caixa.cor, espessura: FUNDO_ESP_PADRAO }, "fundo", box.altura, larguraPorPeca, 0, 0, "comprimento");
 }
 
-/**
- * Tamponamento de INSTÂNCIA (doc 12): painéis colados por fora da carcaça já
- * pronta, um por lado ativado, cada um com sua própria montagem (inteiriça ou
- * sarrafo) e material. Não altera as peças internas da caixa — soma apenas ao
- * consumo de material (a largura de instalação é somada à parte, ver
- * `larguraInstalacaoBox`).
- */
-function gerarTamponamentoInstancia(ctx: Ctx, box: BoxModule) {
-  const t = box.tamponamento;
-  if (!t) return;
-
-  const lados: { lado: TamponamentoLadoNome; comp: number }[] = [
-    { lado: "esquerdo", comp: box.altura },
-    { lado: "direito", comp: box.altura },
-    { lado: "superior", comp: box.largura },
-    { lado: "inferior", comp: box.largura },
-  ];
-
-  const profundidade = box.profundidade + TAMPONAMENTO_EXTRA;
-  for (const l of lados) {
-    const cfg = t[l.lado];
-    if (!cfg.ativo) continue;
-    if (cfg.sarrafo) {
-      // 1º sarrafo: altura_mm = l.comp (altura ou largura do módulo, sem
-      // profundidade), largura_mm = SARRAFO_LARGURA (constante) → "comprimento".
-      push(ctx, `Sarrafo tamponamento (${l.lado})`, 2, cfg.material, "frente", l.comp, SARRAFO_LARGURA, 0, 0, "comprimento");
-      // 2º sarrafo: altura_mm = profundidade (derivada de box.profundidade),
-      // largura_mm = SARRAFO_LARGURA (constante) → profundidade já em
-      // altura_mm → "comprimento" (mesmo padrão da Base).
-      push(ctx, `Sarrafo tamponamento (${l.lado})`, 2, cfg.material, "frente", profundidade - 2 * SARRAFO_LARGURA, SARRAFO_LARGURA, 0, 0, "comprimento");
-    } else {
-      // Tamponamento inteiriço: altura_mm = l.comp (altura/largura do
-      // módulo), largura_mm = profundidade → profundidade em largura_mm →
-      // "largura" (mesmo padrão da Lateral).
-      push(ctx, `Tamponamento ${l.lado}`, 1, cfg.material, "frente", l.comp, profundidade, 1, 0, "largura");
-    }
-  }
-}
-
-type TamponamentoLadoNome = "esquerdo" | "direito" | "superior" | "inferior";
-
 export function explodeBox(box: BoxModule): BoxResult {
   const ctx: Ctx = {
     pecas: [],
@@ -394,7 +351,6 @@ export function explodeBox(box: BoxModule): BoxResult {
   explodeVao(ctx, box.raiz, interiorW, interiorH, interiorD);
   aplicarGruposPortas(ctx, box, interiorW, interiorH, t);
   gerarFundoGlobal(ctx, box);
-  gerarTamponamentoInstancia(ctx, box);
 
   const areaMdfM2 = round4(ctx.pecas.reduce((s, p) => s + p.area_m2, 0));
   const fitaM = round4(ctx.pecas.reduce((s, p) => s + p.fita_m, 0));
