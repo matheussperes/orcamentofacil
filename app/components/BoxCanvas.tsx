@@ -508,27 +508,6 @@ function desenharItemConjunto(ctx: CanvasRenderingContext2D, g: GeoItemConjunto)
     const rectPx = { x: px(rectMm.x), y: py(rectMm.y), w: rectMm.w * scale, h: rectMm.h * scale };
     desenharGrupoPortas(ctx, rectPx, grupo, box.puxador);
   }
-
-  const tamp = box.tamponamento;
-  if (tamp) {
-    const faixa = 10;
-    if (tamp.esquerdo.ativo) {
-      ctx.fillStyle = corParaHex(tamp.esquerdo.material.cor);
-      ctx.fillRect(px(0) - faixa, py(0), faixa, box.altura * scale);
-    }
-    if (tamp.direito.ativo) {
-      ctx.fillStyle = corParaHex(tamp.direito.material.cor);
-      ctx.fillRect(px(0) + box.largura * scale, py(0), faixa, box.altura * scale);
-    }
-    if (tamp.superior.ativo) {
-      ctx.fillStyle = corParaHex(tamp.superior.material.cor);
-      ctx.fillRect(px(0), py(0) - faixa, box.largura * scale, faixa);
-    }
-    if (tamp.inferior.ativo) {
-      ctx.fillStyle = corParaHex(tamp.inferior.material.cor);
-      ctx.fillRect(px(0), py(0) + box.altura * scale, box.largura * scale, faixa);
-    }
-  }
 }
 
 // Task 13.2a — Nota de Escopo do contrato: `BoxCanvasPropsConjunto` (Task
@@ -868,29 +847,6 @@ export function BoxCanvas(props: BoxCanvasProps) {
         ctx.strokeStyle = ACCENT;
         ctx.lineWidth = 2;
         ctx.strokeRect(rectPx.x + 2, rectPx.y + 2, rectPx.w - 4, rectPx.h - 4);
-      }
-    }
-
-    // Tamponamento de instância: tiras coloridas por fora da carcaça, com a
-    // cor de cada lado — dá feedback visual imediato da configuração atual.
-    const tamp = box.tamponamento;
-    if (tamp) {
-      const faixa = 10; // px, espessura visual da tira (não depende da escala real)
-      if (tamp.esquerdo.ativo) {
-        ctx.fillStyle = corParaHex(tamp.esquerdo.material.cor);
-        ctx.fillRect(px(0) - faixa, py(0), faixa, box.altura * g.scale);
-      }
-      if (tamp.direito.ativo) {
-        ctx.fillStyle = corParaHex(tamp.direito.material.cor);
-        ctx.fillRect(px(0) + box.largura * g.scale, py(0), faixa, box.altura * g.scale);
-      }
-      if (tamp.superior.ativo) {
-        ctx.fillStyle = corParaHex(tamp.superior.material.cor);
-        ctx.fillRect(px(0), py(0) - faixa, box.largura * g.scale, faixa);
-      }
-      if (tamp.inferior.ativo) {
-        ctx.fillStyle = corParaHex(tamp.inferior.material.cor);
-        ctx.fillRect(px(0), py(0) + box.altura * g.scale, box.largura * g.scale, faixa);
       }
     }
   }, [box, itens, alturas, itensComAviso, conjuntos, comercial, modoSelecao, vaosSelecionados, divisaoSelecionada, portaSelecionada, vaoGavetaSelecionado, hoverId]);

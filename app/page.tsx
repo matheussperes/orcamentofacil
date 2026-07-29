@@ -8,12 +8,7 @@ import {
   PARAMETROS_FABRICA_PADRAO,
 } from "@/lib/engine/defaults";
 import type { EngineOutput } from "@/lib/engine/types";
-import {
-  larguraInstalacaoBox,
-  type BoxModule,
-  type TamponamentoInstancia,
-  type TamponamentoLado,
-} from "@/lib/engine/box/types";
+import type { BoxModule } from "@/lib/engine/box/types";
 import type { Placa } from "@/lib/engine/placa/types";
 import {
   calcularOrcamentoMisto,
@@ -601,14 +596,6 @@ function ResumoModulo({ it }: { it: ModuloOrcamento }) {
   }
 
   const box = it.box;
-  const coresTamponamento = [
-    box.tamponamento?.esquerdo,
-    box.tamponamento?.direito,
-    box.tamponamento?.superior,
-    box.tamponamento?.inferior,
-  ]
-    .filter((l) => l?.ativo)
-    .map((l) => l!.material.cor);
 
   return (
     <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
@@ -625,10 +612,7 @@ function ResumoModulo({ it }: { it: ModuloOrcamento }) {
         <div className="muted">
           Parede {box.parede ?? "A"} · {box.largura}×{box.altura}×{box.profundidade}mm
         </div>
-        <div className="muted">
-          Interno: {box.caixa.cor} · Tamponamento:{" "}
-          {coresTamponamento.length ? [...new Set(coresTamponamento)].join(", ") : "—"}
-        </div>
+        <div className="muted">Interno: {box.caixa.cor}</div>
       </div>
     </div>
   );
@@ -740,8 +724,10 @@ function NovoModuloWizard({
 }
 
 // Card de edição de um módulo-CAIXA (V3): overrides comerciais de instância
-// (dimensões, cor/espessura interna, tamponamento) — a engenharia interna
-// (subdivisões/conteúdo dos vãos) é definida no laboratório (/modulo).
+// (dimensões, cor/espessura interna) — a engenharia interna (subdivisões/
+// conteúdo dos vãos) é definida no laboratório (/modulo). Tamponamento saiu
+// daqui (Dívida A resolvida, Task 13.2c) — agora é Elemento Contínuo,
+// configurado em /ambientes.
 function BoxModuloCard({
   box,
   paredes,
@@ -754,7 +740,6 @@ function BoxModuloCard({
   onAtualizar: (patch: Partial<BoxModule>) => void;
 }) {
   const cores = catalogo ? coresDisponiveis(catalogo) : [box.caixa.cor];
-  const larguraInstalacao = larguraInstalacaoBox(box);
   const [outrasAbertas, setOutrasAbertas] = useState(false);
 
   return (
@@ -837,12 +822,6 @@ function BoxModuloCard({
               </select>
             </div>
           </div>
-          {larguraInstalacao !== box.largura && (
-            <div className="muted mt-1.5 text-legenda">
-              Largura de instalação: {larguraInstalacao}mm (carcaça {box.largura}mm +
-              tamponamento)
-            </div>
-          )}
         </div>
       </div>
 
@@ -918,121 +897,12 @@ function BoxModuloCard({
         )}
       </div>
 
-      <TamponamentoConfig
-        catalogo={catalogo}
-        valor={box.tamponamento}
-        onChange={(t) => onAtualizar({ tamponamento: t })}
-      />
-
       <div className="muted mt-1.5 text-legenda">
         Estrutura interna (vãos, prateleiras) definida no editor.{" "}
         <a href="/modulo">Editar em /modulo</a>.
       </div>
     </>
   );
-}
-
-const LADOS_TAMPONAMENTO = ["esquerdo", "direito", "superior", "inferior"] as const;
-type LadoTampNome = (typeof LADOS_TAMPONAMENTO)[number];
-const ROTULO_LADO: Record<LadoTampNome, string> = {
-  esquerdo: "Esquerdo",
-  direito: "Direito",
-  superior: "Superior (topo)",
-  inferior: "Inferior (base)",
-};
-
-// Tamponamento de instância (doc 12): soma à largura de instalação, não altera
-// a carcaça já pronta. Cada lado tem sua PRÓPRIA montagem (inteiriça/sarrafo)
-// e material — ligar o direito não obriga o topo a usar a mesma cor.
-function TamponamentoConfig({
-  catalogo,
-  valor,
-  onChange,
-}: {
-  catalogo: Catalogo | null;
-  valor?: TamponamentoInstancia;
-  onChange: (t: TamponamentoInstancia | undefined) => void;
-}) {
-  const cores = catalogo ? coresDisponiveis(catalogo) : ["Branco TX", "Madeirado"];
-
-  if (!valor) {
-    return (
-      <Button variant="ghost" size="sm" className="mt-2" onClick={() => onChange(tamponamentoInicial(cores))}>
-        + Adicionar tamponamento
-      </Button>
-    );
-  }
-
-  function setLado(lado: LadoTampNome, patch: Partial<TamponamentoLado>) {
-    onChange({ ...valor!, [lado]: { ...valor![lado], ...patch } });
-  }
-
-  return (
-    <div className="mt-2.5 border-t border-cinza-200 pt-2">
-      <label>Tamponamento (por lado)</label>
-      {LADOS_TAMPONAMENTO.map((lado) => {
-        const cfg = valor[lado];
-        const espessuras = catalogo ? espessurasDaCor(catalogo, cfg.material.cor) : [15, 18, 25];
-        return (
-          <div key={lado} className="mt-2 border-t border-dashed border-cinza-200 pt-1.5">
-            <label className="flex items-center gap-1.5 text-corpo-pequeno">
-              <input
-                type="checkbox"
-                checked={cfg.ativo}
-                onChange={(e) => setLado(lado, { ativo: e.target.checked })}
-              />
-              {ROTULO_LADO[lado]}
-            </label>
-            {cfg.ativo && (
-              <div className="mt-1 grid grid-cols-2 gap-2 sm:grid-cols-3">
-                <div className="min-w-0">
-                  <label>Cor</label>
-                  <select value={cfg.material.cor} onChange={(e) => setLado(lado, { material: { ...cfg.material, cor: e.target.value } })}>
-                    {cores.map((c) => <option key={c} value={c}>{c}</option>)}
-                  </select>
-                </div>
-                <div className="min-w-0">
-                  <label>Espessura</label>
-                  <select
-                    value={cfg.material.espessura}
-                    onChange={(e) => setLado(lado, { material: { ...cfg.material, espessura: Number(e.target.value) } })}
-                  >
-                    {(espessuras.length ? espessuras : [15, 18, 25]).map((esp) => (
-                      <option key={esp} value={esp}>{esp} mm</option>
-                    ))}
-                  </select>
-                </div>
-                <div className="min-w-0">
-                  <label>Montagem</label>
-                  <select value={cfg.sarrafo ? "sarrafo" : "inteirica"} onChange={(e) => setLado(lado, { sarrafo: e.target.value === "sarrafo" })}>
-                    <option value="inteirica">Inteiriça</option>
-                    <option value="sarrafo">Sarrafo</option>
-                  </select>
-                </div>
-              </div>
-            )}
-          </div>
-        );
-      })}
-      <Button variant="ghost" size="sm" className="mt-2" onClick={() => onChange(undefined)}>
-        Remover tamponamento
-      </Button>
-    </div>
-  );
-}
-
-function tamponamentoInicial(cores: string[]): TamponamentoInstancia {
-  const ladoBase = (): TamponamentoLado => ({
-    ativo: false,
-    sarrafo: false,
-    material: { cor: cores[0] ?? "Branco TX", espessura: 18 },
-  });
-  return {
-    esquerdo: ladoBase(),
-    direito: ladoBase(),
-    superior: ladoBase(),
-    inferior: ladoBase(),
-  };
 }
 
 function Slider({
