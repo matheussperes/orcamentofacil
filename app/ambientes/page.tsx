@@ -864,7 +864,7 @@ export default function AmbientesPage() {
       </div>
 
       <div className="mb-4 grid grid-cols-1 gap-lg lg:grid-cols-2">
-        <section className="rounded-lg border border-cinza-200 bg-cinza-0 p-4 shadow-xs">
+        <section className="min-w-0 rounded-lg border border-cinza-200 bg-cinza-0 p-4 shadow-xs">
           <h2 className="mb-3 text-titulo-secao text-cinza-900">Blocos e itens</h2>
           <p className="mb-3 text-corpo-pequeno text-cinza-500">
             Selecione um Conjunto ou um item avulso para adicionar tampo, rodapé, tamponamento ou
@@ -922,7 +922,7 @@ export default function AmbientesPage() {
           )}
         </section>
 
-        <section className="rounded-lg border border-cinza-200 bg-cinza-0 p-4 shadow-xs">
+        <section className="min-w-0 rounded-lg border border-cinza-200 bg-cinza-0 p-4 shadow-xs">
           <h2 className="mb-3 text-titulo-secao text-cinza-900">Elementos contínuos</h2>
           {!selecao ? (
             <p className="text-corpo-pequeno text-cinza-500">
