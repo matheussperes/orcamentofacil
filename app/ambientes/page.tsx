@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -124,12 +124,19 @@ export default function AmbientesPage() {
   const [xItem, setXItem] = useState(0);
 
   // Task 13.2b — overrides do handle de junção, local-first (mesmo padrão de
-  // `lib/boxPresets.ts`): carrega uma vez do localStorage e persiste a cada
-  // mudança. `overridesCarregadosRef` evita que o efeito de persistência
-  // rode com o array vazio inicial ANTES do efeito de carga concluir (o que
-  // sobrescreveria o localStorage com `[]` por uma fração de render).
-  const [overrides, setOverrides] = useState<OverrideJuncao[]>([]);
-  const overridesCarregadosRef = useRef(false);
+  // `lib/boxPresets.ts`): inicializador preguiçoso do `useState` (mesma
+  // convenção já usada por `parede`/`alturas` acima, via `paredeInicial`/
+  // `alturasIniciais`) em vez de um efeito de carga separado. Um efeito de
+  // carga rodando `setOverrides(...)` só AGENDA o estado — não o aplica na
+  // hora — então um segundo efeito de persistência no MESMO flush de commit
+  // (como acontece no mount: React Strict Mode roda mount→cleanup→mount
+  // sincronamente) ainda vê `overrides` como `[]` no closure daquele render e
+  // sobrescreve o localStorage com `[]` antes do valor carregado aparecer.
+  // Isso já foi um bug real (encontrado em auditoria ao vivo): o override do
+  // handle de junção sumia sozinho no reload seguinte. O inicializador de
+  // `useState` roda só uma vez, antes do primeiro commit, então não existe
+  // essa janela de estado desatualizado — não precisa de ref-guard nenhum.
+  const [overrides, setOverrides] = useState<OverrideJuncao[]>(overridesIniciais);
 
   useEffect(() => {
     seedPresetsPadrao();
@@ -139,12 +146,6 @@ export default function AmbientesPage() {
   }, []);
 
   useEffect(() => {
-    setOverrides(overridesIniciais());
-    overridesCarregadosRef.current = true;
-  }, []);
-
-  useEffect(() => {
-    if (!overridesCarregadosRef.current) return;
     window.localStorage.setItem(CHAVE_OVERRIDES, JSON.stringify(overrides));
   }, [overrides]);
 
