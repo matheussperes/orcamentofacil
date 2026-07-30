@@ -22,5 +22,5 @@ export function AmbientesTabConectada({ orcamentoId, estadoInicial }: AmbientesT
     return salvarEstadoAmbiente(orcamentoId, estado);
   }
 
-  return <AmbientesLab estadoInicial={estadoInicial} onSalvar={onSalvar} />;
+  return <AmbientesLab estadoInicial={estadoInicial} onSalvar={onSalvar} orcamentoId={orcamentoId} />;
 }

@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { X } from "lucide-react";
+import Link from "next/link";
+import { Pencil, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -146,9 +147,20 @@ export interface AmbientesLabProps {
    * autosave. Quem implementa decide o destino (Supabase, localStorage,
    * no-op) e como reporta sucesso/erro. */
   onSalvar: (estado: EstadoAmbiente) => Promise<ResultadoSalvarAmbiente>;
+  /** Id do orçamento pai — só existe quando este `AmbientesLab` está
+   * conectado a um orçamento real (`AmbientesTabConectada`, Task 13.3d).
+   * Task 13.3e: quando presente, cada linha de "Itens posicionados" ganha um
+   * link "Editar item" pra `/orcamento/[id]/item/[itemId]` (o Editor de Item
+   * completo — accordion Caixa/Divisões/Portas/Gavetas/Puxador ou seções de
+   * Placa). Ausente em `AmbientesLabStandalone` (`/ambientes`, sem
+   * orçamento pai — não há pra onde linkar) e em `AmbientesTabMock` (harness
+   * `/dev/preview/orcamento`, sem `orcamentoId`/`itemId` reais que resolvam
+   * numa rota que funcione) — decisão de menor esforço documentada no
+   * relatório da 13.3e. */
+  orcamentoId?: string;
 }
 
-export function AmbientesLab({ estadoInicial, onSalvar }: AmbientesLabProps) {
+export function AmbientesLab({ estadoInicial, onSalvar, orcamentoId }: AmbientesLabProps) {
   const [parede, setParede] = useState<Parede>(() => estadoInicial.parede);
   const [alturas, setAlturas] = useState<AlturasFaixas>(() => estadoInicial.alturas);
   const [presets, setPresets] = useState<BoxPreset[]>([]);
@@ -790,14 +802,28 @@ export function AmbientesLab({ estadoInicial, onSalvar }: AmbientesLabProps) {
                             {modulo ? larguraDoItem(modulo) : "—"}
                           </TableCell>
                           <TableCell className="text-right">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => removerItem(pos.itemId)}
-                              aria-label={`Remover item ${nomeDoItem(pos.itemId)}`}
-                            >
-                              <X size={14} />
-                            </Button>
+                            <div className="flex justify-end gap-1">
+                              {orcamentoId && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  asChild
+                                  aria-label={`Editar item ${nomeDoItem(pos.itemId)}`}
+                                >
+                                  <Link href={`/orcamento/${orcamentoId}/item/${pos.itemId}`}>
+                                    <Pencil size={14} />
+                                  </Link>
+                                </Button>
+                              )}
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => removerItem(pos.itemId)}
+                                aria-label={`Remover item ${nomeDoItem(pos.itemId)}`}
+                              >
+                                <X size={14} />
+                              </Button>
+                            </div>
                           </TableCell>
                         </TableRow>
                       );
