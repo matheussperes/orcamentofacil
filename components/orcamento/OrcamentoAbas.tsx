@@ -1,9 +1,10 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { FileText, LayoutGrid, Scissors, Wallet } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AbaPlaceholder } from "./AbaPlaceholder";
+import { AbaAtivaProvider } from "./AbaAtivaContext";
 import { usePageHeader } from "@/components/shell/PageHeaderContext";
 
 // Task 13.3c (contrato .maestro/tmp/13.3c-contract.md) — shell de
@@ -27,6 +28,16 @@ import { usePageHeader } from "@/components/shell/PageHeaderContext";
 // `/dev/preview/orcamento`) decidir qual "dono de I/O" usar
 // (`AmbientesTabConectada`/`AmbientesTabMock`), sem este componente precisar
 // conhecer `EstadoAmbiente`/Supabase.
+//
+// Task 13.4 (contrato .maestro/tmp/13.4-contract.md): mesma lógica de slot
+// agora vale para "Corte & Material" (`abaCorteMaterial`), que também ganha
+// `forceMount` — `CorteMaterialTabConectada` guarda itens manuais/resultado
+// de congelamento em `useState` local, que também não deve se perder ao
+// trocar de aba (mesma razão de "Ambientes"). Além disso, `Tabs` passou de
+// não-controlado (`defaultValue`) para controlado (`value`/`onValueChange`)
+// para permitir que conteúdo de uma aba peça a troca para outra
+// (`AbaAtivaProvider`/`useIrParaAba`, ver `AbaAtivaContext.tsx`) — usado pelo
+// estado vazio do plano de corte ("Ir para Ambientes").
 export interface OrcamentoAbasProps {
   clienteNome: string;
   /** Id curto (8 primeiros caracteres do uuid, maiúsculo) — usado só como
@@ -38,9 +49,14 @@ export interface OrcamentoAbasProps {
    * (real, Supabase) ou `AmbientesTabMock` (harness), já com o estado
    * carregado/`onSalvar` resolvidos. */
   abaAmbientes: ReactNode;
+  /** Conteúdo da aba "Corte & Material" — o caller monta
+   * `CorteMaterialTabConectada` (real, Supabase) ou `CorteMaterialTabMock`
+   * (harness). Mesmo espírito de `abaAmbientes`: `OrcamentoAbas` não sabe de
+   * onde vem o dado nem para onde ele congela. */
+  abaCorteMaterial: ReactNode;
 }
 
-export function OrcamentoAbas({ clienteNome, idCurto, abaAmbientes }: OrcamentoAbasProps) {
+export function OrcamentoAbas({ clienteNome, idCurto, abaAmbientes, abaCorteMaterial }: OrcamentoAbasProps) {
   // Sobrescreve a Topbar com o breadcrumb "Orçamentos / <nome do cliente>"
   // (Design-System Seção 6) enquanto esta página estiver montada — ver
   // `components/shell/PageHeaderContext.tsx`.
@@ -51,39 +67,43 @@ export function OrcamentoAbas({ clienteNome, idCurto, abaAmbientes }: OrcamentoA
     ],
   });
 
-  return (
-    <Tabs defaultValue="ambientes">
-      <TabsList>
-        <TabsTrigger value="ambientes">
-          <LayoutGrid className="h-4 w-4" aria-hidden="true" />
-          Ambientes
-        </TabsTrigger>
-        <TabsTrigger value="corte-material">
-          <Scissors className="h-4 w-4" aria-hidden="true" />
-          Corte & Material
-        </TabsTrigger>
-        <TabsTrigger value="financeiro">
-          <Wallet className="h-4 w-4" aria-hidden="true" />
-          Financeiro
-        </TabsTrigger>
-        <TabsTrigger value="proposta">
-          <FileText className="h-4 w-4" aria-hidden="true" />
-          Proposta
-        </TabsTrigger>
-      </TabsList>
+  const [abaAtiva, setAbaAtiva] = useState("ambientes");
 
-      <TabsContent value="ambientes" forceMount className="data-[state=inactive]:hidden">
-        {abaAmbientes}
-      </TabsContent>
-      <TabsContent value="corte-material">
-        <AbaPlaceholder titulo="Corte & Material" task="13.4" />
-      </TabsContent>
-      <TabsContent value="financeiro">
-        <AbaPlaceholder titulo="Financeiro" task="13.5" />
-      </TabsContent>
-      <TabsContent value="proposta">
-        <AbaPlaceholder titulo="Proposta" task="13.6" />
-      </TabsContent>
-    </Tabs>
+  return (
+    <AbaAtivaProvider value={setAbaAtiva}>
+      <Tabs value={abaAtiva} onValueChange={setAbaAtiva}>
+        <TabsList>
+          <TabsTrigger value="ambientes">
+            <LayoutGrid className="h-4 w-4" aria-hidden="true" />
+            Ambientes
+          </TabsTrigger>
+          <TabsTrigger value="corte-material">
+            <Scissors className="h-4 w-4" aria-hidden="true" />
+            Corte & Material
+          </TabsTrigger>
+          <TabsTrigger value="financeiro">
+            <Wallet className="h-4 w-4" aria-hidden="true" />
+            Financeiro
+          </TabsTrigger>
+          <TabsTrigger value="proposta">
+            <FileText className="h-4 w-4" aria-hidden="true" />
+            Proposta
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="ambientes" forceMount className="data-[state=inactive]:hidden">
+          {abaAmbientes}
+        </TabsContent>
+        <TabsContent value="corte-material" forceMount className="data-[state=inactive]:hidden">
+          {abaCorteMaterial}
+        </TabsContent>
+        <TabsContent value="financeiro">
+          <AbaPlaceholder titulo="Financeiro" task="13.5" />
+        </TabsContent>
+        <TabsContent value="proposta">
+          <AbaPlaceholder titulo="Proposta" task="13.6" />
+        </TabsContent>
+      </Tabs>
+    </AbaAtivaProvider>
   );
 }

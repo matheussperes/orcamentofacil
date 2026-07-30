@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { Shell } from "@/components/shell/Shell";
 import { OrcamentoAbas } from "@/components/orcamento/OrcamentoAbas";
 import { AmbientesTabMock } from "@/components/ambientes/AmbientesTabMock";
+import { CorteMaterialTabMock } from "@/components/orcamento/CorteMaterialTabMock";
 
 // Task 13.3c (contrato .maestro/tmp/13.3c-contract.md) — harness DEV-ONLY:
 // renderiza o shell `/orcamento/[id]` (4 abas, Ambientes viva) com um
@@ -13,6 +14,11 @@ import { AmbientesTabMock } from "@/components/ambientes/AmbientesTabMock";
 // agora é Supabase-backed na rota real — este harness continua isolado
 // disso via `AmbientesTabMock` (estado padrão em memória + "salvar" no-op),
 // exatamente pra não precisar de sessão/Supabase aqui.
+//
+// Task 13.4 (contrato .maestro/tmp/13.4-contract.md): mesmo princípio para
+// "Corte & Material" — `CorteMaterialTabMock` (estado POPULADO em memória +
+// "congelar" no-op), ver comentário daquele arquivo sobre a diferença de
+// escopo em relação a `AmbientesTabMock`.
 export default function DevPreviewOrcamentoPage() {
   if (process.env.NODE_ENV === "production") {
     notFound();
@@ -24,6 +30,7 @@ export default function DevPreviewOrcamentoPage() {
         clienteNome="Marcenaria Boa Vista"
         idCurto="PREVIEW1"
         abaAmbientes={<AmbientesTabMock />}
+        abaCorteMaterial={<CorteMaterialTabMock />}
       />
     </Shell>
   );

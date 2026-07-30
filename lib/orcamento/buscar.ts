@@ -17,6 +17,9 @@ export interface OrcamentoDetalhe {
   /** `orcamento` não tem coluna de título — mesma regra da 13.3b (Dashboard):
    * o rótulo é o nome do cliente. */
   clienteNome: string;
+  /** `orcamento.frete` (Task 11.2, numeric nullable) — Task 13.4: exibido
+   * (só leitura) na aba Corte & Material; editar é escopo da Task 13.5. */
+  frete: number | null;
 }
 
 type ClienteAninhado = { nome: string | null } | { nome: string | null }[] | null;
@@ -42,7 +45,7 @@ export async function buscarOrcamentoPorId(id: string): Promise<OrcamentoDetalhe
 
   const { data, error } = await supabase
     .from("orcamento")
-    .select("id, status, prazo_entrega, cliente(nome)")
+    .select("id, status, prazo_entrega, frete, cliente(nome)")
     .eq("id", id)
     .maybeSingle();
 
@@ -54,6 +57,7 @@ export async function buscarOrcamentoPorId(id: string): Promise<OrcamentoDetalhe
     id: data.id as string,
     status: data.status as StatusOrcamento,
     prazoEntrega: (data.prazo_entrega as string | null) ?? null,
+    frete: (data.frete as number | null) ?? null,
     clienteNome: nomeDoCliente(data.cliente as ClienteAninhado),
   };
 }
@@ -88,7 +92,7 @@ export async function buscarItemDoOrcamento(
 
   const { data, error } = await supabase
     .from("orcamento")
-    .select("id, status, prazo_entrega, cliente(nome), itens")
+    .select("id, status, prazo_entrega, frete, cliente(nome), itens")
     .eq("id", orcamentoId)
     .maybeSingle();
 
@@ -107,6 +111,7 @@ export async function buscarItemDoOrcamento(
       id: data.id as string,
       status: data.status as StatusOrcamento,
       prazoEntrega: (data.prazo_entrega as string | null) ?? null,
+      frete: (data.frete as number | null) ?? null,
       clienteNome: nomeDoCliente(data.cliente as ClienteAninhado),
     },
     item,

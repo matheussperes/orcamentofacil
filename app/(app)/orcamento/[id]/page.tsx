@@ -1,8 +1,10 @@
 import { notFound } from "next/navigation";
 import { buscarOrcamentoPorId } from "@/lib/orcamento/buscar";
 import { carregarEstadoAmbiente } from "@/lib/ambiente/carregar";
+import { buscarUltimaListaMaterial } from "@/lib/lista-material/buscarUltima";
 import { OrcamentoAbas } from "@/components/orcamento/OrcamentoAbas";
 import { AmbientesTabConectada } from "@/components/ambientes/AmbientesTabConectada";
+import { CorteMaterialTabConectada } from "@/components/orcamento/CorteMaterialTabConectada";
 
 // Task 13.3c (contrato .maestro/tmp/13.3c-contract.md) — shell de
 // `/orcamento/[id]` com 4 abas. Server Component: busca o orçamento (RLS
@@ -18,6 +20,16 @@ import { AmbientesTabConectada } from "@/components/ambientes/AmbientesTabConect
 // (`carregarEstadoAmbiente`, Supabase) e monta `AmbientesTabConectada` — o
 // único ponto de I/O Supabase da aba "Ambientes" — para passar pra
 // `OrcamentoAbas` via slot `abaAmbientes`.
+//
+// Task 13.4 (contrato .maestro/tmp/13.4-contract.md): a aba "Corte &
+// Material" REAPROVEITA a MESMA chamada `carregarEstadoAmbiente` (não busca
+// os dados de novo) — `estadoAmbiente.modulos`/`elementosContinuos` já tem
+// tudo que o plano de corte/lista de material do orçamento inteiro precisa.
+// Além disso lê `orcamento.frete` (já em `buscarOrcamentoPorId`, retrofit
+// desta task) e a última linha de `lista_material` congelada
+// (`buscarUltimaListaMaterial`, leitura nova e pequena — só metadado,
+// nenhuma decisão de schema) para satisfazer "recarregar a página não perde
+// a intenção".
 export default async function OrcamentoPage({ params }: { params: { id: string } }) {
   const orcamento = await buscarOrcamentoPorId(params.id);
 
@@ -27,6 +39,7 @@ export default async function OrcamentoPage({ params }: { params: { id: string }
 
   const idCurto = orcamento.id.slice(0, 8).toUpperCase();
   const estadoAmbiente = await carregarEstadoAmbiente(orcamento.id);
+  const ultimaCongeladaEm = await buscarUltimaListaMaterial(orcamento.id);
 
   return (
     <OrcamentoAbas
@@ -34,6 +47,14 @@ export default async function OrcamentoPage({ params }: { params: { id: string }
       idCurto={idCurto}
       abaAmbientes={
         <AmbientesTabConectada orcamentoId={orcamento.id} estadoInicial={estadoAmbiente} />
+      }
+      abaCorteMaterial={
+        <CorteMaterialTabConectada
+          orcamentoId={orcamento.id}
+          estadoInicial={estadoAmbiente}
+          frete={orcamento.frete}
+          ultimaCongeladaEmInicial={ultimaCongeladaEm}
+        />
       }
     />
   );
