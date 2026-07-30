@@ -90,7 +90,17 @@ export function DashboardView({ orcamentos, contagemPorStatus }: DadosDashboard)
               <TableBody>
                 {orcamentos.map((o) => (
                   <TableRow key={o.id}>
-                    <TableCell className="font-medium text-cinza-900">{o.clienteNome}</TableCell>
+                    <TableCell className="font-medium text-cinza-900">
+                      {/* Task 13.3c — só agora existe um destino real
+                          (`/orcamento/[id]`); antes desta task, qualquer link
+                          aqui seria um 404. */}
+                      <Link
+                        href={`/orcamento/${o.id}`}
+                        className="hover:text-accent hover:underline"
+                      >
+                        {o.clienteNome}
+                      </Link>
+                    </TableCell>
                     <TableCell>
                       <StatusOrcamentoBadge status={o.status} />
                     </TableCell>

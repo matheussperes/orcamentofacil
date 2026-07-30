@@ -4,6 +4,8 @@ import { useRouter, usePathname } from "next/navigation";
 import { LogOut, Menu } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+import { useTopbarHeaderOverride } from "./PageHeaderContext";
 
 // Task 13.3b (contrato .maestro/tmp/13.3b-contract.md) — Topbar autenticada
 // v3 (Design-System.md Seção 6 + 7.5). Componente NOVO, custom.
@@ -23,11 +25,13 @@ import { Button } from "@/components/ui/button";
 // `usePathname`) em vez de recebidos como prop obrigatória de quem monta o
 // `Shell` — `app/(app)/layout.tsx` envolve MAIS de uma rota (Dashboard +
 // placeholder "Novo orçamento"), então o layout sozinho não sabe qual título
-// mostrar por página. Mecanismo mais rico (cada `page.tsx` define seu
-// próprio título via contexto/slot) fica para quando o shell cobrir rotas
-// com estrutura mais variada (breadcrumb "Orçamento #123 > Editor", Seção 6)
-// — hoje só 2 rotas simples usam isso, um mapa já resolve sem
-// over-engineering.
+// mostrar por página. Cobre as rotas SEM dado dinâmico; `/orcamento/[id]`
+// (Task 13.3c) precisa do nome do cliente, que só existe depois de uma
+// consulta ao Supabase feita pelo Server Component da rota — para esse
+// caso, o "mecanismo mais rico" que este comentário previa chegou:
+// `PageHeaderContext.tsx` (`usePageHeader`), consumido via
+// `useTopbarHeaderOverride` abaixo. Quando há sobrescrita ativa, ela vence
+// o mapa estático.
 const TITULOS_POR_ROTA: Record<string, { titulo: string; subtitulo?: string }> = {
   "/": { titulo: "Dashboard", subtitulo: "Visão geral dos seus orçamentos" },
   "/dev/preview": {
@@ -35,6 +39,7 @@ const TITULOS_POR_ROTA: Record<string, { titulo: string; subtitulo?: string }> =
     subtitulo: "Visão geral dos seus orçamentos (preview com dados mock)",
   },
   "/orcamento/novo": { titulo: "Novo orçamento" },
+  "/dev/preview/orcamento/novo": { titulo: "Novo orçamento (preview)" },
 };
 const TITULO_PADRAO = { titulo: "OrçaFácil" };
 
@@ -45,7 +50,9 @@ export interface TopbarProps {
 export function Topbar({ onAbrirMenu }: TopbarProps) {
   const router = useRouter();
   const pathname = usePathname();
+  const override = useTopbarHeaderOverride();
   const { titulo, subtitulo } = TITULOS_POR_ROTA[pathname] ?? TITULO_PADRAO;
+  const breadcrumb = override?.breadcrumb;
 
   async function sair() {
     const supabase = createClient();
@@ -66,8 +73,47 @@ export function Topbar({ onAbrirMenu }: TopbarProps) {
           <Menu className="h-5 w-5" />
         </button>
         <div className="min-w-0">
-          <h1 className="truncate text-display font-bold text-cinza-900">{titulo}</h1>
-          {subtitulo && <p className="truncate text-corpo text-cinza-500">{subtitulo}</p>}
+          {breadcrumb && breadcrumb.length > 0 ? (
+            // Só o ÚLTIMO segmento (nome do cliente, potencialmente longo)
+            // recebe `min-w-0 flex-1 truncate` — os anteriores ("Orçamentos")
+            // são curtos e fixos, então ficam `shrink-0` para nunca sumir
+            // antes do segmento atual truncar (Design-System Seção 10:
+            // nenhum overflow horizontal em qualquer largura ≥360px).
+            <nav aria-label="Breadcrumb" className="flex min-w-0 items-center text-corpo">
+              {breadcrumb.map((segmento, i) => {
+                const atual = i === breadcrumb.length - 1;
+                return (
+                  <span key={i} className={cn("flex items-center", atual && "min-w-0 flex-1")}>
+                    {i > 0 && (
+                      <span aria-hidden="true" className="mx-xs shrink-0 text-cinza-400">
+                        /
+                      </span>
+                    )}
+                    <span
+                      className={cn(
+                        atual
+                          ? "min-w-0 flex-1 truncate font-medium text-cinza-900"
+                          : "shrink-0 whitespace-nowrap text-cinza-500"
+                      )}
+                    >
+                      {segmento.rotulo}
+                    </span>
+                  </span>
+                );
+              })}
+            </nav>
+          ) : (
+            <>
+              <h1 className="truncate text-display font-bold text-cinza-900">
+                {override?.titulo ?? titulo}
+              </h1>
+              {(override?.subtitulo ?? subtitulo) && (
+                <p className="truncate text-corpo text-cinza-500">
+                  {override?.subtitulo ?? subtitulo}
+                </p>
+              )}
+            </>
+          )}
         </div>
       </div>
 

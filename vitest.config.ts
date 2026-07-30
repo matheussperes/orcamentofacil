@@ -9,6 +9,12 @@ export default defineConfig({
   },
   test: {
     environment: "node",
-    include: ["lib/**/*.test.ts", "app/**/*.test.ts"],
+    // Task 13.3c: `ElevacaoParede.tsx`/`.test.ts` migraram de `app/ambientes/`
+    // para `components/ambientes/` (extração de `AmbientesLab.tsx`,
+    // reaproveitado tanto por `/ambientes` quanto pela aba "Ambientes" de
+    // `/orcamento/[id]`) — sem este padrão, o teste parava de rodar
+    // silenciosamente (Vitest só ignora, não falha, arquivo fora do
+    // `include`).
+    include: ["lib/**/*.test.ts", "app/**/*.test.ts", "components/**/*.test.ts"],
   },
 });
