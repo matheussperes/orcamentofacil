@@ -1430,7 +1430,15 @@ jornada do cliente, agora sobre Tailwind + shadcn/ui).
   (Task 11.2, RLS já pronta). Depende de 13.2a/b/c e **de 13.3a (auth — sem
   sessão não há o que persistir)**. A aba "Ambientes" migra de `/ambientes`
   pra cá; `/modulo` migra pro Editor de Item em `/orcamento/[id]/item/[itemId]`.
-  Provavelmente será quebrada em sub-tasks (é a maior da Stage). 🟡 Média · Sonnet.
+  **Quebrada em 3 sub-tasks (2026-07-30)**: 13.3b (shell sidebar+topbar v3 +
+  Dashboard `/` + retrofit visual v3 do app inteiro + harness `/dev/preview`)
+  → 13.3c (`/orcamento/[id]` com abas + fluxo de novo orçamento/cliente +
+  migra aba Ambientes) → 13.3d (migra `/modulo` → Editor de Item). **Constraint
+  de auditoria** (efeito do gate da 13.3a): telas autenticadas não abrem sem
+  login e o Maestro não loga (não cria conta/senha) — por isso a 13.3b entrega
+  um harness `/dev/preview` (rota dev-only, 404 em produção, pública no gate)
+  renderizando shell+Dashboard com mock, pro Maestro auditar o visual sem
+  sessão (decisão do operador 2026-07-30). 🟡 Média · Sonnet.
   **Dívida de retrofit visual (2026-07-28, decisão do operador)**:
   `docs/Design-System.md` foi reescrito integralmente nesta data (v3 —
   sidebar navy/laranja a partir de 12 mockups + logo oficial, substitui o
