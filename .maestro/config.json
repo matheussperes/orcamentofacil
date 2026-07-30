@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 2,
+  "framework": {
+    "plugin": "maestro",
+    "version": "3.0.0"
+  },
+  "conventions": {
+    "enginePath": "engine",
+    "sourcePath": "app",
+    "migrationsPath": "supabase/migrations",
+    "scripts": {
+      "build": "npm run build",
+      "lint": "npm run lint",
+      "typecheck": "npm run typecheck",
+      "test": "npm run test",
+      "dev": "npm run dev",
+      "seedQaUser": null
+    },
+    "breakpoints": {
+      "mobile": 375,
+      "tablet": 768,
+      "desktop": 1440
+    },
+    "mainBranch": "main"
+  },
+  "gates": {
+    "maxAttemptsPerGate": 2,
+    "uxAuditRequiresScreenshots": true,
+    "qaGateEnabled": true
+  }
+}

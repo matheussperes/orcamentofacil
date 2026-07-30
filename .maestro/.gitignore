@@ -1,0 +1,9 @@
+# Estado efemero do Maestro: nao vai para o repositorio do projeto.
+tmp/
+cache/
+logs/
+state/
+
+# Propostas e configuracao sao versionaveis.
+!proposals/
+!config.json
