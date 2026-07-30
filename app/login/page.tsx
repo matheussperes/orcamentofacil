@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useState, type FormEvent } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { Eye, EyeOff, Lock, Mail } from "lucide-react";
@@ -20,15 +20,35 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 // `marinho`/`marca` (isolados do `accent` v2 já em uso pelas telas
 // existentes).
 //
+// `useSearchParams` exige um limite de Suspense ao redor de quem o chama
+// (senão o Next tenta prerenderizar a página inteira como estática e
+// falha) — por isso o formulário fica num componente interno e o export
+// default só monta o Suspense.
+export default function LoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginForm />
+    </Suspense>
+  );
+}
+
 // Client component: usa o Supabase browser client (lib/supabase/client.ts,
 // já configurado na Task 11.1 — não criamos client novo).
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
   const [mostrarSenha, setMostrarSenha] = useState(false);
   const [carregando, setCarregando] = useState(false);
-  const [erro, setErro] = useState<string | null>(null);
+  // Estado inicial cobre o retorno de app/auth/confirm/route.ts quando o
+  // link de confirmação de e-mail está inválido/expirado (?erro=confirmacao)
+  // — ver Design-System Seção 11 (diz o que aconteceu + o que fazer).
+  const [erro, setErro] = useState<string | null>(() =>
+    searchParams.get("erro") === "confirmacao"
+      ? "O link de confirmação do seu e-mail é inválido ou expirou. Peça um novo cadastro em “Criar conta”, ou tente entrar caso já tenha confirmado antes."
+      : null
+  );
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();

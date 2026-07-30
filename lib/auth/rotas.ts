@@ -10,7 +10,12 @@
 // Extraído como função pura (em vez de inline em `middleware.ts`) para ser
 // testável com Vitest sem precisar mockar `NextRequest`/`NextResponse` —
 // mesmo padrão de teste já usado no resto do repo (funções puras, sem DOM).
-export const ROTAS_PUBLICAS = ["/login", "/signup"] as const;
+//
+// `/auth/confirm` (correção pós-auditoria da 13.3a): rota de callback do
+// link de confirmação de e-mail (app/auth/confirm/route.ts). É clicada por
+// um browser SEM sessão — o gate NÃO pode redirecionar essa request pro
+// /login antes da rota processar o `token_hash` e criar a sessão.
+export const ROTAS_PUBLICAS = ["/login", "/signup", "/auth/confirm"] as const;
 
 /** Rotas que NÃO passam pelo gate de sessão do middleware. */
 export function isRotaPublica(pathname: string): boolean {
