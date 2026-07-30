@@ -1,8 +1,8 @@
 # Status Atual, Decisões, Pendências e Próximos Passos
 
-> Atualizado em 2026-07-30 (handoff de sessão — Stage 13/Fase C em
-> andamento, Tasks 13.0 a 13.3e concluídas — Task 13.2 e Task 13.3 fechadas
-> por completo. **Cadeia pausada por pedido do operador antes da 13.4** —
+> Atualizado em 2026-07-30 (Stage 13/Fase C em progresso — Tasks 13.0 a 13.4
+> concluídas — Task 13.2, Task 13.3 e Task 13.4 fechadas por completo. Pausa
+> anterior à 13.4 foi levantada — próximo passo: Task 13.5.
 > ver fim da Seção 6). Este arquivo é o ponto de partida de
 > qualquer sessão nova — leia antes de assumir o que já existe. O projeto
 > virou V2 em 2026-07-24 (ver Seção 1) — não confie em nada anterior a essa
@@ -410,17 +410,26 @@ topbar), Dashboard, orçamento com 4 abas persistindo no Supabase (cabeçalho
 `/dev/preview/*` cobrindo shell/dashboard/orçamento/ambientes/editor pro
 Maestro auditar sem sessão. Retrofit visual v3 aplicado globalmente.
 
-**PAUSA solicitada pelo operador (2026-07-30)**: a cadeia automática
-13.3→13.4→13.5 foi interrompida por decisão do operador depois que um
-agente bateu o limite de gasto mensal da conta no meio da 13.3d (o Maestro
-terminou aquela task diretamente, sem perder trabalho). Operador pediu pra
-**parar aqui e confirmar explicitamente** antes de iniciar a Task 13.4.
-**Próximo passo real (aguardando confirmação do operador): Task 13.4**
-(Corte & Material). Depois: **13.5 → 13.6 → 13.7**. **Pendência do
-operador** (pra usar o app real e validar os writes E2E, inclusive
-`/modulo`): configurar dashboard Supabase (Site URL/Redirect URLs + template
-de e-mail, ou desligar "Confirm email") e criar a 1ª conta. Ver
-`docs/Backlog.md` Stage 13.
+**Task 13.4 concluída (2026-07-30)**: Corte & Material — aba funcional em
+`/orcamento/[id]`, plano de corte agregado (todos os itens do orçamento),
+reaproveitando `PlanoCorteCanvas`/`todasAsPecas` existentes com respeito a
+restrição de veio (Task 12.5); barra de aproveitamento por chapa (verde ≥70% /
+amber 40-70% / vermelho <40%); lista de material/pré-pedido via
+`montarLinhasInsumos` + itens manuais; congelamento explícito em `lista_material`
+(INSERT-only, `organizacao_id` do perfil); extração texto/CSV client-side;
+`resolverAlvoElemento` extraída pra `lib/ambiente/resolverAlvo.ts` (sem
+regressão); `OrcamentoAbas` controlado via `AbaAtivaContext`; harness
+`/dev/preview/orcamento` estendido. Zero migrations. Code Auditor (251/251
+testes), Security Auditor (zero achados), QA Engineer (251/251 + 4 estados),
+UX Auditor (0 overflow, cores confirmadas). Zero correções. Detalhe em
+`docs/Backlog.md` Task 13.4.
+
+A pausa solicitada pelo operador (2026-07-30, a meio da 13.3d —agente bateu
+limite de gasto mensal) foi levantada. **Próximo passo real: Task 13.5**
+(Financeiro). Depois: **13.6 → 13.7**. **Pendência do operador** (pra usar o
+app real e validar writes E2E, inclusive `/modulo`): configurar dashboard
+Supabase (Site URL/Redirect URLs + template e-mail, ou desligar "Confirm
+email") e criar 1ª conta. Ver `docs/Backlog.md` Stage 13.
 
 **Mudança de fase importante**: as tasks da Stage 13 são majoritariamente UI
 — o **Frontend Engineer** volta a ser o executor principal, com **UX
