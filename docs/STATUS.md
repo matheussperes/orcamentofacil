@@ -344,14 +344,31 @@ recoloridas via token); o `app/page.tsx` antigo (simulador de orçamento
 completo multi-módulo + gerar PDF) foi aposentado sem substituto ainda —
 reconstruído na 13.3c (orçamento real) / 13.5 (preço).
 
-**Próximo passo real: executar a Task 13.3c** (`/orcamento/[id]` com as 4
-abas + fluxo de novo orçamento/cliente persistindo no Supabase + migra a aba
-Ambientes de `/ambientes` pra dentro do shell). Depois: **13.3d (migra
-editor) → {13.4, 13.5} → 13.6 → 13.7**. Operador pediu (2026-07-29) encadear
-automaticamente com commit/merge/push entre cada, mantendo os gates do
-Maestro. **Pendência do operador** (pra usar o app real): configurar
-dashboard Supabase (Site URL/Redirect URLs + template de e-mail, ou desligar
-"Confirm email") e criar a 1ª conta. Ver `docs/Backlog.md` Stage 13.
+**Task 13.3c concluída (2026-07-30)**: `/orcamento/[id]` (route group
+`(app)`) com 4 abas shadcn (underline accent laranja) — Ambientes viva (lab
+migrado via `components/ambientes/AmbientesLab.tsx`), Corte&Material/
+Financeiro/Proposta placeholder (13.4/13.5/13.6). Fluxo de novo orçamento
+(`/orcamento/novo`): Server Action `lib/orcamento/criar.ts` insere cliente +
+orcamento (rascunho), `organizacao_id` lido do `perfil` do usuário
+autenticado (nunca do client), RLS-safe, redirect pra `/orcamento/[id]`.
+**Primeiro write real no Supabase.** Estado profundo de Ambientes segue local
+escopado por orçamento (chave localStorage inclui o id; persistência disso em
+`ambiente`/`parede` é task futura dedicada) — cabeçalho persiste. Harness
+`/dev/preview/orcamento[/novo]` estendido. Auditado via harness: 4 abas +
+troca + placeholders + breadcrumb + form, sem overflow em 375; write path
+revisado (seguro). 224 testes, tsc/lint limpos. **Limitação menor conhecida**:
+se o insert de cliente passar mas o de orçamento falhar, sobra cliente órfão
+(sem transação — Supabase JS; aceitável MVP, cleanup futuro via RPC). Write
+E2E real só o operador valida (sessão).
+
+**Próximo passo real: executar a Task 13.3d** (migra `/modulo` → Editor de
+Item em `/orcamento/[id]/item/[itemId]`, dentro do shell + retrofit v3 do
+editor). Última sub-task da 13.3. Depois: **{13.4, 13.5} → 13.6 → 13.7**.
+Operador pediu (2026-07-29) encadear automaticamente com commit/merge/push +
+gates do Maestro. **Pendência do operador** (pra usar o app real e validar os
+writes E2E): configurar dashboard Supabase (Site URL/Redirect URLs + template
+de e-mail, ou desligar "Confirm email") e criar a 1ª conta. Ver
+`docs/Backlog.md` Stage 13.
 
 **Mudança de fase importante**: as tasks da Stage 13 são majoritariamente UI
 — o **Frontend Engineer** volta a ser o executor principal, com **UX
