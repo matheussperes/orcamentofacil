@@ -80,10 +80,37 @@ export function Sidebar({ user, mobileOpen, onFecharMobile }: SidebarProps) {
       )}
 
       <aside
+        data-state={mobileOpen ? "open" : "closed"}
         className={cn(
-          "fixed inset-y-0 left-0 z-50 flex w-[264px] flex-col bg-marinho-900 shadow-sidebar transition-transform duration-200 ease-out-back",
-          "xl:sticky xl:top-0 xl:z-auto xl:h-screen xl:translate-x-0",
-          mobileOpen ? "translate-x-0" : "-translate-x-full"
+          // Bug real encontrado em auditoria (13.3b) e corrigido aqui: a
+          // versão anterior animava `transform`/`translate-x-*` (fechado:
+          // `-translate-x-full`, aberto: `translate-x-0`, `xl`:
+          // `xl:translate-x-0`). Confirmado por diagnóstico (classe e
+          // `--tw-translate-x` atualizavam certo no DOM/CSSOM, o `<aside>`
+          // ficava com o valor de variável CORRETO) que o `transform`
+          // COMPUTADO não recompunha a partir da variável depois da primeira
+          // transição — reproduzido tanto trocando a classe via ternário
+          // quanto trocando via seletor de atributo (`data-[state=open]:
+          // translate-x-0`, maior especificidade): as duas formas de alterar
+          // QUAL REGRA vence sobre o `transform` (que em todo utilitário
+          // `translate-x-*` do Tailwind é montado a partir de várias
+          // custom properties `--tw-translate-x/rotate/skew/scale-*`
+          // compostas na mesma declaração `transform: translate(...)
+          // rotate(...) ...`) mostraram o mesmo sintoma. Fix: anima-se
+          // `left` em vez de `transform` — `left` é uma propriedade simples,
+          // sem composição via `var()` com outras utilities, então não tem
+          // essa classe de problema. Custo aceito: perde a aceleração por
+          // GPU do `transform` (o painel dispara reflow a cada frame em vez
+          // de só compositing), irrelevante para uma animação de abrir/
+          // fechar drawer, pouco frequente.
+          "fixed inset-y-0 z-50 flex w-[264px] -left-[264px] flex-col bg-marinho-900 shadow-sidebar transition-[left] duration-200 ease-out-back",
+          // Aberto abaixo de `xl`: variante de atributo `data-state=open`
+          // (mesmo padrão do Radix/shadcn para abrir/fechar) — as DUAS
+          // classes (`-left-[264px]` e `data-[state=open]:left-0`) ficam
+          // sempre presentes; só o atributo `data-state` muda.
+          "data-[state=open]:left-0",
+          // `xl`: sempre visível, independente do estado do drawer.
+          "xl:sticky xl:top-0 xl:z-auto xl:h-screen xl:left-0"
         )}
         aria-label="Navegação principal"
       >
