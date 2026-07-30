@@ -2,9 +2,11 @@ import { notFound } from "next/navigation";
 import { buscarOrcamentoPorId } from "@/lib/orcamento/buscar";
 import { carregarEstadoAmbiente } from "@/lib/ambiente/carregar";
 import { buscarUltimaListaMaterial } from "@/lib/lista-material/buscarUltima";
+import { carregarConfiguracaoPrecificacao } from "@/lib/precificacao/carregarConfiguracao";
 import { OrcamentoAbas } from "@/components/orcamento/OrcamentoAbas";
 import { AmbientesTabConectada } from "@/components/ambientes/AmbientesTabConectada";
 import { CorteMaterialTabConectada } from "@/components/orcamento/CorteMaterialTabConectada";
+import { FinanceiroTabConectada } from "@/components/orcamento/FinanceiroTabConectada";
 
 // Task 13.3c (contrato .maestro/tmp/13.3c-contract.md) — shell de
 // `/orcamento/[id]` com 4 abas. Server Component: busca o orçamento (RLS
@@ -30,6 +32,13 @@ import { CorteMaterialTabConectada } from "@/components/orcamento/CorteMaterialT
 // (`buscarUltimaListaMaterial`, leitura nova e pequena — só metadado,
 // nenhuma decisão de schema) para satisfazer "recarregar a página não perde
 // a intenção".
+//
+// Task 13.5 (contrato .maestro/tmp/13.5-contract.md): a aba "Financeiro"
+// também reaproveita `estadoAmbiente` (mesma chamada) e soma uma leitura
+// nova pequena, `carregarConfiguracaoPrecificacao` (resolve
+// `orcamento.modo_precificacao`/`modo_montagem`/`frete` contra os defaults
+// de `organizacao.modo_precificacao_padrao`/`modo_montagem_padrao`) — passa
+// pra `OrcamentoAbas` via slot `abaFinanceiro`.
 export default async function OrcamentoPage({ params }: { params: { id: string } }) {
   const orcamento = await buscarOrcamentoPorId(params.id);
 
@@ -40,6 +49,7 @@ export default async function OrcamentoPage({ params }: { params: { id: string }
   const idCurto = orcamento.id.slice(0, 8).toUpperCase();
   const estadoAmbiente = await carregarEstadoAmbiente(orcamento.id);
   const ultimaCongeladaEm = await buscarUltimaListaMaterial(orcamento.id);
+  const configuracaoPrecificacao = await carregarConfiguracaoPrecificacao(orcamento.id);
 
   return (
     <OrcamentoAbas
@@ -54,6 +64,13 @@ export default async function OrcamentoPage({ params }: { params: { id: string }
           estadoInicial={estadoAmbiente}
           frete={orcamento.frete}
           ultimaCongeladaEmInicial={ultimaCongeladaEm}
+        />
+      }
+      abaFinanceiro={
+        <FinanceiroTabConectada
+          orcamentoId={orcamento.id}
+          estadoInicial={estadoAmbiente}
+          configuracaoInicial={configuracaoPrecificacao}
         />
       }
     />

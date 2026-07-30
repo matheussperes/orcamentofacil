@@ -16,15 +16,11 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { PlanoCorteCanvas } from "@/app/components/PlanoCorteCanvas";
-import { detectarConjuntos, aplicarOverrides } from "@/lib/engine/conjunto";
-import type { ResolvedorItens } from "@/lib/engine/parede";
-import { calcularOrcamentoMisto, idDoItem, type ElementoContinuoResolvido } from "@/lib/orcamento";
-import { MATERIAIS_PADRAO, PARAMETROS_FABRICA_PADRAO } from "@/lib/engine/defaults";
 import { todasAsPecas, montarLinhasInsumos } from "@/lib/insumos";
 import { planoDeCorte } from "@/lib/engine/box/cutting";
 import { carregarCatalogo, catalogoParaPrecos, type Catalogo } from "@/lib/catalog";
 import { PRECOS_REFERENCIA } from "@/lib/engine/prices";
-import { resolverAlvoElemento } from "@/lib/ambiente/resolverAlvo";
+import { calcularEngineOrcamento } from "@/lib/ambiente/calcularEngineOrcamento";
 import type { EstadoAmbiente } from "@/lib/ambiente/estado";
 import {
   montarSnapshotListaMaterial,
@@ -96,40 +92,10 @@ export function CorteMaterialLab({
   }, []);
   const precos = catalogo ? catalogoParaPrecos(catalogo) : PRECOS_REFERENCIA;
 
-  // Task 13.4 — mesmo pipeline que `AmbientesLab.tsx` já usa (Task 13.2b/c):
-  // resolvedor de itens -> Conjuntos (automáticos + overrides de junção) ->
-  // Elementos Contínuos resolvidos -> `calcularOrcamentoMisto`. A diferença é
-  // o escopo: aqui entram TODOS os `modulos`/`elementosContinuos` do
-  // orçamento, não só os da seleção atual (esta aba não tem seleção — é uma
-  // visão agregada, somente leitura, do orçamento inteiro).
-  const resultadoEngine = useMemo(() => {
-    try {
-      const resolvedor: ResolvedorItens = new Map(estadoInicial.modulos.map((m) => [idDoItem(m), m]));
-      const conjuntosAutomaticos = detectarConjuntos(estadoInicial.parede, estadoInicial.alturas, resolvedor);
-      const conjuntosFinais = aplicarOverrides(
-        conjuntosAutomaticos,
-        estadoInicial.parede.itens,
-        estadoInicial.overrides
-      );
-      const elementosContinuosResolvidos: ElementoContinuoResolvido[] = estadoInicial.elementosContinuos
-        .map((elemento) => {
-          const alvo = resolverAlvoElemento(elemento, resolvedor, conjuntosFinais);
-          return alvo ? { elemento, alvo } : null;
-        })
-        .filter((v): v is ElementoContinuoResolvido => v !== null);
-
-      const engine = calcularOrcamentoMisto({
-        ambiente: { tipo: "ambiente", materiais: MATERIAIS_PADRAO },
-        parametros: PARAMETROS_FABRICA_PADRAO,
-        itens: estadoInicial.modulos,
-        elementosContinuos: elementosContinuosResolvidos,
-      });
-      return { ok: true as const, engine };
-    } catch (erro) {
-      console.error("[corte-material] falha ao calcular o orçamento:", erro);
-      return { ok: false as const };
-    }
-  }, [estadoInicial]);
+  // Task 13.5 — extraído para `lib/ambiente/calcularEngineOrcamento.ts`
+  // (mesmo `EngineOutput` agregado do orçamento inteiro que a aba Financeiro
+  // também precisa; ver o comentário completo nesse arquivo).
+  const resultadoEngine = useMemo(() => calcularEngineOrcamento(estadoInicial), [estadoInicial]);
 
   const pecas = useMemo(
     () => (resultadoEngine.ok ? todasAsPecas(resultadoEngine.engine) : []),

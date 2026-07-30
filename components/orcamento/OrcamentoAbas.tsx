@@ -38,6 +38,11 @@ import { usePageHeader } from "@/components/shell/PageHeaderContext";
 // para permitir que conteúdo de uma aba peça a troca para outra
 // (`AbaAtivaProvider`/`useIrParaAba`, ver `AbaAtivaContext.tsx`) — usado pelo
 // estado vazio do plano de corte ("Ir para Ambientes").
+//
+// Task 13.5 (contrato .maestro/tmp/13.5-contract.md): mesmo slot pattern
+// para "Financeiro" (`abaFinanceiro`), também `forceMount` — `FinanceiroLab`
+// guarda a configuração de precificação/montagem/frete em edição em
+// `useState` local, que não deve se perder ao trocar de aba.
 export interface OrcamentoAbasProps {
   clienteNome: string;
   /** Id curto (8 primeiros caracteres do uuid, maiúsculo) — usado só como
@@ -54,9 +59,12 @@ export interface OrcamentoAbasProps {
    * (harness). Mesmo espírito de `abaAmbientes`: `OrcamentoAbas` não sabe de
    * onde vem o dado nem para onde ele congela. */
   abaCorteMaterial: ReactNode;
+  /** Conteúdo da aba "Financeiro" — Task 13.5, mesmo espírito das outras
+   * duas: `FinanceiroTabConectada` (real) ou `FinanceiroTabMock` (harness). */
+  abaFinanceiro: ReactNode;
 }
 
-export function OrcamentoAbas({ clienteNome, idCurto, abaAmbientes, abaCorteMaterial }: OrcamentoAbasProps) {
+export function OrcamentoAbas({ clienteNome, idCurto, abaAmbientes, abaCorteMaterial, abaFinanceiro }: OrcamentoAbasProps) {
   // Sobrescreve a Topbar com o breadcrumb "Orçamentos / <nome do cliente>"
   // (Design-System Seção 6) enquanto esta página estiver montada — ver
   // `components/shell/PageHeaderContext.tsx`.
@@ -97,8 +105,8 @@ export function OrcamentoAbas({ clienteNome, idCurto, abaAmbientes, abaCorteMate
         <TabsContent value="corte-material" forceMount className="data-[state=inactive]:hidden">
           {abaCorteMaterial}
         </TabsContent>
-        <TabsContent value="financeiro">
-          <AbaPlaceholder titulo="Financeiro" task="13.5" />
+        <TabsContent value="financeiro" forceMount className="data-[state=inactive]:hidden">
+          {abaFinanceiro}
         </TabsContent>
         <TabsContent value="proposta">
           <AbaPlaceholder titulo="Proposta" task="13.6" />

@@ -3,6 +3,7 @@ import { Shell } from "@/components/shell/Shell";
 import { OrcamentoAbas } from "@/components/orcamento/OrcamentoAbas";
 import { AmbientesTabMock } from "@/components/ambientes/AmbientesTabMock";
 import { CorteMaterialTabMock } from "@/components/orcamento/CorteMaterialTabMock";
+import { FinanceiroTabMock } from "@/components/orcamento/FinanceiroTabMock";
 
 // Task 13.3c (contrato .maestro/tmp/13.3c-contract.md) — harness DEV-ONLY:
 // renderiza o shell `/orcamento/[id]` (4 abas, Ambientes viva) com um
@@ -19,6 +20,10 @@ import { CorteMaterialTabMock } from "@/components/orcamento/CorteMaterialTabMoc
 // "Corte & Material" — `CorteMaterialTabMock` (estado POPULADO em memória +
 // "congelar" no-op), ver comentário daquele arquivo sobre a diferença de
 // escopo em relação a `AmbientesTabMock`.
+//
+// Task 13.5 (contrato .maestro/tmp/13.5-contract.md): mesmo princípio para
+// "Financeiro" — `FinanceiroTabMock` (mesmo `EstadoAmbiente` populado,
+// configuração de precificação mock usando o padrão da org, "salvar" no-op).
 export default function DevPreviewOrcamentoPage() {
   if (process.env.NODE_ENV === "production") {
     notFound();
@@ -31,6 +36,7 @@ export default function DevPreviewOrcamentoPage() {
         idCurto="PREVIEW1"
         abaAmbientes={<AmbientesTabMock />}
         abaCorteMaterial={<CorteMaterialTabMock />}
+        abaFinanceiro={<FinanceiroTabMock />}
       />
     </Shell>
   );
