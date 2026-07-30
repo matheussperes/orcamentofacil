@@ -21,7 +21,21 @@
 // uma sessão real. Segura mesmo em produção: a própria rota faz
 // `notFound()` quando `NODE_ENV === "production"` — este gate só evita que
 // ela também exija login em desenvolvimento.
-export const ROTAS_PUBLICAS = ["/login", "/signup", "/auth/confirm", "/dev/preview"] as const;
+//
+// `/dev/preview/orcamento` e `/dev/preview/orcamento/novo` (Task 13.3c):
+// mesmo espírito — harness do shell `/orcamento/[id]` (4 abas, dados mock) e
+// do formulário de novo orçamento em modo preview, respectivamente. Rotas
+// estáticas (sem segmento dinâmico) de propósito: `isRotaPublica` faz match
+// exato, não prefixo — um harness com `[id]` dinâmico não daria pra listar
+// aqui sem abrir mão do match exato para toda a árvore `/dev/preview/*`.
+export const ROTAS_PUBLICAS = [
+  "/login",
+  "/signup",
+  "/auth/confirm",
+  "/dev/preview",
+  "/dev/preview/orcamento",
+  "/dev/preview/orcamento/novo",
+] as const;
 
 /** Rotas que NÃO passam pelo gate de sessão do middleware. */
 export function isRotaPublica(pathname: string): boolean {

@@ -18,6 +18,15 @@ describe("isRotaPublica", () => {
     expect(isRotaPublica("/dev/preview")).toBe(true);
   });
 
+  it("trata /dev/preview/orcamento e /dev/preview/orcamento/novo como públicas (harness do shell de orçamento, Task 13.3c — 404 em produção é responsabilidade da própria rota)", () => {
+    expect(isRotaPublica("/dev/preview/orcamento")).toBe(true);
+    expect(isRotaPublica("/dev/preview/orcamento/novo")).toBe(true);
+  });
+
+  it("não trata /orcamento/[id] real como pública — só os harnesses /dev/preview/* são", () => {
+    expect(isRotaPublica("/orcamento/abc-123")).toBe(false);
+  });
+
   it("trata a raiz (Dashboard) como protegida", () => {
     expect(isRotaPublica("/")).toBe(false);
   });
