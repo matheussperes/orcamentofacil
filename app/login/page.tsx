@@ -15,10 +15,10 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 // Task 13.3a (contrato .maestro/tmp/13.3a-contract.md) — tela de login,
 // construída direto em v3 (docs/Design-System.md Seção 2.9: painel
 // esquerdo `marinho-900` com o lockup PNG oficial variante "fundo escuro",
-// painel direito branco com o formulário). NÃO mexe no visual de nenhuma
-// tela antiga — ver `tailwind.config.ts` para a decisão sobre os tokens
-// `marinho`/`marca` (isolados do `accent` v2 já em uso pelas telas
-// existentes).
+// painel direito branco com o formulário). Task 13.3b consolidou o token
+// temporário `marca` (isolado do `accent` v2 na 13.3a) direto em `accent`
+// (agora laranja em todo o app) — este arquivo usa `accent`/`accent-hover`
+// puros, sem override de classe.
 //
 // `useSearchParams` exige um limite de Suspense ao redor de quem o chama
 // (senão o Next tenta prerenderizar a página inteira como estática e
@@ -175,18 +175,14 @@ function LoginForm() {
               </Alert>
             )}
 
-            <Button
-              type="submit"
-              disabled={carregando}
-              className="mt-sm w-full bg-marca hover:bg-marca-hover active:bg-marca-active"
-            >
+            <Button type="submit" disabled={carregando} className="mt-sm w-full">
               {carregando ? "Entrando…" : "Entrar"}
             </Button>
           </form>
 
           <p className="mt-lg text-center text-corpo-pequeno text-cinza-500">
             Ainda não tem uma conta?{" "}
-            <Link href="/signup" className="font-medium text-marca hover:text-marca-hover">
+            <Link href="/signup" className="font-medium text-accent hover:text-accent-hover">
               Criar conta
             </Link>
           </p>

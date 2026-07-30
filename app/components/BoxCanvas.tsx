@@ -45,6 +45,16 @@ const H = 360;
 // hardcoded em JS porque o desenho é Canvas 2D, não classes Tailwind. Vão
 // hover: contorno tracejado 2px ACCENT. Vão selecionado: contorno sólido 2px
 // ACCENT + fundo ACCENT_SUBTLE.
+//
+// Nota de retrofit (Task 13.3b): fora de escopo desta task — o contrato só
+// pediu a migração do contorno de CONJUNTO (`CONJUNTO_COR`, abaixo) para
+// `informacao`. Este `ACCENT`/`ACCENT_SUBTLE` (seleção/hover de VÃO no modo
+// laboratório de `/modulo`) continua com o hex azul antigo (`#2563EB`/
+// `#EFF6FF`), não o novo laranja (`accent.vivid` `#D97706`) — como é hex
+// hardcoded (não classe Tailwind), NÃO recolore junto com o flip do token.
+// Isso é uma divergência visual real (a seleção de vão fica azul enquanto o
+// resto do app vira laranja); registrada aqui para retrofit futuro de
+// `/modulo`, fora do escopo de shell+Dashboard desta task.
 const ACCENT = "#2563EB";
 const ACCENT_SUBTLE = "#EFF6FF";
 
@@ -539,18 +549,17 @@ function desenharDestaqueItem(ctx: CanvasRenderingContext2D, g: GeoItemConjunto,
 
 // Task 13.2b — Design-System.md Seção 9.3 especifica `stroke-informacao`
 // para o contorno/colchete do conjunto e para o handle de junção.
-// `informacao` (Design-System v3, Seção 2.4) ainda NÃO existe em
-// `tailwind.config.ts` — o retrofit de `/ambientes` pra v3 é a Task 13.3
-// (decisão já registrada no Backlog, fora do escopo desta task). Usa-se
-// `accent` (v2, já existente): `#2563EB`, EXATAMENTE o mesmo hex que a Seção
-// 2.4 do Design-System v3 atribui a `informacao` — não é aproximação, é o
-// mesmo valor. ATENÇÃO Task 13.3: quando `tailwind.config.ts` repontar
-// `accent` pra laranja (identidade v3), este uso PRECISA migrar pra
-// `informacao` (que existirá then) — senão o contorno/handle de conjunto vira
-// laranja (cor de ação/seleção) por acidente, colidindo visualmente com o
-// estado "selecionado" do módulo (mesmo risco já documentado acima para
-// `AVISO`/`AVISO_SUBTLE`).
-const CONJUNTO_COR = "#2563EB"; // accent (v2) === informacao (Design-System v3, Seção 2.4)
+//
+// Task 13.3b (retrofit v3, migração executada): `tailwind.config.ts` agora
+// repointa `accent` para laranja e adiciona o token `informacao` (Seção 2.4)
+// com o hex que ERA o `accent` azul da v2 (`#2563EB`). Esta constante já
+// usava esse hex antes da migração — o valor não muda, só o nome/comentário,
+// para deixar explícito que este contorno é semanticamente `informacao`
+// (não mais uma referência histórica a `accent`). Continua desenhado como
+// hex puro (Canvas 2D, não classe Tailwind), mas agora aponta pro token
+// certo: se `informacao` mudar de valor no Design-System no futuro, este
+// hex precisa acompanhar.
+const CONJUNTO_COR = "#2563EB"; // informacao (Design-System v3, Seção 2.4)
 
 const HANDLE_RAIO_PX = 10; // círculo de 20px de diâmetro (Design-System 9.3)
 const BRACKET_TICK_PX = 6; // altura da perna do colchete nas extremidades

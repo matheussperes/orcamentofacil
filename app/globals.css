@@ -32,7 +32,9 @@
     --card-foreground: 222.2 47.4% 11.2%; /* cinza-900 #0F172A (derivado) */
     --popover: 0 0% 100%; /* cinza-0 #FFFFFF */
     --popover-foreground: 222.2 47.4% 11.2%; /* cinza-900 #0F172A (derivado) */
-    --primary: 221.2 83.2% 53.3%; /* accent #2563EB */
+    /* Task 13.3b (retrofit v3): accent virou laranja `#B45309` — 26 90% 37%
+       em HSL. Antes era `221.2 83.2% 53.3%` (azul #2563EB da v2). */
+    --primary: 26 90% 37%; /* accent #B45309 */
     --primary-foreground: 0 0% 100%; /* cinza-0 #FFFFFF */
     --secondary: 210 40% 96.1%; /* cinza-100 #F1F5F9 (derivado) */
     --secondary-foreground: 222.2 47.4% 11.2%; /* cinza-900 #0F172A (derivado) */
@@ -42,7 +44,7 @@
     --destructive-foreground: 0 0% 100%; /* cinza-0 #FFFFFF */
     --border: 214.3 31.8% 91.4%; /* cinza-200 #E2E8F0 */
     --input: 214.3 31.8% 91.4%; /* cinza-200 #E2E8F0 */
-    --ring: 221.2 83.2% 53.3%; /* accent #2563EB (anel de foco) */
+    --ring: 26 90% 37%; /* accent #B45309 (anel de foco) */
     --radius: 0.75rem; /* Seção 5 — 12px = rounded-lg */
 
     /*
@@ -63,10 +65,17 @@
     --legacy-border: #e2e8f0; /* cinza-200 */
     --legacy-text: #0f172a; /* cinza-900 */
     --legacy-muted: #64748b; /* cinza-500 */
-    --legacy-accent: #2563eb; /* accent */
+    /* Task 13.3b (retrofit v3): acompanha o flip do `accent` do Tailwind
+       (agora laranja) — classes legadas (`.card`, `button.primary`,
+       `.modulo`, `.aviso`, `.slider-row`), ainda em uso por `/modulo`,
+       `/biblioteca` e `/configuracoes/materiais` (não migradas para shadcn
+       nesta task), recolorem junto para não destoar do resto do app.
+       `--legacy-amber` também muda (mesmo motivo do Design-System Seção 2.4
+       sobre `aviso` não reaproveitar o hex de `accent.vivid`). */
+    --legacy-accent: #b45309; /* accent (v3, laranja) */
     --legacy-green: #16a34a; /* sucesso */
     --legacy-red: #dc2626; /* erro */
-    --legacy-amber: #d97706; /* aviso */
+    --legacy-amber: #a16207; /* aviso (v3) */
   }
 }
 
