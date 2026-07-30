@@ -1430,10 +1430,15 @@ jornada do cliente, agora sobre Tailwind + shadcn/ui).
   (Task 11.2, RLS já pronta). Depende de 13.2a/b/c e **de 13.3a (auth — sem
   sessão não há o que persistir)**. A aba "Ambientes" migra de `/ambientes`
   pra cá; `/modulo` migra pro Editor de Item em `/orcamento/[id]/item/[itemId]`.
-  **Quebrada em 3 sub-tasks (2026-07-30)**: 13.3b (shell sidebar+topbar v3 +
-  Dashboard `/` + retrofit visual v3 do app inteiro + harness `/dev/preview`)
-  → 13.3c (`/orcamento/[id]` com abas + fluxo de novo orçamento/cliente +
-  migra aba Ambientes) → 13.3d (migra `/modulo` → Editor de Item). **Constraint
+  **Quebrada em 4 sub-tasks (2026-07-30, a 4ª inserida no mesmo dia por
+  decisão do operador — "persistir o orçamento primeiro")**: 13.3b (shell
+  sidebar+topbar v3 + Dashboard `/` + retrofit visual v3 do app inteiro +
+  harness `/dev/preview`) → 13.3c (`/orcamento/[id]` com abas + fluxo de
+  novo orçamento/cliente + migra aba Ambientes, estado ainda local) → 13.3d
+  (persiste o estado profundo de Ambientes — parede/módulos/alturas/
+  elementos contínuos — nas tabelas Supabase existentes, substituindo o
+  localStorage; `AmbientesLab` vira presentational) → 13.3e (migra `/modulo`
+  → Editor de Item). **Constraint
   de auditoria** (efeito do gate da 13.3a): telas autenticadas não abrem sem
   login e o Maestro não loga (não cria conta/senha) — por isso a 13.3b entrega
   um harness `/dev/preview` (rota dev-only, 404 em produção, pública no gate)

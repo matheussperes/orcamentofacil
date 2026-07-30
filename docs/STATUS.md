@@ -361,7 +361,28 @@ se o insert de cliente passar mas o de orçamento falhar, sobra cliente órfão
 (sem transação — Supabase JS; aceitável MVP, cleanup futuro via RPC). Write
 E2E real só o operador valida (sessão).
 
-**Próximo passo real: executar a Task 13.3d** (migra `/modulo` → Editor de
+**Task 13.3d concluída (2026-07-30) — inserida por decisão do operador**
+("persistir o orçamento primeiro", antes do editor): estado profundo de
+Ambientes (parede, módulos posicionados, alturas, elementos contínuos,
+overrides de junção) migrou de `localStorage` pras tabelas Supabase que já
+existiam (`ambiente`/`parede`/`elemento_continuo`; `organizacao.alturas_padrao`
+pras alturas, nível ORG). `AmbientesLab` virou presentational (props
+`estadoInicial`/`onSalvar`) com 3 "donos de I/O": `AmbientesTabConectada`
+(Supabase real, `/orcamento/[id]`), `AmbientesTabMock` (harness, sem I/O),
+`AmbientesLabStandalone` (`/ambientes` sem orçamento pai, continua
+localStorage). Save é ação explícita ("Salvar alterações"), nunca autosave.
+`organizacao_id` sempre do `perfil` do usuário autenticado. Gap de schema
+documentado sem virar migration (`elemento_continuo` não tem coluna de cor —
+cor não sobrevive a reload, cai em fallback). **Nota de execução**: o agente
+que implementou foi interrompido no meio por limite de gasto da conta
+(`API error: monthly spend limit`) — o Maestro terminou a implementação
+diretamente (checks/commit/push) em vez de gastar outro agente, dado que o
+trabalho já estava quase completo e de boa qualidade. 237 testes,
+tsc/lint/`get_advisors` limpos, auditado ao vivo via harness (botão salvar +
+feedback + sem overflow). Write E2E real (persistir de verdade) só o
+operador valida.
+
+**Próximo passo real: executar a Task 13.3e** (migra `/modulo` → Editor de
 Item em `/orcamento/[id]/item/[itemId]`, dentro do shell + retrofit v3 do
 editor). Última sub-task da 13.3. Depois: **{13.4, 13.5} → 13.6 → 13.7**.
 Operador pediu (2026-07-29) encadear automaticamente com commit/merge/push +
