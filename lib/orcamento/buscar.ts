@@ -1,4 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
+import { modulosDeJson } from "@/lib/ambiente/mapear";
+import { idDoItem, type ModuloOrcamento } from "@/lib/orcamento";
 
 // Task 13.3c (contrato .maestro/tmp/13.3c-contract.md) — leitura server-side
 // de um orçamento por id para `/orcamento/[id]`. Mesmo espírito de
@@ -53,5 +55,60 @@ export async function buscarOrcamentoPorId(id: string): Promise<OrcamentoDetalhe
     status: data.status as StatusOrcamento,
     prazoEntrega: (data.prazo_entrega as string | null) ?? null,
     clienteNome: nomeDoCliente(data.cliente as ClienteAninhado),
+  };
+}
+
+export interface ItemDoOrcamentoEncontrado {
+  orcamento: OrcamentoDetalhe;
+  item: ModuloOrcamento;
+}
+
+/**
+ * Task 13.3e (contrato .maestro/tmp/13.3e-contract.md) — busca um orçamento
+ * E acha um item específico dentro de `orcamento.itens` (jsonb
+ * `ModuloOrcamento[]`, gravado desde a Task 13.3d) pelo seu `itemId` (o
+ * mesmo id que `parede.itens[].itemId` referencia pra posição — ver
+ * `lib/ambiente/estado.ts`). Usado por `/orcamento/[id]/item/[itemId]`.
+ *
+ * Devolve `null` nos MESMOS três casos, de propósito indistinguíveis pra
+ * quem chama (mesma razão de `buscarOrcamentoPorId`: evitar vazar "existe
+ * mas não é seu"/"orçamento existe mas item não" via timing/mensagem) — a
+ * página trata qualquer `null` como 404 (`notFound()`):
+ *  - orçamento não existe;
+ *  - orçamento existe mas pertence a outra organização (RLS já filtra);
+ *  - orçamento existe (e é seu) mas não tem um item com esse `itemId` em
+ *    `itens` (id nunca existiu, ou o item foi removido da aba Ambientes
+ *    depois que o link foi copiado/aberto em outra aba).
+ */
+export async function buscarItemDoOrcamento(
+  orcamentoId: string,
+  itemId: string
+): Promise<ItemDoOrcamentoEncontrado | null> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("orcamento")
+    .select("id, status, prazo_entrega, cliente(nome), itens")
+    .eq("id", orcamentoId)
+    .maybeSingle();
+
+  if (error || !data) {
+    return null;
+  }
+
+  const itens = modulosDeJson(data.itens ?? null);
+  const item = itens.find((m) => idDoItem(m) === itemId);
+  if (!item) {
+    return null;
+  }
+
+  return {
+    orcamento: {
+      id: data.id as string,
+      status: data.status as StatusOrcamento,
+      prazoEntrega: (data.prazo_entrega as string | null) ?? null,
+      clienteNome: nomeDoCliente(data.cliente as ClienteAninhado),
+    },
+    item,
   };
 }

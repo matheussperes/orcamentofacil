@@ -28,6 +28,11 @@
 // estáticas (sem segmento dinâmico) de propósito: `isRotaPublica` faz match
 // exato, não prefixo — um harness com `[id]` dinâmico não daria pra listar
 // aqui sem abrir mão do match exato para toda a árvore `/dev/preview/*`.
+//
+// `/dev/preview/orcamento/item` (Task 13.3e): mesmo espírito — harness do
+// núcleo do Editor de Item (`EditorItemNucleo`) com um `ModuloOrcamento`
+// mock, pra testar `/orcamento/[id]/item/[itemId]` (rota real, protegida,
+// FORA desta lista) sem sessão real.
 export const ROTAS_PUBLICAS = [
   "/login",
   "/signup",
@@ -35,6 +40,7 @@ export const ROTAS_PUBLICAS = [
   "/dev/preview",
   "/dev/preview/orcamento",
   "/dev/preview/orcamento/novo",
+  "/dev/preview/orcamento/item",
 ] as const;
 
 /** Rotas que NÃO passam pelo gate de sessão do middleware. */
