@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { Shell } from "@/components/shell/Shell";
 import { OrcamentoAbas } from "@/components/orcamento/OrcamentoAbas";
+import { AmbientesTabMock } from "@/components/ambientes/AmbientesTabMock";
 
 // Task 13.3c (contrato .maestro/tmp/13.3c-contract.md) — harness DEV-ONLY:
 // renderiza o shell `/orcamento/[id]` (4 abas, Ambientes viva) com um
@@ -8,9 +9,10 @@ import { OrcamentoAbas } from "@/components/orcamento/OrcamentoAbas";
 // sessão real. Mesma guarda de `app/dev/preview/page.tsx` (Task 13.3b): 404
 // em produção + rota pública no gate (`lib/auth/rotas.ts`).
 //
-// `chavePrefixo="dev-preview-orcamento"` (dentro de `OrcamentoAbas` →
-// `AmbientesLab`) isola o localStorage deste harness de qualquer orçamento
-// real — nunca coincide com um uuid de verdade.
+// Task 13.3d (contrato .maestro/tmp/13.3d-contract.md): a aba "Ambientes"
+// agora é Supabase-backed na rota real — este harness continua isolado
+// disso via `AmbientesTabMock` (estado padrão em memória + "salvar" no-op),
+// exatamente pra não precisar de sessão/Supabase aqui.
 export default function DevPreviewOrcamentoPage() {
   if (process.env.NODE_ENV === "production") {
     notFound();
@@ -19,9 +21,9 @@ export default function DevPreviewOrcamentoPage() {
   return (
     <Shell user={{ nome: "Usuário de teste", organizacao: "Organização de teste" }}>
       <OrcamentoAbas
-        orcamentoId="dev-preview-orcamento"
         clienteNome="Marcenaria Boa Vista"
         idCurto="PREVIEW1"
+        abaAmbientes={<AmbientesTabMock />}
       />
     </Shell>
   );

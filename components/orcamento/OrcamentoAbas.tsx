@@ -1,8 +1,8 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { FileText, LayoutGrid, Scissors, Wallet } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { AmbientesLab } from "@/components/ambientes/AmbientesLab";
 import { AbaPlaceholder } from "./AbaPlaceholder";
 import { usePageHeader } from "@/components/shell/PageHeaderContext";
 
@@ -15,22 +15,32 @@ import { usePageHeader } from "@/components/shell/PageHeaderContext";
 // `forceMount` só na aba "Ambientes": as outras 3 são estáticas (sem
 // estado), então desmontar/remontar ao trocar de aba não perde nada — não
 // há motivo para pagar o custo de renderizá-las sempre ocultas. Já
-// "Ambientes" (`AmbientesLab`) tem estado profundo em memória (parede,
-// itens, elementos contínuos) que precisaria recarregar do localStorage a
-// cada troca de aba se desmontasse — `forceMount` + `data-[state=inactive]:
-// hidden` mantém o componente montado (e portanto seu React state intacto)
-// enquanto só alterna a visibilidade via CSS.
+// "Ambientes" tem estado profundo em memória (parede, itens, elementos
+// contínuos) que se perderia ao desmontar — `forceMount` + `data-
+// [state=inactive]:hidden` mantém o componente montado (e portanto seu
+// React state intacto) enquanto só alterna a visibilidade via CSS.
+//
+// Task 13.3d (contrato .maestro/tmp/13.3d-contract.md): `OrcamentoAbas` NÃO
+// sabe mais de onde vem o conteúdo da aba "Ambientes" nem para onde ele
+// salva (Supabase, mock, localStorage) — recebe pronto via `abaAmbientes`
+// (slot). Isso deixa o caller (a página real `/orcamento/[id]`, o harness
+// `/dev/preview/orcamento`) decidir qual "dono de I/O" usar
+// (`AmbientesTabConectada`/`AmbientesTabMock`), sem este componente precisar
+// conhecer `EstadoAmbiente`/Supabase.
 export interface OrcamentoAbasProps {
-  orcamentoId: string;
   clienteNome: string;
   /** Id curto (8 primeiros caracteres do uuid, maiúsculo) — usado só como
    * fallback de exibição; hoje `clienteNome` sempre existe (coluna
    * `cliente.nome` é NOT NULL), mas mantemos o fallback pela mesma razão
    * defensiva de `lib/dashboard/orcamentos.ts` (Task 13.3b). */
   idCurto: string;
+  /** Conteúdo da aba "Ambientes" — o caller monta `AmbientesTabConectada`
+   * (real, Supabase) ou `AmbientesTabMock` (harness), já com o estado
+   * carregado/`onSalvar` resolvidos. */
+  abaAmbientes: ReactNode;
 }
 
-export function OrcamentoAbas({ orcamentoId, clienteNome, idCurto }: OrcamentoAbasProps) {
+export function OrcamentoAbas({ clienteNome, idCurto, abaAmbientes }: OrcamentoAbasProps) {
   // Sobrescreve a Topbar com o breadcrumb "Orçamentos / <nome do cliente>"
   // (Design-System Seção 6) enquanto esta página estiver montada — ver
   // `components/shell/PageHeaderContext.tsx`.
@@ -63,7 +73,7 @@ export function OrcamentoAbas({ orcamentoId, clienteNome, idCurto }: OrcamentoAb
       </TabsList>
 
       <TabsContent value="ambientes" forceMount className="data-[state=inactive]:hidden">
-        <AmbientesLab chavePrefixo={orcamentoId} />
+        {abaAmbientes}
       </TabsContent>
       <TabsContent value="corte-material">
         <AbaPlaceholder titulo="Corte & Material" task="13.4" />
