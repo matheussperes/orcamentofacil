@@ -22,7 +22,18 @@ const config: Config = {
           800: "#1E293B",
           900: "#0F172A",
         },
-        // Seção 2.2 — Cor de destaque
+        // Seção 2.2 — Cor de destaque (v2, ainda em uso pelas telas
+        // antigas — `/`, `/modulo`, `/biblioteca`, `/ambientes` — via
+        // `Button`/`Alert`/etc. de `components/ui`). NÃO alterado nesta
+        // task (13.3a): o Design-System v3 (Seção 2.3) redefine `accent`
+        // para um laranja, mas recolorir este token aqui mudaria o visual
+        // de toda tela já existente que consome `bg-accent`/`text-accent` —
+        // exatamente o que o contrato da 13.3a proíbe ("não mexa no visual
+        // das telas antigas"). Ver `marinho`/`marca` abaixo: tokens v3
+        // isolados, usados só pelas telas novas desta task (/login,
+        // /signup). A Task 13.3b (shell + retrofit v3) é quem substitui
+        // este `accent` pelos valores de `marca` em todo o app e então
+        // remove `marca` (fica redundante).
         accent: {
           DEFAULT: "#2563EB",
           hover: "#1D4ED8",
@@ -30,10 +41,37 @@ const config: Config = {
           subtle: "#EFF6FF",
           border: "#BFDBFE",
         },
-        // Seção 2.3 — Semânticas
+        // Seção 2.3 — Semânticas (idem: valores v2, não tocados nesta task)
         sucesso: { DEFAULT: "#16A34A", subtle: "#F0FDF4" },
         erro: { DEFAULT: "#DC2626", subtle: "#FEF2F2" },
         aviso: { DEFAULT: "#D97706", subtle: "#FFFBEB" },
+        // Seção 2.2 — Navy (marinho), NOVO na v3. Chave nova (nenhuma tela
+        // antiga referencia `marinho-*`), portanto pura adição sem risco de
+        // regressão visual — usado pelo painel de marca de /login e /signup
+        // (Task 13.3a).
+        marinho: {
+          900: "#0E1420",
+          800: "#141B2B",
+          700: "#1B2436",
+          600: "#232C3F",
+          300: "#8D96A8",
+        },
+        // Seção 2.3 — Laranja da v3 ("cor de marca"), isolado do `accent`
+        // v2 acima pelo motivo já explicado. Valores idênticos aos de
+        // `docs/Design-System.md` Seção 2.3 (`accent.DEFAULT/hover/active/
+        // subtle/border/vivid`), só sob outro nome de chave para não colidir
+        // com o token já em uso. Consumido apenas por /login e /signup
+        // (Task 13.3a) via override pontual de classe (ex.:
+        // `bg-marca hover:bg-marca-hover`) sobre o `Button` primary
+        // compartilhado — não duplica o componente, só substitui a cor.
+        marca: {
+          DEFAULT: "#B45309",
+          hover: "#92400E",
+          active: "#78350F",
+          subtle: "#FFF3E0",
+          border: "#F3C88F",
+          vivid: "#D97706",
+        },
         // Seção 2.4 — Mapeamento shadcn/ui (CSS variables definidas na Task 5.2)
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",

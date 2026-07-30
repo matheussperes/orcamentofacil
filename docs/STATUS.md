@@ -309,14 +309,29 @@ Verificado ao vivo pelo Maestro num bloco de 3 itens — bate exatamente.
 blowout" de tasks anteriores, corrigido com `min-w-0`). Detalhe completo em
 `docs/Backlog.md`, Task 13.2c.
 
-**Próximo passo real: executar a Task 13.3** (Shell `/orcamento/[id]` com
-abas + Dashboard `/` + fluxo de novo orçamento/cliente). Depende de
-13.2a/b/c (todas feitas). **É também onde o retrofit visual pra v3
-acontece** (`/modulo` e `/ambientes` migram pro shell real — decisão já
-registrada de não reskinar antes, ver Seção 4). Ordem restante: **13.3 →
-{13.4, 13.5} → 13.6 → 13.7** (13.7 é isolada, pode andar em paralelo a
-qualquer momento). Ver `docs/Backlog.md` Seção "Pipeline Stage 13" pro
-critério de aceitação completo de cada sub-task.
+**Bloqueio de dependência descoberto (2026-07-29) → auth primeiro.** A 13.3
+(shell) assume persistir orçamento/cliente no Supabase, mas isso exige
+sessão autenticada e **não existe login/signup no app** (toda a Stage 13 foi
+local-first). Operador decidiu: construir auth antes. Por isso a 13.3 virou
+**13.3a (Autenticação)** + **13.3b (Shell)**.
+
+**Task 13.3a concluída (2026-07-30)**: auth de verdade no app —
+`/login`+`/signup` (Supabase Auth), gate deny-by-default no `middleware.ts`
+(todo o app exige sessão exceto `/login`/`/signup`/`/auth/confirm`), rota de
+confirmação de e-mail, logout mínimo. Tokens v3 (`marinho`/`marca`) só nas
+telas novas — o resto do app ainda é v2 até o retrofit da 13.3b. 221 testes,
+segurança zero achados, auditado ao vivo. **Ação pendente do operador antes
+do teste E2E**: configurar no dashboard Supabase a Site URL/Redirect URLs e
+o template de e-mail "Confirm signup" (→ `/auth/confirm?token_hash=...`), ou
+desligar "Confirm email"; depois criar a 1ª conta (o Maestro não cria conta).
+
+**Próximo passo real: executar a Task 13.3b** (shell `/orcamento/[id]` +
+Dashboard `/` + fluxo de novo orçamento/cliente + retrofit visual v3 do app
+inteiro). Agora pode persistir de verdade (auth existe). É a maior task da
+Stage — provavelmente vai ser quebrada em sub-tasks. Depois: **{13.4, 13.5}
+→ 13.6 → 13.7**. Operador pediu (2026-07-29) encadear 13.3→13.4→13.5
+automaticamente (commit/merge/push entre cada), mantendo os gates de
+auditoria do Maestro. Ver `docs/Backlog.md` Seção "Pipeline Stage 13".
 
 **Mudança de fase importante**: as tasks da Stage 13 são majoritariamente UI
 — o **Frontend Engineer** volta a ser o executor principal, com **UX
