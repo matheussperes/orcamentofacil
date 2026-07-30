@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
 import { calcularPreco, type ParametrosComerciais } from "@/lib/engine/pricing";
 import {
   COMERCIAL_PADRAO,
@@ -59,6 +61,17 @@ const brl = (n: number) =>
 const pct = (n: number) => `${(n * 100).toFixed(1)}%`;
 
 export default function Home() {
+  const router = useRouter();
+
+  // Task 13.3a: ponto discreto de logout (o topbar real do shell v3 é a
+  // Task 13.3b — aqui só o botão funcional, sem investir em layout).
+  async function sair() {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    router.push("/login");
+    router.refresh();
+  }
+
   // Lista única de itens de orçamento (hoje só caixas customizadas V3; a
   // Task 12.1 adiciona o branch "placa"). Sem estado paralelo.
   const [itens, setItens] = useState<ModuloOrcamento[]>([]);
@@ -215,10 +228,18 @@ export default function Home() {
   return (
     <div className="wrap">
       <header className="mb-6">
-        <h1 className="text-display font-bold text-cinza-900">Budget Planner AI</h1>
-        <p className="mt-1 text-corpo text-cinza-500">
-          Motor paramétrico de orçamento — do módulo ao preço em segundos.
-        </p>
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-display font-bold text-cinza-900">Budget Planner AI</h1>
+            <p className="mt-1 text-corpo text-cinza-500">
+              Motor paramétrico de orçamento — do módulo ao preço em segundos.
+            </p>
+          </div>
+          {/* Task 13.3a: ponto discreto de logout — topbar real vem na 13.3b */}
+          <Button variant="ghost" size="sm" onClick={sair}>
+            Sair
+          </Button>
+        </div>
         <nav className="mt-4 flex flex-wrap items-center gap-4 text-corpo">
           <a href="/modulo" className="text-accent hover:text-accent-hover hover:underline">
             Editor de módulo (V3)
