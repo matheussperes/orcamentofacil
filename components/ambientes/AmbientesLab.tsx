@@ -37,11 +37,9 @@ import {
 import { aplicarOverrides, detectarConjuntos, type Conjunto, type OverrideJuncao } from "@/lib/engine/conjunto";
 import type { EngineWarning } from "@/lib/engine/types";
 import {
-  alturaDoItem,
   calcularOrcamentoMisto,
   idDoItem,
   larguraDoItem,
-  profundidadeDoItem,
   type ElementoContinuoResolvido,
   type ModuloOrcamento,
 } from "@/lib/orcamento";
@@ -50,15 +48,14 @@ import type { BoxMaterial } from "@/lib/engine/box/types";
 import {
   POSICOES_VALIDAS,
   type AlvoElementoContinuo,
-  type AlvoResolvido,
   type ElementoContinuo,
-  type ModuloResolvido,
   type PosicaoElemento,
   type TipoElementoContinuo,
 } from "@/lib/engine/elemento-continuo/types";
 import { listarPresets, seedPresetsPadrao, type BoxPreset } from "@/lib/boxPresets";
 import { carregarCatalogo, coresDisponiveis, espessurasDaCor, type Catalogo } from "@/lib/catalog";
 import type { EstadoAmbiente, ResultadoSalvarAmbiente } from "@/lib/ambiente/estado";
+import { resolverAlvoElemento } from "@/lib/ambiente/resolverAlvo";
 
 // Task 13.3d (contrato .maestro/tmp/13.3d-contract.md) — refatoração para
 // componente PRESENTACIONAL: recebe o estado profundo de Ambientes (parede,
@@ -354,16 +351,6 @@ export function AmbientesLab({ estadoInicial, onSalvar, orcamentoId }: Ambientes
     return modulo.origem === "custom_box" ? modulo.box.nome : modulo.placa.nome;
   }
 
-  function moduloResolvidoDe(itemId: string): ModuloResolvido | null {
-    const modulo = resolvedor.get(itemId);
-    if (!modulo) return null;
-    return {
-      largura: larguraDoItem(modulo),
-      profundidade: profundidadeDoItem(modulo),
-      altura: alturaDoItem(modulo),
-    };
-  }
-
   // Itens (ordenados por x) que compõem a seleção atual — um Conjunto inteiro
   // ou um único item avulso. `conjunto.itensIds` já vem ordenado por x
   // (ver lib/engine/conjunto/detectar.ts), então o índice dentro deste array
@@ -446,28 +433,19 @@ export function AmbientesLab({ estadoInicial, onSalvar, orcamentoId }: Ambientes
     [elementosContinuos, selecao, itensDaSelecao]
   );
 
-  function resolverAlvoElemento(elemento: ElementoContinuo): AlvoResolvido | null {
-    if (elemento.tipo === "tamponamento") {
-      if (!("moduloId" in elemento.alvo)) return null;
-      const modulo = moduloResolvidoDe(elemento.alvo.moduloId);
-      return modulo ? { moduloExtremidade: modulo } : null;
-    }
-    const alvo = elemento.alvo;
-    const ids =
-      "conjuntoId" in alvo
-        ? (conjuntosFinais.find((c) => c.id === alvo.conjuntoId)?.itensIds ?? [])
-        : [alvo.moduloId];
-    const itens = ids
-      .map(moduloResolvidoDe)
-      .filter((m): m is ModuloResolvido => m !== null);
-    return itens.length ? { itens } : null;
-  }
+  // Task 13.4 (contrato .maestro/tmp/13.4-contract.md) — extraída para
+  // `lib/ambiente/resolverAlvo.ts` (função pura, sem estado de UI) para ser
+  // reaproveitada também por `CorteMaterialLab` (plano de corte/lista de
+  // material do orçamento inteiro), sem duplicar a regra de resolução de
+  // alvo em dois lugares. `resolvedor`/`conjuntosFinais` já existem acima
+  // (Task 13.2b/13.3c) — só passamos como parâmetro em vez de fechar sobre o
+  // escopo do componente.
 
   const elementosContinuosResolvidos: ElementoContinuoResolvido[] = useMemo(
     () =>
       elementosDaSelecao
         .map((elemento) => {
-          const alvo = resolverAlvoElemento(elemento);
+          const alvo = resolverAlvoElemento(elemento, resolvedor, conjuntosFinais);
           return alvo ? { elemento, alvo } : null;
         })
         .filter((v): v is ElementoContinuoResolvido => v !== null),
