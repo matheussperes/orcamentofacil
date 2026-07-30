@@ -1,6 +1,6 @@
 "use client";
 
-import { AmbientesLab } from "@/components/ambientes/AmbientesLab";
+import { AmbientesLabStandalone } from "@/components/ambientes/AmbientesLabStandalone";
 
 // Task 13.3c (contrato .maestro/tmp/13.3c-contract.md) — a lógica de desenho
 // (parede, itens, elementos contínuos, validação Tier 1/2) migrou para
@@ -15,8 +15,15 @@ import { AmbientesLab } from "@/components/ambientes/AmbientesLab";
 // de parede sem precisar criar um orçamento primeiro; (3) já está atrás do
 // gate de auth (Task 13.3a) e fora do shell v3 — não é um destino do menu
 // principal (`docs/Mapa-de-Telas.md`), então não compete visualmente com
-// `/orcamento/[id]`. Usa `chavePrefixo="standalone"` — estado próprio,
-// isolado de qualquer orçamento real.
+// `/orcamento/[id]`.
+//
+// Task 13.3d (contrato .maestro/tmp/13.3d-contract.md): `AmbientesLab` virou
+// presentational (props `estadoInicial`/`onSalvar`, sem I/O próprio) — este
+// laboratório não tem orçamento pai pra persistir em Supabase, então
+// `AmbientesLabStandalone` assume o load/save via localStorage
+// (`lib/ambiente/persistenciaLocal.ts`, escopo `"standalone"`), no lugar do
+// antigo `chavePrefixo="standalone"` que vivia dentro do próprio
+// `AmbientesLab`.
 export default function AmbientesPage() {
   return (
     <div className="wrap">
@@ -33,7 +40,7 @@ export default function AmbientesPage() {
         </nav>
       </header>
 
-      <AmbientesLab chavePrefixo="standalone" />
+      <AmbientesLabStandalone />
     </div>
   );
 }

@@ -38,6 +38,7 @@ import type { EngineWarning } from "@/lib/engine/types";
 import {
   alturaDoItem,
   calcularOrcamentoMisto,
+  idDoItem,
   larguraDoItem,
   profundidadeDoItem,
   type ElementoContinuoResolvido,
@@ -56,37 +57,29 @@ import {
 } from "@/lib/engine/elemento-continuo/types";
 import { listarPresets, seedPresetsPadrao, type BoxPreset } from "@/lib/boxPresets";
 import { carregarCatalogo, coresDisponiveis, espessurasDaCor, type Catalogo } from "@/lib/catalog";
+import type { EstadoAmbiente, ResultadoSalvarAmbiente } from "@/lib/ambiente/estado";
 
-// Task 13.3c (contrato .maestro/tmp/13.3c-contract.md) — extraído de
-// `app/ambientes/page.tsx` (Task 13.2a/b/c) para virar a aba "Ambientes" de
-// `/orcamento/[id]` (componente reaproveitável, sem duplicar a lógica de
-// desenho/validação) E continuar servindo o laboratório standalone
-// `/ambientes` (`app/ambientes/page.tsx`, que agora só monta este
-// componente dentro do header/wrap próprio dele).
+// Task 13.3d (contrato .maestro/tmp/13.3d-contract.md) — refatoração para
+// componente PRESENTACIONAL: recebe o estado profundo de Ambientes (parede,
+// alturas, módulos posicionados, elementos contínuos, overrides de junção)
+// via prop `estadoInicial` e devolve mudanças via `onSalvar` (chamado só
+// quando o usuário clica em "Salvar alterações" — nunca autosave). Este
+// componente NÃO SABE de onde o estado veio nem para onde `onSalvar` grava —
+// pode ser Supabase (`AmbientesTabConectada`, `/orcamento/[id]`), localStorage
+// (`AmbientesLabStandalone`, laboratório `/ambientes`) ou nada
+// (`AmbientesTabMock`, harness `/dev/preview/orcamento`). É exatamente essa
+// indiferença que mantém o harness funcionando sem sessão/Supabase reais.
 //
-// Nota de escopo (contrato, "NÃO reabrir sem reportar"): o estado profundo
-// de Ambientes (parede, alturas de faixa, elementos de parede, itens
-// posicionados, elementos contínuos, overrides de junção) CONTINUA só
-// local — React state + localStorage — e NÃO é persistido nas tabelas
-// Supabase (`ambiente`/`parede`/`elemento_continuo`, já existentes no
-// schema) nesta task. Migrar isso pro banco é task futura dedicada, grande e
-// que só o operador consegue testar E2E com sessão real (ver relatório da
-// 13.3c). Só o CABEÇALHO do orçamento (cliente/prazo/status) persiste de
-// verdade, via `lib/orcamento/criar.ts`.
-//
-// Diferença de escopo em relação à Task 13.2c: a chave de localStorage
-// agora é PARAMETRIZADA por `chavePrefixo` (o id do orçamento, quando
-// embutida em `/orcamento/[id]`, ou `"standalone"` para o laboratório
-// `/ambientes`) — dois orçamentos não compartilham parede/itens/elementos
-// entre si. E TODO o estado profundo passou a ser persistido em UM blob
-// único (`ambientes:<chavePrefixo>:estado`), não só os overrides de junção
-// como antes — necessário porque agora este componente vive dentro de uma
-// aba (`components/orcamento/OrcamentoAbas.tsx`) e precisa sobreviver a
-// navegação para fora e volta (ex.: o usuário sai pro Dashboard e volta)
-// sem perder o que montou. As Tabs usam `forceMount` (não desmontam ao
-// trocar de aba), então o localStorage aqui é uma rede de segurança para
-// navegação de página inteira, não o mecanismo principal de continuidade
-// entre abas.
+// Diferença de escopo em relação à Task 13.3c: o estado profundo deixou de
+// viver em localStorage próprio deste componente (removido — ver relatório
+// da 13.3d sobre o que aconteceu com a chave `ambientes:<chavePrefixo>:
+// estado`). Também mudou o formato de "itens posicionados": não existe mais
+// `ItemColocado` (itemId+presetId+x+faixa) — agora `modulos` guarda o
+// `ModuloOrcamento[]` REAL copiado do preset no momento de posicionar (com o
+// itemId de instância), e `parede.itens` (`ItemPosicionado[]`) guarda só as
+// posições que referenciam esses itemIds. O nome exibido de um item
+// posicionado vem do próprio módulo (`box.nome`/`placa.nome`), não mais de um
+// lookup em `presets` por `presetId`.
 
 const TIPOS_ELEMENTO: ElementoParede["tipo"][] = ["janela", "porta", "tomada", "ponto_hidraulico"];
 const ROTULO_TIPO_ELEMENTO: Record<ElementoParede["tipo"], string> = {
@@ -103,32 +96,10 @@ const ROTULO_FAIXA: Record<Faixa, string> = {
   torre: "Torre",
 };
 
-function paredeInicial(): Parede {
-  return { id: "parede-1", largura: 3000, altura: 2700, elementos: [], itens: [] };
-}
-
-function alturasIniciais(): AlturasFaixas {
-  return { alturaRodape: 100, alturaBancada: 900, alturaInstalacaoAereo: 1400, peDireito: 2700 };
-}
-
-// Cada item posicionado guarda um `itemId` de INSTÂNCIA sintético (não o id
-// do preset) — decisão de design: `ResolvedorItens` é um `Map<itemId,
-// ModuloOrcamento>` (chave única), então reaproveitar o id do preset como
-// `itemId` impediria posicionar o MESMO preset duas vezes na parede (a
-// segunda sobrescreveria a primeira no Map). `presetId` fica como metadado
-// de UI (rótulo/rastreio), fora do `ItemPosicionado` que o motor enxerga.
-interface ItemColocado {
-  itemId: string;
-  presetId: string;
-  x: number;
-  faixa: Faixa;
-}
-
-// Task 13.3c: ids gerados por timestamp+random (não mais um contador
-// incremental em variável de módulo) — o estado agora sobrevive a reload
-// via localStorage, e um contador reiniciando em 0 a cada carregamento de
-// página colidiria com ids já persistidos (duas "instancia-1" diferentes).
-// Mesma convenção de `lib/boxPresets.ts` (`Math.random().toString(36)`).
+// Task 13.3c: ids gerados por timestamp+random (não um contador incremental
+// em variável de módulo) — evita colisão com ids já persistidos (duas
+// "instancia-1" diferentes) entre sessões/orçamentos. Mesma convenção de
+// `lib/boxPresets.ts`.
 function novoItemId(): string {
   return `instancia-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
 }
@@ -165,64 +136,23 @@ function numero(valor: string): number {
   return Number.isFinite(n) ? n : 0;
 }
 
-// Task 13.3c — persistência local unificada, escopada por `chavePrefixo`
-// (ver nota de escopo no topo do arquivo).
-interface EstadoAmbientePersistido {
-  parede: Parede;
-  alturas: AlturasFaixas;
-  itensColocados: ItemColocado[];
-  elementosContinuos: ElementoContinuo[];
-  overrides: OverrideJuncao[];
-}
-
-function chaveEstado(chavePrefixo: string): string {
-  return `ambientes:${chavePrefixo}:estado`;
-}
-
-function estadoPadrao(): EstadoAmbientePersistido {
-  return {
-    parede: paredeInicial(),
-    alturas: alturasIniciais(),
-    itensColocados: [],
-    elementosContinuos: [],
-    overrides: [],
-  };
-}
-
-function carregarEstado(chavePrefixo: string): EstadoAmbientePersistido {
-  if (typeof window === "undefined") return estadoPadrao();
-  try {
-    const bruto = window.localStorage.getItem(chaveEstado(chavePrefixo));
-    if (!bruto) return estadoPadrao();
-    const parsed = JSON.parse(bruto) as Partial<EstadoAmbientePersistido>;
-    return {
-      parede: parsed.parede ?? paredeInicial(),
-      alturas: parsed.alturas ?? alturasIniciais(),
-      itensColocados: parsed.itensColocados ?? [],
-      elementosContinuos: parsed.elementosContinuos ?? [],
-      overrides: parsed.overrides ?? [],
-    };
-  } catch {
-    return estadoPadrao();
-  }
-}
-
 export interface AmbientesLabProps {
-  /** Escopo do localStorage (`ambientes:<chavePrefixo>:estado`) — o id do
-   * orçamento quando embutido em `/orcamento/[id]`, ou `"standalone"` para o
-   * laboratório `/ambientes`. */
-  chavePrefixo: string;
+  /** Estado inicial (carregado pelo dono de I/O — Supabase, localStorage ou
+   * mock). Só é lido na PRIMEIRA renderização (inicializador preguiçoso do
+   * `useState`, mesmo padrão já usado pelos overrides na Task 13.2b) — trocar
+   * a prop depois de montado não reseta o estado em edição. */
+  estadoInicial: EstadoAmbiente;
+  /** Chamado só quando o usuário clica em "Salvar alterações" — NUNCA
+   * autosave. Quem implementa decide o destino (Supabase, localStorage,
+   * no-op) e como reporta sucesso/erro. */
+  onSalvar: (estado: EstadoAmbiente) => Promise<ResultadoSalvarAmbiente>;
 }
 
-export function AmbientesLab({ chavePrefixo }: AmbientesLabProps) {
-  const [parede, setParede] = useState<Parede>(() => carregarEstado(chavePrefixo).parede);
-  const [alturas, setAlturas] = useState<AlturasFaixas>(
-    () => carregarEstado(chavePrefixo).alturas
-  );
+export function AmbientesLab({ estadoInicial, onSalvar }: AmbientesLabProps) {
+  const [parede, setParede] = useState<Parede>(() => estadoInicial.parede);
+  const [alturas, setAlturas] = useState<AlturasFaixas>(() => estadoInicial.alturas);
   const [presets, setPresets] = useState<BoxPreset[]>([]);
-  const [itensColocados, setItensColocados] = useState<ItemColocado[]>(
-    () => carregarEstado(chavePrefixo).itensColocados
-  );
+  const [modulos, setModulos] = useState<ModuloOrcamento[]>(() => estadoInicial.modulos);
 
   const [novoTipo, setNovoTipo] = useState<ElementoParede["tipo"]>("janela");
   const [novoX, setNovoX] = useState(0);
@@ -234,24 +164,18 @@ export function AmbientesLab({ chavePrefixo }: AmbientesLabProps) {
   const [faixaSelecionada, setFaixaSelecionada] = useState<Faixa>("inferior");
   const [xItem, setXItem] = useState(0);
 
-  // Task 13.2b — overrides do handle de junção, local-first: inicializador
-  // preguiçoso do `useState` (não um efeito de carga separado — ver
-  // histórico do bug real de auditoria documentado em
-  // `app/ambientes/page.tsx` antes desta extração, git log da Task 13.2b).
-  const [overrides, setOverrides] = useState<OverrideJuncao[]>(
-    () => carregarEstado(chavePrefixo).overrides
-  );
+  // Task 13.2b — overrides do handle de junção.
+  const [overrides, setOverrides] = useState<OverrideJuncao[]>(() => estadoInicial.overrides);
 
   // Task 13.2c — catálogo (cores/espessuras disponíveis pro material do
   // Elemento Contínuo). Não é escopado por orçamento — é o catálogo da
   // organização inteira, igual ao resto do produto.
   const [catalogo, setCatalogo] = useState<Catalogo | null>(null);
 
-  // Seleção de Conjunto/item avulso e os Elementos Contínuos adicionados
-  // (local-first, mesmo espírito de `itensColocados`/`overrides` acima).
+  // Seleção de Conjunto/item avulso e os Elementos Contínuos adicionados.
   const [selecao, setSelecao] = useState<SelecaoAlvo | null>(null);
   const [elementosContinuos, setElementosContinuos] = useState<ElementoContinuo[]>(
-    () => carregarEstado(chavePrefixo).elementosContinuos
+    () => estadoInicial.elementosContinuos
   );
 
   // Formulário de "adicionar elemento".
@@ -260,6 +184,11 @@ export function AmbientesLab({ chavePrefixo }: AmbientesLabProps) {
   const [moduloTamponamento, setModuloTamponamento] = useState<string>("");
   const [corElemento, setCorElemento] = useState<string>("");
   const [espessuraElemento, setEspessuraElemento] = useState<number>(18);
+
+  // Task 13.3d — "Salvar alterações": ação explícita (não autosave). Feedback
+  // legível de sucesso/erro (Design-System Seção 11 / Alert, Seção 7.13).
+  const [salvando, setSalvando] = useState(false);
+  const [resultadoSalvar, setResultadoSalvar] = useState<ResultadoSalvarAmbiente | null>(null);
 
   useEffect(() => {
     seedPresetsPadrao();
@@ -270,24 +199,13 @@ export function AmbientesLab({ chavePrefixo }: AmbientesLabProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Persistência local unificada — um único blob por `chavePrefixo`, escrito
-  // sempre que qualquer parte do estado profundo muda.
-  useEffect(() => {
-    const estado: EstadoAmbientePersistido = {
-      parede,
-      alturas,
-      itensColocados,
-      elementosContinuos,
-      overrides,
-    };
-    window.localStorage.setItem(chaveEstado(chavePrefixo), JSON.stringify(estado));
-  }, [chavePrefixo, parede, alturas, itensColocados, elementosContinuos, overrides]);
-
   function atualizarParede(patch: Partial<Parede>) {
     setParede((p) => ({ ...p, ...patch }));
+    setResultadoSalvar(null);
   }
   function atualizarAlturas(patch: Partial<AlturasFaixas>) {
     setAlturas((a) => ({ ...a, ...patch }));
+    setResultadoSalvar(null);
   }
 
   function adicionarElemento() {
@@ -299,53 +217,50 @@ export function AmbientesLab({ chavePrefixo }: AmbientesLabProps) {
       altura: novaAltura,
     };
     setParede((p) => ({ ...p, elementos: [...p.elementos, elemento] }));
+    setResultadoSalvar(null);
   }
   function removerElemento(indice: number) {
     setParede((p) => ({ ...p, elementos: p.elementos.filter((_, i) => i !== indice) }));
+    setResultadoSalvar(null);
   }
 
+  // Ao posicionar: COPIA o box do preset pra um módulo de instância novo (id
+  // de instância, não o id do preset — mesma decisão da Task 13.3c, agora
+  // persistida de verdade em `orcamento.itens`) e guarda só a POSIÇÃO em
+  // `parede.itens` (contrato: "orcamento.itens = módulos; parede.itens =
+  // posições referenciando esses itemIds").
   function adicionarItem() {
     if (!presetSelecionado) return;
-    const item: ItemColocado = {
-      itemId: novoItemId(),
-      presetId: presetSelecionado,
-      x: xItem,
-      faixa: faixaSelecionada,
-    };
-    setItensColocados((its) => [...its, item]);
+    const preset = presets.find((p) => p.id === presetSelecionado);
+    if (!preset) return;
+
+    const itemId = novoItemId();
+    const modulo: ModuloOrcamento = { origem: "custom_box", box: { ...preset.box, id: itemId } };
+    const posicao: ItemPosicionado = { itemId, x: xItem, faixa: faixaSelecionada };
+
+    setModulos((ms) => [...ms, modulo]);
+    setParede((p) => ({ ...p, itens: [...p.itens, posicao] }));
+    setResultadoSalvar(null);
   }
   function removerItem(itemId: string) {
-    setItensColocados((its) => its.filter((i) => i.itemId !== itemId));
+    setModulos((ms) => ms.filter((m) => idDoItem(m) !== itemId));
+    setParede((p) => ({ ...p, itens: p.itens.filter((i) => i.itemId !== itemId) }));
+    setResultadoSalvar(null);
   }
 
   const resolvedor: ResolvedorItens = useMemo(() => {
     const m = new Map<string, ModuloOrcamento>();
-    for (const ic of itensColocados) {
-      const preset = presets.find((p) => p.id === ic.presetId);
-      if (preset) m.set(ic.itemId, { origem: "custom_box", box: preset.box });
-    }
+    for (const modulo of modulos) m.set(idDoItem(modulo), modulo);
     return m;
-  }, [itensColocados, presets]);
-
-  const paredeComItens: Parede = useMemo(
-    () => ({
-      ...parede,
-      itens: itensColocados.map(
-        (i): ItemPosicionado => ({ itemId: i.itemId, x: i.x, faixa: i.faixa })
-      ),
-    }),
-    [parede, itensColocados]
-  );
+  }, [modulos]);
 
   // Tier 1 + Tier 2 rodam a cada mudança de posicionamento/parede/alturas
   // (useMemo recalcula sempre que qualquer dependência muda — não há botão
-  // "validar", é reativo).
+  // "validar", é reativo). `parede` já carrega `itens` (posições) direto —
+  // não precisa mais de um wrapper `paredeComItens` (Task 13.3c).
   const warnings: EngineWarning[] = useMemo(
-    () => [
-      ...validarParedeTier1(paredeComItens, resolvedor),
-      ...validarParedeTier2(paredeComItens, alturas, resolvedor),
-    ],
-    [paredeComItens, alturas, resolvedor]
+    () => [...validarParedeTier1(parede, resolvedor), ...validarParedeTier2(parede, alturas, resolvedor)],
+    [parede, alturas, resolvedor]
   );
 
   // itemId -> pior severidade (erro > aviso), consumido pelo destaque visual
@@ -362,15 +277,13 @@ export function AmbientesLab({ chavePrefixo }: AmbientesLabProps) {
 
   const itensDoConjunto: ItemDoConjunto[] = useMemo(
     () =>
-      itensColocados
-        .map((ic) => {
-          const item = resolvedor.get(ic.itemId);
-          if (!item) return null;
-          const posicao: ItemPosicionado = { itemId: ic.itemId, x: ic.x, faixa: ic.faixa };
-          return { item, posicao };
+      parede.itens
+        .map((posicao) => {
+          const item = resolvedor.get(posicao.itemId);
+          return item ? { item, posicao } : null;
         })
         .filter((v): v is ItemDoConjunto => v !== null),
-    [itensColocados, resolvedor]
+    [parede.itens, resolvedor]
   );
 
   // Task 13.2b — Conjuntos automáticos (detecção pura, sem override) + finais
@@ -378,13 +291,13 @@ export function AmbientesLab({ chavePrefixo }: AmbientesLabProps) {
   // reimplementada aqui — só consome `detectarConjuntos`/`aplicarOverrides`
   // (lib/engine/conjunto/detectar.ts, já testadas).
   const conjuntosAutomaticos = useMemo(
-    () => detectarConjuntos(paredeComItens, alturas, resolvedor),
-    [paredeComItens, alturas, resolvedor]
+    () => detectarConjuntos(parede, alturas, resolvedor),
+    [parede, alturas, resolvedor]
   );
 
   const conjuntosFinais = useMemo(
-    () => aplicarOverrides(conjuntosAutomaticos, paredeComItens.itens, overrides),
-    [conjuntosAutomaticos, paredeComItens.itens, overrides]
+    () => aplicarOverrides(conjuntosAutomaticos, parede.itens, overrides),
+    [conjuntosAutomaticos, parede.itens, overrides]
   );
 
   // Alterna união/quebra do par (handle de junção do BoxCanvas modo
@@ -408,6 +321,7 @@ export function AmbientesLab({ chavePrefixo }: AmbientesLabProps) {
       ),
       { itemIdA, itemIdB, forcar: unidoAtualmente ? "quebrado" : "unido" },
     ]);
+    setResultadoSalvar(null);
   }
 
   // Task 13.2c — itens que NÃO pertencem a nenhum Conjunto ("avulsos"): alvo
@@ -417,15 +331,15 @@ export function AmbientesLab({ chavePrefixo }: AmbientesLabProps) {
     () => new Set(conjuntosFinais.flatMap((c) => c.itensIds)),
     [conjuntosFinais]
   );
-  const itensAvulsos: ItemColocado[] = useMemo(
-    () => itensColocados.filter((ic) => !idsEmConjunto.has(ic.itemId)),
-    [itensColocados, idsEmConjunto]
+  const itensAvulsos: ItemPosicionado[] = useMemo(
+    () => parede.itens.filter((i) => !idsEmConjunto.has(i.itemId)),
+    [parede.itens, idsEmConjunto]
   );
 
   function nomeDoItem(itemId: string): string {
-    const ic = itensColocados.find((i) => i.itemId === itemId);
-    const preset = ic ? presets.find((p) => p.id === ic.presetId) : undefined;
-    return preset?.nome ?? itemId;
+    const modulo = resolvedor.get(itemId);
+    if (!modulo) return itemId;
+    return modulo.origem === "custom_box" ? modulo.box.nome : modulo.placa.nome;
   }
 
   function moduloResolvidoDe(itemId: string): ModuloResolvido | null {
@@ -585,10 +499,21 @@ export function AmbientesLab({ chavePrefixo }: AmbientesLabProps) {
       material,
     };
     setElementosContinuos((els) => [...els, elemento]);
+    setResultadoSalvar(null);
   }
 
   function removerElementoContinuo(id: string) {
     setElementosContinuos((els) => els.filter((e) => e.id !== id));
+    setResultadoSalvar(null);
+  }
+
+  async function handleSalvar() {
+    setSalvando(true);
+    setResultadoSalvar(null);
+    const estado: EstadoAmbiente = { parede, modulos, alturas, elementosContinuos, overrides };
+    const resultado = await onSalvar(estado);
+    setSalvando(false);
+    setResultadoSalvar(resultado);
   }
 
   return (
@@ -619,7 +544,11 @@ export function AmbientesLab({ chavePrefixo }: AmbientesLabProps) {
         </section>
 
         <section className="rounded-lg border border-cinza-200 bg-cinza-0 p-4 shadow-xs">
-          <h2 className="mb-3 text-titulo-secao text-cinza-900">Alturas do perfil</h2>
+          <h2 className="mb-1 text-titulo-secao text-cinza-900">Alturas do perfil</h2>
+          <p className="mb-3 text-corpo-pequeno text-cinza-500">
+            Perfil de alturas da marcenaria — ao salvar, vale para todos os orçamentos da
+            organização, não só este.
+          </p>
           <div className="grid grid-cols-2 gap-sm">
             <div>
               <Label htmlFor="altura-rodape">Rodapé (mm)</Label>
@@ -825,14 +754,14 @@ export function AmbientesLab({ chavePrefixo }: AmbientesLabProps) {
               </Button>
             </div>
 
-            {itensColocados.length === 0 ? (
+            {parede.itens.length === 0 ? (
               <p className="text-corpo-pequeno text-cinza-500">Nenhum item posicionado ainda.</p>
             ) : (
               <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Preset</TableHead>
+                      <TableHead>Item</TableHead>
                       <TableHead>Faixa</TableHead>
                       <TableHead className="text-right">X</TableHead>
                       <TableHead className="text-right">Largura</TableHead>
@@ -840,13 +769,12 @@ export function AmbientesLab({ chavePrefixo }: AmbientesLabProps) {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {itensColocados.map((ic) => {
-                      const preset = presets.find((p) => p.id === ic.presetId);
-                      const modulo = resolvedor.get(ic.itemId);
-                      const severidade = itensComAviso.get(ic.itemId);
+                    {parede.itens.map((pos) => {
+                      const modulo = resolvedor.get(pos.itemId);
+                      const severidade = itensComAviso.get(pos.itemId);
                       return (
                         <TableRow
-                          key={ic.itemId}
+                          key={pos.itemId}
                           className={
                             severidade === "erro"
                               ? "bg-erro-subtle"
@@ -855,9 +783,9 @@ export function AmbientesLab({ chavePrefixo }: AmbientesLabProps) {
                                 : undefined
                           }
                         >
-                          <TableCell>{preset?.nome ?? "—"}</TableCell>
-                          <TableCell>{ROTULO_FAIXA[ic.faixa]}</TableCell>
-                          <TableCell className="text-right tabular-nums">{ic.x}</TableCell>
+                          <TableCell>{nomeDoItem(pos.itemId)}</TableCell>
+                          <TableCell>{ROTULO_FAIXA[pos.faixa]}</TableCell>
+                          <TableCell className="text-right tabular-nums">{pos.x}</TableCell>
                           <TableCell className="text-right tabular-nums">
                             {modulo ? larguraDoItem(modulo) : "—"}
                           </TableCell>
@@ -865,8 +793,8 @@ export function AmbientesLab({ chavePrefixo }: AmbientesLabProps) {
                             <Button
                               variant="ghost"
                               size="icon"
-                              onClick={() => removerItem(ic.itemId)}
-                              aria-label={`Remover item ${preset?.nome ?? ic.itemId}`}
+                              onClick={() => removerItem(pos.itemId)}
+                              aria-label={`Remover item ${nomeDoItem(pos.itemId)}`}
                             >
                               <X size={14} />
                             </Button>
@@ -943,16 +871,16 @@ export function AmbientesLab({ chavePrefixo }: AmbientesLabProps) {
                       </TableRow>
                     );
                   })}
-                  {itensAvulsos.map((ic) => {
-                    const selecionado = selecao?.tipo === "item" && selecao.itemId === ic.itemId;
+                  {itensAvulsos.map((pos) => {
+                    const selecionado = selecao?.tipo === "item" && selecao.itemId === pos.itemId;
                     return (
                       <TableRow
-                        key={ic.itemId}
+                        key={pos.itemId}
                         className={`cursor-pointer ${selecionado ? "bg-accent-subtle" : ""}`}
-                        onClick={() => setSelecao({ tipo: "item", itemId: ic.itemId })}
+                        onClick={() => setSelecao({ tipo: "item", itemId: pos.itemId })}
                       >
-                        <TableCell>{nomeDoItem(ic.itemId)} (avulso)</TableCell>
-                        <TableCell>{ROTULO_FAIXA[ic.faixa]}</TableCell>
+                        <TableCell>{nomeDoItem(pos.itemId)} (avulso)</TableCell>
+                        <TableCell>{ROTULO_FAIXA[pos.faixa]}</TableCell>
                         <TableCell className="text-right tabular-nums">1</TableCell>
                         <TableCell />
                       </TableRow>
@@ -1172,6 +1100,25 @@ export function AmbientesLab({ chavePrefixo }: AmbientesLabProps) {
               </Alert>
             ))}
           </div>
+        )}
+      </section>
+
+      {/* Task 13.3d — rodapé da aba: ação explícita de salvar (contrato:
+          "NÃO autosave"). Qualquer mudança de estado acima limpa o feedback
+          anterior (`setResultadoSalvar(null)`) pra não mostrar um "salvo com
+          sucesso" desatualizado depois de editar algo. */}
+      <section className="flex flex-col items-start gap-sm rounded-lg border border-cinza-200 bg-cinza-0 p-4 shadow-xs">
+        <Button variant="primary" onClick={handleSalvar} disabled={salvando}>
+          {salvando ? "Salvando alterações…" : "Salvar alterações"}
+        </Button>
+        {resultadoSalvar && (
+          <Alert variant={resultadoSalvar.ok ? "sucesso" : "erro"} className="w-full">
+            <AlertDescription>
+              {resultadoSalvar.ok
+                ? "Alterações salvas com sucesso."
+                : (resultadoSalvar.erro ?? "Não foi possível salvar as alterações.")}
+            </AlertDescription>
+          </Alert>
         )}
       </section>
     </div>
