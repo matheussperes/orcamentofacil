@@ -22,55 +22,50 @@ const config: Config = {
           800: "#1E293B",
           900: "#0F172A",
         },
-        // Seção 2.2 — Cor de destaque (v2, ainda em uso pelas telas
-        // antigas — `/`, `/modulo`, `/biblioteca`, `/ambientes` — via
-        // `Button`/`Alert`/etc. de `components/ui`). NÃO alterado nesta
-        // task (13.3a): o Design-System v3 (Seção 2.3) redefine `accent`
-        // para um laranja, mas recolorir este token aqui mudaria o visual
-        // de toda tela já existente que consome `bg-accent`/`text-accent` —
-        // exatamente o que o contrato da 13.3a proíbe ("não mexa no visual
-        // das telas antigas"). Ver `marinho`/`marca` abaixo: tokens v3
-        // isolados, usados só pelas telas novas desta task (/login,
-        // /signup). A Task 13.3b (shell + retrofit v3) é quem substitui
-        // este `accent` pelos valores de `marca` em todo o app e então
-        // remove `marca` (fica redundante).
+        // Seção 2.3 — `accent` (laranja, cor de marca/ação primária da v3).
+        // Task 13.3b: RETROFIT — este token era o azul `#2563EB` da v2. A
+        // partir desta task ele passa a valer os tons laranja de
+        // `docs/Design-System.md` Seção 2.3 em todo o app — qualquer tela já
+        // construída com `bg-accent`/`text-accent`/`border-accent` (Button,
+        // Alert de foco, links) recolore automaticamente pra laranja sem
+        // precisar editar cada arquivo. O token temporário `marca` (13.3a,
+        // usado só em /login e /signup) foi consolidado aqui e removido —
+        // ele tinha exatamente estes mesmos valores sob outro nome.
         accent: {
-          DEFAULT: "#2563EB",
-          hover: "#1D4ED8",
-          active: "#1E40AF",
-          subtle: "#EFF6FF",
-          border: "#BFDBFE",
+          DEFAULT: "#B45309",
+          hover: "#92400E",
+          active: "#78350F",
+          subtle: "#FFF3E0",
+          border: "#F3C88F",
+          vivid: "#D97706", // logo, ícone ativo da sidebar, contorno de seleção do canvas — NUNCA fundo de botão com texto branco
         },
-        // Seção 2.3 — Semânticas (idem: valores v2, não tocados nesta task)
-        sucesso: { DEFAULT: "#16A34A", subtle: "#F0FDF4" },
-        erro: { DEFAULT: "#DC2626", subtle: "#FEF2F2" },
-        aviso: { DEFAULT: "#D97706", subtle: "#FFFBEB" },
-        // Seção 2.2 — Navy (marinho), NOVO na v3. Chave nova (nenhuma tela
-        // antiga referencia `marinho-*`), portanto pura adição sem risco de
-        // regressão visual — usado pelo painel de marca de /login e /signup
-        // (Task 13.3a).
+        // Seção 2.4 — Semânticas
+        sucesso: { DEFAULT: "#16A34A", subtle: "#F0FDF4", border: "#86EFAC" },
+        erro: { DEFAULT: "#DC2626", subtle: "#FEF2F2", border: "#FCA5A5" },
+        // Task 13.3b (fix de retrofit): `aviso.DEFAULT` era `#D97706` (o
+        // mesmo hex do agora `accent.vivid`) — colisão de acidente de
+        // implementação que a Seção 2.4 do Design-System v3 pede para
+        // corrigir explicitamente (aviso não pode ler igual a "cor de marca/
+        // seleção"). Valor correto: `#A16207` (dourado/amarelo-mostarda).
+        aviso: { DEFAULT: "#A16207", subtle: "#FFFBEB", border: "#FDE68A" },
+        // Seção 2.4 — NOVO na v3: reaproveita o hex que era o `accent` azul
+        // da v2 (`#2563EB`) — deixa de ser cor de marca/ação e passa a ser
+        // puramente semântica (informativo/neutro-frio).
+        informacao: { DEFAULT: "#2563EB", subtle: "#EFF6FF", border: "#BFDBFE" },
+        // Seção 2.4 — NOVO na v3: status "Fechado", KPI icon roxo, tag de categoria.
+        roxo: { DEFAULT: "#7C3AED", subtle: "#F3E8FF", border: "#DDD6FE" },
+        // Seção 2.6 — NOVO na v3: 5º par de ícone de KPI (ex.: Catálogo com 5
+        // KPIs) — uso exclusivo de ícone de KPI, não é status nem semântica.
+        rosa: { DEFAULT: "#DB2777", subtle: "#FCE7F3" },
+        // Seção 2.2 — Navy (marinho), NOVO na v3, confirmado como token
+        // PERMANENTE (cor de superfície fixa da sidebar, não um "modo
+        // escuro" alternável — Seção 2.9).
         marinho: {
           900: "#0E1420",
           800: "#141B2B",
           700: "#1B2436",
           600: "#232C3F",
           300: "#8D96A8",
-        },
-        // Seção 2.3 — Laranja da v3 ("cor de marca"), isolado do `accent`
-        // v2 acima pelo motivo já explicado. Valores idênticos aos de
-        // `docs/Design-System.md` Seção 2.3 (`accent.DEFAULT/hover/active/
-        // subtle/border/vivid`), só sob outro nome de chave para não colidir
-        // com o token já em uso. Consumido apenas por /login e /signup
-        // (Task 13.3a) via override pontual de classe (ex.:
-        // `bg-marca hover:bg-marca-hover`) sobre o `Button` primary
-        // compartilhado — não duplica o componente, só substitui a cor.
-        marca: {
-          DEFAULT: "#B45309",
-          hover: "#92400E",
-          active: "#78350F",
-          subtle: "#FFF3E0",
-          border: "#F3C88F",
-          vivid: "#D97706",
         },
         // Seção 2.4 — Mapeamento shadcn/ui (CSS variables definidas na Task 5.2)
         border: "hsl(var(--border))",
@@ -123,6 +118,9 @@ const config: Config = {
         "corpo-pequeno": ["13px", { lineHeight: "1.5" }],
         legenda: ["12px", { lineHeight: "1.4" }],
         "valor-destaque": ["24px", { lineHeight: "1.2" }],
+        // Seção 3 — NOVO na v3: total de proposta/pré-pedido (destaque
+        // máximo de uma tela).
+        "valor-destaque-lg": ["32px", { lineHeight: "1.15" }],
       },
       // Seção 4 — Espaçamento (aliases nomeados; escala default 4px já cobre o resto)
       spacing: {
@@ -148,6 +146,10 @@ const config: Config = {
         sm: "0 1px 3px rgba(15,23,42,0.08), 0 1px 2px rgba(15,23,42,0.04)",
         md: "0 4px 6px -1px rgba(15,23,42,0.08), 0 2px 4px -2px rgba(15,23,42,0.04)",
         lg: "0 10px 15px -3px rgba(15,23,42,0.1), 0 4px 6px -4px rgba(15,23,42,0.05)",
+        // Seção 5 — NOVO na v3: borda-sombra sutil entre a sidebar e o
+        // conteúdo (ambos têm cor sólida diferente, então não dá pra usar
+        // `border`).
+        sidebar: "1px 0 0 0 rgba(0,0,0,0.4)",
       },
       // Seção 6.1 — duração de transição do Button (120ms). Registrada como
       // token nomeado (não arbitrário) porque `tailwindcss-animate` também
@@ -159,6 +161,16 @@ const config: Config = {
       // ser ambíguo.
       transitionDuration: {
         "120": "120ms",
+        // Seção 12 — Task 13.3b: entrada/saída de drawer (mobile) e
+        // microinteração de UI. Nomeados pelo mesmo motivo do `120` acima
+        // (evitar ambiguidade com `tailwindcss-animate`).
+        "150": "150ms",
+        "200": "200ms",
+      },
+      // Seção 12 — curva nomeada "ease-out-back" (entrada de modal/drawer,
+      // Task 13.3b).
+      transitionTimingFunction: {
+        "out-back": "cubic-bezier(0.16, 1, 0.3, 1)",
       },
       // Seção 7 — Breakpoints
       screens: {

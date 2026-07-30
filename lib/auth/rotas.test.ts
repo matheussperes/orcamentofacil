@@ -14,6 +14,10 @@ describe("isRotaPublica", () => {
     expect(isRotaPublica("/auth/confirm")).toBe(true);
   });
 
+  it("trata /dev/preview como pública (harness de preview do Dashboard, Task 13.3b — 404 em produção é responsabilidade da própria rota)", () => {
+    expect(isRotaPublica("/dev/preview")).toBe(true);
+  });
+
   it("trata a raiz (Dashboard) como protegida", () => {
     expect(isRotaPublica("/")).toBe(false);
   });

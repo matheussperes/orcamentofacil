@@ -15,7 +15,13 @@
 // link de confirmação de e-mail (app/auth/confirm/route.ts). É clicada por
 // um browser SEM sessão — o gate NÃO pode redirecionar essa request pro
 // /login antes da rota processar o `token_hash` e criar a sessão.
-export const ROTAS_PUBLICAS = ["/login", "/signup", "/auth/confirm"] as const;
+//
+// `/dev/preview` (Task 13.3b): harness de preview do Dashboard com dados
+// mock (`app/dev/preview/page.tsx`), usado pelo UX Auditor sem precisar de
+// uma sessão real. Segura mesmo em produção: a própria rota faz
+// `notFound()` quando `NODE_ENV === "production"` — este gate só evita que
+// ela também exija login em desenvolvimento.
+export const ROTAS_PUBLICAS = ["/login", "/signup", "/auth/confirm", "/dev/preview"] as const;
 
 /** Rotas que NÃO passam pelo gate de sessão do middleware. */
 export function isRotaPublica(pathname: string): boolean {

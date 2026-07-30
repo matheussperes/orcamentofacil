@@ -23,6 +23,7 @@ const twMerge = extendTailwindMerge({
             "corpo-pequeno",
             "legenda",
             "valor-destaque",
+            "valor-destaque-lg",
           ],
         },
       ],

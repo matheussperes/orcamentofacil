@@ -106,7 +106,7 @@ export default function SignupPage() {
           </p>
           <Link
             href="/login"
-            className="mt-lg inline-block font-medium text-marca hover:text-marca-hover"
+            className="mt-lg inline-block font-medium text-accent hover:text-accent-hover"
           >
             Voltar para o login
           </Link>
@@ -225,18 +225,14 @@ export default function SignupPage() {
               </Alert>
             )}
 
-            <Button
-              type="submit"
-              disabled={carregando}
-              className="mt-sm w-full bg-marca hover:bg-marca-hover active:bg-marca-active"
-            >
+            <Button type="submit" disabled={carregando} className="mt-sm w-full">
               {carregando ? "Criando conta…" : "Criar conta e iniciar"}
             </Button>
           </form>
 
           <p className="mt-lg text-center text-corpo-pequeno text-cinza-500">
             Já tem uma conta?{" "}
-            <Link href="/login" className="font-medium text-marca hover:text-marca-hover">
+            <Link href="/login" className="font-medium text-accent hover:text-accent-hover">
               Fazer login
             </Link>
           </p>
