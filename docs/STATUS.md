@@ -424,12 +424,32 @@ testes), Security Auditor (zero achados), QA Engineer (251/251 + 4 estados),
 UX Auditor (0 overflow, cores confirmadas). Zero correções. Detalhe em
 `docs/Backlog.md` Task 13.4.
 
-A pausa solicitada pelo operador (2026-07-30, a meio da 13.3d —agente bateu
-limite de gasto mensal) foi levantada. **Próximo passo real: Task 13.5**
-(Financeiro). Depois: **13.6 → 13.7**. **Pendência do operador** (pra usar o
-app real e validar writes E2E, inclusive `/modulo`): configurar dashboard
-Supabase (Site URL/Redirect URLs + template e-mail, ou desligar "Confirm
-email") e criar 1ª conta. Ver `docs/Backlog.md` Stage 13.
+**Task 13.5 concluída (2026-07-30)**: Financeiro — aba funcional em
+`/orcamento/[id]`, resumo de 6 campos (preço final, custo material, montagem,
+frete, lucro final, margem) calculado de verdade via primeira ligação real de
+`ratearPrecificacao` (Task 12.6) a uma tela — **resolve a Dívida B2**.
+Preço final em destaque visual (`accent`), lucro/margem coloridos por sinal
+(`sucesso`/`erro`). Seletores de modo de precificação (4 modos) e modo de
+montagem (3 modos), cada orçamento pode usar o padrão da organização ou
+override próprio (toggle). Frete editável, persistido em `orcamento.frete`.
+Nova leitura `lib/precificacao/carregarConfiguracao.ts` (resolve override
+orçamento vs. default organização) e Server Action
+`lib/orcamento/salvarConfiguracaoPrecificacao.ts` (RLS-safe). Extração de
+`lib/ambiente/calcularEngineOrcamento.ts` e `lib/ambiente/estadoMockPreenchido.ts`
+reaproveitadas por Corte&Material E Financeiro (sem lógica duplicada). Novo
+`components/ui/checkbox.tsx`. Migration aplicada no banco real:
+`supabase/migrations/20260730180000_fix_modo_montagem_padrao_fracao.sql`
+corrige bug pré-existente (default modo_montagem_padrao). Code Auditor
+(253/253 testes, 3 console.error considerado falso positivo → não bloqueado),
+Security Auditor (RLS ok, 4 observações não-bloqueantes), QA Engineer
+(253/253), UX Auditor (0 overflow em 3 breakpoints, cores confirmadas).
+Zero correções. Detalhe em `docs/Backlog.md` Task 13.5.
+
+**Próximo passo real: Task 13.6** (Linhas de Proposta). Depois: **13.7**.
+**Pendência do operador** (pra usar o app real): confirmar que a Task 13.5
+foi validada — configurar dashboard Supabase (Site URL/Redirect URLs +
+template e-mail, ou desligar "Confirm email") e criar 1ª conta pra testes E2E
+real. Ver `docs/Backlog.md` Stage 13.
 
 **Mudança de fase importante**: as tasks da Stage 13 são majoritariamente UI
 — o **Frontend Engineer** volta a ser o executor principal, com **UX
