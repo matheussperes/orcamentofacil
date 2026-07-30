@@ -325,13 +325,33 @@ do teste E2E**: configurar no dashboard Supabase a Site URL/Redirect URLs e
 o template de e-mail "Confirm signup" (→ `/auth/confirm?token_hash=...`), ou
 desligar "Confirm email"; depois criar a 1ª conta (o Maestro não cria conta).
 
-**Próximo passo real: executar a Task 13.3b** (shell `/orcamento/[id]` +
-Dashboard `/` + fluxo de novo orçamento/cliente + retrofit visual v3 do app
-inteiro). Agora pode persistir de verdade (auth existe). É a maior task da
-Stage — provavelmente vai ser quebrada em sub-tasks. Depois: **{13.4, 13.5}
-→ 13.6 → 13.7**. Operador pediu (2026-07-29) encadear 13.3→13.4→13.5
-automaticamente (commit/merge/push entre cada), mantendo os gates de
-auditoria do Maestro. Ver `docs/Backlog.md` Seção "Pipeline Stage 13".
+**Task 13.3b concluída (2026-07-30)**: shell autenticado v3 (sidebar navy +
+topbar, route group `app/(app)/`), Dashboard `/` (lista orçamentos por
+status, rótulo = nome do cliente, 4 status reais do banco; KPIs monetários
+placeholder até o motor de preço da 13.5), retrofit visual v3 do app inteiro
+(`accent` azul→laranja global, `informacao`/`aviso` corrigidos, `marca`
+consolidado em `accent`, contorno de conjunto do `BoxCanvas` → `informacao`
+azul), e o **harness `/dev/preview`** (404 em produção via `NODE_ENV`) pro
+Maestro auditar telas protegidas sem logar. Auditado ao vivo via harness:
+desktop (sidebar sticky navy 264px, accent laranja, sem overflow) e drawer
+mobile (abre pra `left:0`) OK; 222 testes, tsc/lint/build limpos. **Nota**:
+na auditoria reportei um "bug" de drawer que era artefato de medição
+(transições CSS não compositam no Browser pane headless — ver
+[[maestro-orchestration-style]]); o executor trocou `transform`→`left`+
+data-state (funciona), o código estava correto. **Escopo deixado pra 13.3c+**:
+`/modulo`/`/ambientes`/`/biblioteca` ainda NÃO entraram no shell (só foram
+recoloridas via token); o `app/page.tsx` antigo (simulador de orçamento
+completo multi-módulo + gerar PDF) foi aposentado sem substituto ainda —
+reconstruído na 13.3c (orçamento real) / 13.5 (preço).
+
+**Próximo passo real: executar a Task 13.3c** (`/orcamento/[id]` com as 4
+abas + fluxo de novo orçamento/cliente persistindo no Supabase + migra a aba
+Ambientes de `/ambientes` pra dentro do shell). Depois: **13.3d (migra
+editor) → {13.4, 13.5} → 13.6 → 13.7**. Operador pediu (2026-07-29) encadear
+automaticamente com commit/merge/push entre cada, mantendo os gates do
+Maestro. **Pendência do operador** (pra usar o app real): configurar
+dashboard Supabase (Site URL/Redirect URLs + template de e-mail, ou desligar
+"Confirm email") e criar a 1ª conta. Ver `docs/Backlog.md` Stage 13.
 
 **Mudança de fase importante**: as tasks da Stage 13 são majoritariamente UI
 — o **Frontend Engineer** volta a ser o executor principal, com **UX
