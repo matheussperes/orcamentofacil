@@ -1424,6 +1424,11 @@ jornada do cliente, agora sobre Tailwind + shadcn/ui).
   segurança) — teste ponta-a-ponta do signup real fica com o operador; o
   Maestro audita infra + confirma no banco que org+perfil nasce. Backend +
   Frontend, mesma branch. 🔴 Alta · Sonnet.
+- **Task 13.3 — ✅ CONCLUÍDA POR COMPLETO (2026-07-30)**, todas as 5
+  sub-tasks mescladas (13.3a auth, 13.3b shell/dashboard/retrofit, 13.3c
+  orçamento/abas/novo, 13.3d persistência, 13.3e editor de item). Detalhe
+  completo de cada uma em `docs/STATUS.md` Seção 6. Cadeia pausada aqui por
+  pedido do operador — próxima é a 13.4, aguardando confirmação explícita.
 - **Task 13.3b (era 13.3)** — Shell `/orcamento/[id]` com abas + Dashboard `/` + fluxo de
   novo orçamento/cliente (captura nome/telefone/endereço + prazo de entrega
   na criação, `docs/Mapa-de-Telas.md` 3.2). Reaproveita `cliente`/`orcamento`

@@ -1,8 +1,9 @@
 # Status Atual, Decisões, Pendências e Próximos Passos
 
-> Atualizado em 2026-07-28 (handoff de sessão — Stage 13/Fase C em
-> andamento, Tasks 13.0, 13.1, 13.2a, 13.2b e 13.2c concluídas — Task 13.2
-> fechada por completo). Este arquivo é o ponto de partida de
+> Atualizado em 2026-07-30 (handoff de sessão — Stage 13/Fase C em
+> andamento, Tasks 13.0 a 13.3e concluídas — Task 13.2 e Task 13.3 fechadas
+> por completo. **Cadeia pausada por pedido do operador antes da 13.4** —
+> ver fim da Seção 6). Este arquivo é o ponto de partida de
 > qualquer sessão nova — leia antes de assumir o que já existe. O projeto
 > virou V2 em 2026-07-24 (ver Seção 1) — não confie em nada anterior a essa
 > data sobre arquitetura/motor sem checar contra os documentos da Seção 7.
@@ -382,12 +383,42 @@ tsc/lint/`get_advisors` limpos, auditado ao vivo via harness (botão salvar +
 feedback + sem overflow). Write E2E real (persistir de verdade) só o
 operador valida.
 
-**Próximo passo real: executar a Task 13.3e** (migra `/modulo` → Editor de
-Item em `/orcamento/[id]/item/[itemId]`, dentro do shell + retrofit v3 do
-editor). Última sub-task da 13.3. Depois: **{13.4, 13.5} → 13.6 → 13.7**.
-Operador pediu (2026-07-29) encadear automaticamente com commit/merge/push +
-gates do Maestro. **Pendência do operador** (pra usar o app real e validar os
-writes E2E): configurar dashboard Supabase (Site URL/Redirect URLs + template
+**Task 13.3e concluída (2026-07-30) — FECHA A TASK 13.3 INTEIRA**
+(13.3a auth → 13.3b shell/dashboard/retrofit → 13.3c orçamento/abas/novo →
+13.3d persistência → **13.3e editor de item**, todas mescladas). Núcleo do
+Editor de Item extraído de `app/modulo/page.tsx` pra
+`app/modulo/EditorItemNucleo.tsx` (padrão `estadoInicial`/`onSalvar`,
+idêntico ao `AmbientesLab` da 13.3d) — `/modulo` continua editando presets
+da biblioteca sem mudança de comportamento pretendida (agora com 2
+instâncias do núcleo, uma por origem, alternando via CSS `hidden`). Nova
+rota `/orcamento/[id]/item/[itemId]` edita um item REAL de `orcamento.itens`
+(Server Action `salvarItemOrcamento`, RLS-safe por construção — só escreve a
+coluna `itens`, nunca `organizacao_id`, a RLS da própria tabela já escopa
+leitura e escrita). Link "Editar item" adicionado na aba Ambientes. Fix
+incidental: `resetar()`/`resetarPlaca()` agora preservam o `id` do item
+(sem isso, "Resetar" um item real trocaria o itemId e quebraria o vínculo
+com a posição na parede). 238 testes, tsc/lint limpos, auditado via harness
+(save funcionando, `#B45309` laranja confirmado, sem overflow em 3
+breakpoints). **Limitação de auditoria registrada**: `/modulo` agora está
+atrás do gate de auth (13.3a) — o Maestro não conseguiu confirmar
+visualmente que não regrediu (só via tsc/lint/testes + revisão de código);
+validação visual real de `/modulo` é do operador.
+
+**Resumo do que a Task 13.3 entregou**: auth completa, shell v3 (sidebar+
+topbar), Dashboard, orçamento com 4 abas persistindo no Supabase (cabeçalho
++ estado profundo de Ambientes + itens + editor de item), harness
+`/dev/preview/*` cobrindo shell/dashboard/orçamento/ambientes/editor pro
+Maestro auditar sem sessão. Retrofit visual v3 aplicado globalmente.
+
+**PAUSA solicitada pelo operador (2026-07-30)**: a cadeia automática
+13.3→13.4→13.5 foi interrompida por decisão do operador depois que um
+agente bateu o limite de gasto mensal da conta no meio da 13.3d (o Maestro
+terminou aquela task diretamente, sem perder trabalho). Operador pediu pra
+**parar aqui e confirmar explicitamente** antes de iniciar a Task 13.4.
+**Próximo passo real (aguardando confirmação do operador): Task 13.4**
+(Corte & Material). Depois: **13.5 → 13.6 → 13.7**. **Pendência do
+operador** (pra usar o app real e validar os writes E2E, inclusive
+`/modulo`): configurar dashboard Supabase (Site URL/Redirect URLs + template
 de e-mail, ou desligar "Confirm email") e criar a 1ª conta. Ver
 `docs/Backlog.md` Stage 13.
 
