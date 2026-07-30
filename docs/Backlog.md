@@ -1382,12 +1382,55 @@ jornada do cliente, agora sobre Tailwind + shadcn/ui).
     - [ ] `npm run lint`/typecheck/test passam (motor: nenhum teste
           existente de `box.tamponamento` sobra órfão — remover ou migrar
           os testes que cobriam o mecanismo antigo).
-- **Task 13.3** — Shell `/orcamento/[id]` com abas + Dashboard `/` + fluxo de
+- **Task 13.3a — Autenticação (login/signup + gate de sessão)** — ✅
+  Concluído (2026-07-30, mesclada em `feature/13.3a-auth`). `/login` +
+  `/signup` (Supabase Auth e-mail+senha via `@supabase/ssr`; signup passa
+  `organizacao_nome`/`nome` em `options.data` pro trigger `handle_new_user`
+  criar org+perfil), gate deny-by-default no `middleware.ts` (`updateSession`
+  passou a devolver `claims` reaproveitando o mesmo `getClaims()`; redirect
+  pra `/login` copiando cookies, sem loop; públicas = `/login`/`/signup`/
+  `/auth/confirm` em `lib/auth/rotas.ts`), rota `/auth/confirm` (verifyOtp
+  do link de e-mail → sessão → `/`; falha → `/login?erro=confirmacao`),
+  logout mínimo no `app/page.tsx`. Design v3 (split navy+form, logo
+  `public/logo`) via tokens novos `marinho`/`marca` isolados do `accent` v2
+  (retrofit completo do accent→laranja fica pra 13.3b). Lógica pura extraída
+  pra `lib/auth/{rotas,validacao,mensagens}.ts` com testes. **Auditoria do
+  Maestro**: lint/tsc limpos, 221 testes, `get_advisors` segurança zero
+  achados, nenhum segredo no código, `.env` não rastreado; `/login`/`/signup`
+  renderizam em v3 e gate confirmado ao vivo (307 pra `/login` sem sessão,
+  sem loop) em 375/768/1280 sem overflow. 1 rodada de correção (a rota
+  `/auth/confirm` faltava — sem ela o link de confirmação de e-mail
+  quebraria o 1º signup). **Pré-requisitos de dashboard do operador** (fora
+  do código, necessários pro fluxo real): Supabase → Authentication → URL
+  Configuration (Site URL + Redirect URLs incluindo a origem de teste) e o
+  template de e-mail "Confirm signup" apontando pra
+  `{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=email`
+  (ou desligar "Confirm email" pra logar na hora). Teste E2E de signup real
+  = operador (Maestro não cria conta).
+- **Task 13.3a (registro histórico da descoberta)**: **Pré-requisito descoberto pelo Maestro (2026-07-29)**: a 13.3b
+  (shell) assume persistência real em `cliente`/`orcamento`, mas gravar
+  nessas tabelas exige sessão autenticada (RLS `authenticated` +
+  `private.org_do_usuario()`), e não existe nenhuma tela de login/signup no
+  app — toda a Stage 13 foi local-first até aqui. Operador decidiu
+  (2026-07-29): **auth primeiro**. Infra de banco já pronta (Task 11.1 —
+  trigger `on_auth_user_created` cria org+perfil no signup; 0 usuários hoje,
+  nunca exercido). Escopo: `/login` + `/signup` (Supabase Auth, e-mail+senha,
+  `@supabase/ssr` já em `lib/supabase/*`), gate de sessão real no
+  `middleware.ts` (hoje só faz refresh, "sem gate" — passa a redirecionar não
+  autenticado pra `/login`), ação de logout mínima. Design v3 (mockups
+  `login.png`/`Cadastro-Singup.png` — split navy+form, logo `public/logo`).
+  Security Auditor obrigatório (sessão/cookie/RLS/sem segredos). **Nota de
+  validação**: o Maestro não cria conta nem digita senha (regra de
+  segurança) — teste ponta-a-ponta do signup real fica com o operador; o
+  Maestro audita infra + confirma no banco que org+perfil nasce. Backend +
+  Frontend, mesma branch. 🔴 Alta · Sonnet.
+- **Task 13.3b (era 13.3)** — Shell `/orcamento/[id]` com abas + Dashboard `/` + fluxo de
   novo orçamento/cliente (captura nome/telefone/endereço + prazo de entrega
   na criação, `docs/Mapa-de-Telas.md` 3.2). Reaproveita `cliente`/`orcamento`
-  (Task 11.2, RLS já pronta). Depende de 13.2a/b/c pra ter algo real dentro
-  do shell (a aba "Ambientes" migra de `/ambientes` pra cá; `/modulo` migra
-  pro Editor de Item em `/orcamento/[id]/item/[itemId]`). 🟡 Média · Sonnet.
+  (Task 11.2, RLS já pronta). Depende de 13.2a/b/c e **de 13.3a (auth — sem
+  sessão não há o que persistir)**. A aba "Ambientes" migra de `/ambientes`
+  pra cá; `/modulo` migra pro Editor de Item em `/orcamento/[id]/item/[itemId]`.
+  Provavelmente será quebrada em sub-tasks (é a maior da Stage). 🟡 Média · Sonnet.
   **Dívida de retrofit visual (2026-07-28, decisão do operador)**:
   `docs/Design-System.md` foi reescrito integralmente nesta data (v3 —
   sidebar navy/laranja a partir de 12 mockups + logo oficial, substitui o
