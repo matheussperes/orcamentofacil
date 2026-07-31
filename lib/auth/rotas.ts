@@ -33,6 +33,11 @@
 // núcleo do Editor de Item (`EditorItemNucleo`) com um `ModuloOrcamento`
 // mock, pra testar `/orcamento/[id]/item/[itemId]` (rota real, protegida,
 // FORA desta lista) sem sessão real.
+//
+// `/dev/preview/proposta-pdf` (Task 13.6b): mesmo espírito — harness do
+// documento imprimível `/proposta/[id]/pdf` (rota real, protegida, FORA
+// desta lista) com dados mock de organização/cliente/linhas de proposta,
+// sem Supabase.
 export const ROTAS_PUBLICAS = [
   "/login",
   "/signup",
@@ -41,6 +46,7 @@ export const ROTAS_PUBLICAS = [
   "/dev/preview/orcamento",
   "/dev/preview/orcamento/novo",
   "/dev/preview/orcamento/item",
+  "/dev/preview/proposta-pdf",
 ] as const;
 
 /** Rotas que NÃO passam pelo gate de sessão do middleware. */

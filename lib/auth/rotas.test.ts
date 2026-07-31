@@ -27,9 +27,17 @@ describe("isRotaPublica", () => {
     expect(isRotaPublica("/dev/preview/orcamento/item")).toBe(true);
   });
 
+  it("trata /dev/preview/proposta-pdf como pública (harness do documento imprimível, Task 13.6b — 404 em produção é responsabilidade da própria rota)", () => {
+    expect(isRotaPublica("/dev/preview/proposta-pdf")).toBe(true);
+  });
+
   it("não trata /orcamento/[id] real nem /orcamento/[id]/item/[itemId] como públicas — só os harnesses /dev/preview/* são", () => {
     expect(isRotaPublica("/orcamento/abc-123")).toBe(false);
     expect(isRotaPublica("/orcamento/abc-123/item/xyz-789")).toBe(false);
+  });
+
+  it("não trata /proposta/[id]/pdf real como pública — só o harness /dev/preview/proposta-pdf é (D-18, só o dono da organização vê a proposta)", () => {
+    expect(isRotaPublica("/proposta/abc-123/pdf")).toBe(false);
   });
 
   it("trata a raiz (Dashboard) como protegida", () => {
