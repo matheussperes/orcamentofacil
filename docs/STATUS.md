@@ -92,8 +92,10 @@ limpos.
   por material) — nunca por ocupação do plano de corte nem por m².
   Congelamento no fechamento da proposta é obrigatório.
 - Design System v3: sidebar navy fixa (não é dark mode) + laranja como
-  destaque. **Sem 3D real** no canvas técnico — decisão explícita do
-  operador.
+  destaque. **Sem 3D real** no canvas técnico (`BoxCanvas`/`ElevacaoParede`/
+  `PlanoCorteCanvas`) — decisão explícita do operador (2026-07-31, D-33);
+  exceção escopada: `ModuleViewer` 3D estático (câmera fixa, sem controles),
+  em backlog.
 - Catálogo (`produto`) e Biblioteca (`gabarito`) são reais (Supabase), com
   wiring de consumo ligado nas telas que usam preço/gabarito.
 

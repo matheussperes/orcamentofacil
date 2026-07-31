@@ -2,9 +2,14 @@
   "schemaVersion": 2,
   "framework": {
     "plugin": "maestro",
-    "version": "3.0.0"
+    "version": "3.3.0"
   },
   "conventions": {
+    "platforms": {
+      "web": "ativo",
+      "mobile": "nao_iniciado"
+    },
+    "mobileComponentLibrary": null,
     "enginePath": "engine",
     "sourcePath": "app",
     "migrationsPath": "supabase/migrations",

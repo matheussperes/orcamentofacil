@@ -834,6 +834,83 @@ Renomear o rótulo do painel de "Visualização 3D" (mockup rejeitado) para
   `material.*` correspondente) ao lado do nome do material, para reforçar
   visualmente a ligação entre a lista e o desenho.
 
+### 9.6 `ModuleViewer` — exceção pontual e estreita: 3D estático, não decorativo, decidida pelo operador (2026-07-31)
+
+> **Isto NÃO reabre a proibição da Seção 9.** A regra "SEM 3D" continua
+> valendo por completo para `BoxCanvas.tsx`, `ElevacaoParede.tsx` e
+> `PlanoCorteCanvas` — nenhum dos três ganha câmera, iluminação realista ou
+> biblioteca 3D. O que segue especifica **um componente novo e isolado**,
+> `ModuleViewer`, autorizado pelo operador com escopo técnico já fechado por
+> ele mesmo (câmera ortográfica fixa, sem `OrbitControls`, sem rotação livre,
+> sem perspectiva — confirmado em `docs/Modelo-de-Dominio.md` Seção 4.1, que
+> já valida não exigir dado novo de domínio). **Não é precedente**: nenhum
+> outro lugar do produto ganha 3D sem nova decisão explícita e igualmente
+> estreita do operador. Se um Frontend Engineer futuro encontrar este
+> `ModuleViewer` e concluir que "3D já está liberado, dá para usar em outro
+> canvas" — está errado; reportar, não estender.
+
+**Onde aparece na tela**: dentro do painel de visualização do Editor de Item
+(Seção 9.5), como um **segundo modo do mesmo painel**, não uma tela nova nem
+um componente solto. O cabeçalho do painel ganha um seletor de modo estilo
+`Tabs` "underline" (mesmo componente e mesmos estilos de trigger da Seção
+7.8 — inativo `text-corpo font-medium text-cinza-500 border-b-2
+border-transparent`, ativo `text-accent border-b-2 border-accent`), com dois
+triggers: **"2D técnico"** (default, o conteúdo já especificado em 9.5) e
+**"3D estático"** (o `ModuleViewer` novo). Motivo de ser um segundo modo do
+mesmo painel, e não uma aba irmã nova em outro lugar da tela: o 3D estático
+é uma vista alternativa do mesmo módulo, não um conteúdo diferente — o
+usuário troca de modo, mas o contexto (qual item, qual painel de materiais
+ao lado) permanece o mesmo. O contêiner externo (fundo, borda, raio, sombra)
+não muda entre os dois modos — é o mesmo frame da Seção 9.5, só o conteúdo
+interno troca.
+
+**Controles de ângulo do modo "3D estático"**: um conjunto de botões
+**próprio e distinto** dos botões Frontal/Traseira/Esquerda/Direita/
+Explodida do modo 2D (que não fazem sentido para uma câmera ortográfica de
+`view`) — mesmo estilo visual (`size="icon"` da Seção 7.1, ativo em
+`bg-accent-subtle border border-accent-border text-accent`), mapeado 1:1 às
+quatro props já fechadas: **Isométrica** (`view="isometric"`, default ao
+abrir o modo 3D — é a vista que melhor comunica volume num único olhar),
+**Frontal** (`view="front"`), **Superior** (`view="top"`), **Lateral**
+(`view="side"`). Troca de ângulo é instantânea, sem animação de rotação de
+câmera (mesma regra da Seção 12 para o 2D — animar a troca pareceria
+rotação 3D livre, que é exatamente o que está proibido).
+
+**Cor do módulo**: quando o `ModuleViewer` renderiza com `color` (MDF
+uniclor sólido, sem `textureUrl`), a cor **não é lida diretamente da paleta
+da Seção 9.2** — ela vem de `corParaHex(material.cor)`, a mesma função de
+derivação já existente em `app/components/ModulePreview.tsx` e já reutilizada
+por `BoxCanvas.tsx` (confirmado em `docs/Modelo-de-Dominio.md`, Seção 4.1 e
+item A-19). Ou seja: o `ModuleViewer` consome o resultado de `corParaHex()`,
+não um hex independente lido à mão da Seção 9.2 — a Seção 9.2 é onde esses
+tons vivem como token de paleta, mas a fonte de verdade em runtime para
+"qual cor este módulo mostra" é sempre `corParaHex()`. Isso é deliberado:
+o mesmo módulo deve mostrar a mesma cor aproximada de material no 2D
+(`BoxCanvas.tsx`) e no 3D estático (`ModuleViewer`), então os dois **têm que
+ler da mesma função**, nunca de duas leituras independentes que podem
+divergir silenciosamente. Consequência prática: se `BoxCanvas.tsx` um dia
+migrar `corParaHex()` para outra fonte de derivação de cor (ex.: o `corHex?`
+opcional citado no item A-19 do Modelo de Domínio), o `ModuleViewer`
+**migra junto**, na mesma task — nunca fica com a heurística antiga enquanto
+o 2D já usa a nova. Se `textureUrl` deve existir no lançamento ou o produto
+sai só com cor sólida é **decisão em aberto do operador/Data Architect
+(Q-14 do Modelo de Domínio)** — não decidida aqui.
+
+**Loading do `ModuleViewer`** (enquanto `next/dynamic({ ssr: false })`
+carrega o bundle `@react-three/fiber`/`@react-three/drei`/`three`): mesmo
+tratamento de skeleton de canvas técnico já definido na Seção 8 — contêiner
+com o mesmo `bg-cinza-50 border-cinza-200`, ícone centralizado em
+`text-cinza-300` (usar `Box` do `lucide-react`, coerente com a curadoria de
+ícone por contexto da Seção 15.2 — "Box" nomeia o objeto ausente, um render
+3D do módulo, em vez de um ícone genérico), sem desenho. Não é um novo
+padrão de loading — é o mesmo já especificado, aplicado a este conteúdo.
+
+**Responsivo**: como o restante da Seção 9, o `ModuleViewer` tem
+`max-w-full` e preserva proporção (critério 4 de "não quebrar", Seção 10);
+abaixo de `md` (768px), os dois modos do painel continuam acessíveis via o
+mesmo seletor de `Tabs`, empilhado conforme o restante do layout do Editor
+de Item.
+
 ## 10. Breakpoints e "não quebrar"
 
 Mantidos da v2 (nenhum mockup contradiz — todos são telas desktop ≥1536px):
@@ -949,8 +1026,169 @@ Documento de proposta, Canvas técnico (elevação/plano de corte/editor de
 item) e os quatro estados (loading/vazio/erro/preenchido).
 
 **Lacuna reportada** (não resolvida silenciosamente): o mockup
-`Editor de Item.png` pede um componente de "toggle 2D/3D" que **não deve
-ser construído** — ver Seção 9. Se o Maestro considerar que a ausência
-desse toggle deixa a tela "incompleta" frente ao mockup visual, essa é uma
-divergência deliberada e já decidida pelo operador, não uma lacuna deste
-documento.
+`Editor de Item.png` pede um componente de "toggle 2D/3D" **fotorrealista e
+interativo**, que **não deve ser construído** — ver Seção 9. Se o Maestro
+considerar que a ausência desse toggle deixa a tela "incompleta" frente ao
+mockup visual, essa é uma divergência deliberada e já decidida pelo
+operador, não uma lacuna deste documento.
+
+> **Atualização (2026-07-31, ver Seção 9.6)**: o operador posteriormente
+> autorizou, com escopo estreito e specado por ele mesmo, um segundo modo
+> "3D estático" (não-interativo, câmera ortográfica fixa, sem
+> `OrbitControls`) no mesmo painel do Editor de Item — ver Seção 9.6. Isso
+> **não invalida** o parágrafo acima: o toggle 3D fotorrealista/interativo
+> do mockup original continua rejeitado; o que existe agora é um componente
+> tecnicamente distinto (`ModuleViewer`), com regras próprias e restritas.
+
+## 15. Reforço anti-genérico — Checklist de Acabamento Premium (adendo, 2026-07-31)
+
+> **Origem**: quatro sessões de walkthrough com o cliente-piloto
+> (`docs/01-backlog-pre-lancamento.md`, Lote 5 — "Limpeza visual") relataram
+> telas com layout de versão antiga convivendo com este Design System,
+> textos clicáveis remanescentes de protótipo, e vocabulário de spec
+> ("tier 1/2") vazado para a UI. A leitura deste Product Designer é que a
+> maior parte disso **não é lacuna de token** — é conformidade: as Seções
+> 1 e 13 já registram a dívida de retrofit, e a Seção 6 já exige sidebar +
+> topbar em toda tela autenticada. Esta seção é aditiva e cobre só o que,
+> mesmo seguindo o restante do documento à risca, ainda faltava: tracking
+> de títulos grandes, curadoria de ícone, e um critério objetivo e
+> verificável para o `ux-auditor` aplicar contra "cara de produto feito por
+> IA". **Não reabre nenhuma decisão fechada** (sidebar navy fixa, laranja
+> de destaque, sem 3D no canvas — Seção 0).
+
+### 15.1 Tracking (letter-spacing) obrigatório nos tamanhos de destaque
+
+A Seção 3 definia tamanho, altura de linha e peso, mas não o tracking —
+sem ele, título e valor grandes ficam com o espaçamento default do
+navegador, que é o que mais denuncia "feito às pressas". Valores a aplicar
+sobre os `fontSize` já existentes (nenhuma mudança de px/lineHeight):
+
+```ts
+letterSpacing: {
+  display:            "-0.014em", // text-display (28px)
+  "titulo-secao":      "-0.006em", // text-titulo-secao (20px)
+  "valor-destaque":    "-0.012em", // text-valor-destaque (24px)
+  "valor-destaque-lg": "-0.017em", // text-valor-destaque-lg (32px) — o maior número da tela, o que mais precisa de tracking negativo
+}
+```
+
+`titulo-card`, `corpo`, `corpo-pequeno` mantêm tracking `normal` (0) — só
+os quatro tamanhos de destaque acima recebem tracking negativo.
+`legenda` **não muda**: continua `tracking-[0.03em]` (positivo, já
+definido na Seção 7.3/7.7 para rótulo uppercase — regra oposta é
+intencional, uppercase pequeno precisa de tracking aberto, não fechado).
+
+### 15.2 Sistema de ícones — biblioteca única, sem mistura
+
+Não estava explícito como princípio, só implícito nos exemplos da Seção 9
+(`AlertTriangle`, `Eye`, `Link`/`Unlink` do `lucide-react`). Fica
+explícito agora: **toda a interface usa exclusivamente `lucide-react`**,
+`stroke-width` `1.75` (peso padrão da biblioteca), tamanhos `14px`/`16px`/
+`20px`/`24px` conforme o contexto já especificado em cada componente da
+Seção 7. Proibido: misturar com outro pacote de ícone (Feather, Heroicons,
+Font Awesome), usar emoji como ícone funcional (exceção documentada: o
+emoji de placeholder "👁" na Seção 9.3 é histórico e deve ser lido como
+`Eye` do lucide, não emoji literal), ou usar um ícone genérico
+("💡", "🚀", caixa/nuvem vazia sem relação com o domínio) num estado vazio
+quando existe opção mais específica.
+
+**Curadoria por contexto de estado vazio** (aplica-se à Seção 8): o ícone
+do estado vazio deve nomear o objeto ausente, não ser um ícone genérico de
+"nada aqui":
+
+| Contexto vazio | Ícone (lucide) | Nunca usar |
+|---|---|---|
+| Lista de orçamentos | `FileText` | `Inbox` genérico |
+| Biblioteca sem módulos na categoria | `Boxes` | `Package` genérico sem relação |
+| Ambiente sem paredes | `LayoutPanelLeft` (referência a planta/parede) | ícone de "vazio" abstrato |
+| Parede sem itens posicionados | `Ruler` | — |
+| Plano de corte sem chapas calculadas | `Scissors` ou `LayoutGrid` | spinner ou ícone de erro |
+| Catálogo sem produtos na categoria | `PackageSearch` | `Inbox` genérico |
+
+### 15.3 Vocabulário de especificação nunca chega ao usuário (reforço da Seção 11)
+
+O backlog pré-lançamento (Seção 2.5, itens 5.5/5.6) reportou um card
+"validação tier 1 + tier 2" na UI — vocabulário criado no briefing técnico
+(D-19) para escopar severidade de validação, não para ser lido pelo
+marceneiro. A causa provável: a Seção 9.3 deste próprio documento usa
+"Tier 1"/"Tier 2" como atalho para descrever *ao Frontend Engineer* qual
+token semântico usar (`erro` vs `aviso`) — e esse atalho de especificação
+vazou como se fosse copy de produto. Fica explícito para eliminar a
+ambiguidade:
+
+- **"Tier 1"/"Tier 2" são nomes internos de severidade do motor** (usados
+  neste documento e no `Modelo-de-Dominio.md` para instruir engenharia).
+  **Nunca aparecem como texto literal na interface.** O que a Seção 9.3 já
+  determina continua valendo (contorno `erro` sólido para Tier 1, `aviso`
+  tracejado para Tier 2) — o token visual está correto, só o **rótulo
+  textual** ao lado/tooltip precisa ser em linguagem de produto: "Bloqueante"
+  ou a mensagem nomeando peça+regra (já no padrão da Seção 11 — "Balcão 2
+  portas... sobrepõe...") para Tier 1; "Atenção" ou a recomendação textual
+  para Tier 2. Nunca literalmente "Tier 1" nem "Tier 2" em tela.
+- **Teste de varredura objetivo, aplicável por qualquer agente**: antes de
+  considerar uma string de UI pronta, perguntar "esse termo apareceria numa
+  conversa com o marceneiro sobre o produto?". Se não (é vocabulário de
+  arquitetura, de banco de dados, de planejamento interno, ou nome de
+  entidade do domínio de dados que não é o nome comercial do conceito —
+  ex.: "tier", "seed", "template" quando o produto já decidiu chamar de
+  "módulo", "snapshot", "BOM", nome de tabela ou de rota interna) —
+  reescrever. Este teste vale para toda string nova, não só para as já
+  reportadas no Lote 5.
+
+### 15.4 Checklist objetivo de Acabamento Premium (critério de aceite do `ux-auditor`)
+
+Lista binária (passa/não passa), para aplicar tela a tela em qualquer task
+de UI — inclui os pontos já existentes no documento e os três reforços
+acima, consolidados num único lugar para conferência rápida:
+
+1. Toda cor usada existe literalmente na Seção 2 (hex ou nome de token) —
+   nenhum hex ad hoc, nenhuma opacidade inventada fora das já especificadas.
+2. Toda sombra usada é exatamente um dos 5 valores da Seção 5
+   (`xs`/`sm`/`md`/`lg`/`sidebar`) — nenhum `box-shadow` inline customizado.
+3. Toda tela autenticada tem sidebar e topbar completas conforme a Seção 6
+   — nenhuma tela "solta" sem o shell (cobre backlog 5.4).
+4. Nenhum texto voltado ao usuário usa vocabulário de spec — varredura
+   conforme 15.3 feita e documentada como concluída (cobre backlog 5.5/5.6).
+5. Nenhum "texto clicável" herdado de versão anterior sem componente real
+   por trás — todo elemento clicável é um `Button`/`Link` da Seção 7.1,
+   nunca texto solto sublinhado de protótipo antigo (cobre backlog 5.3).
+6. `text-display`, `text-titulo-secao`, `text-valor-destaque` e
+   `text-valor-destaque-lg` usam o tracking da Seção 15.1 — nunca o
+   tracking default do navegador.
+7. Ícones vêm exclusivamente de `lucide-react`, mesmo peso de traço,
+   tamanho conforme o contexto (Seção 15.2) — nenhum emoji funcional,
+   nenhuma mistura de biblioteca de ícone.
+8. Telas "irmãs" da mesma família funcional (as quatro abas do orçamento;
+   Biblioteca vs. Catálogo; os cards de KPI de qualquer tela) usam o mesmo
+   padding de card, o mesmo gap entre KPIs e a mesma altura de header —
+   nenhuma inconsistência visual entre telas do mesmo nível de hierarquia
+   (cobre a causa-raiz de fundo do backlog 5.1/5.2: layout antigo convivendo
+   com o novo).
+9. Estado vazio usa o ícone específico do contexto (Seção 15.2), nunca um
+   ícone genérico de "nada aqui" sem relação com o domínio.
+10. Todo elemento interativo (botão, card clicável, linha de tabela, módulo
+    do canvas) tem a transição da Seção 12 aplicada — nenhuma mudança de
+    estado instantânea, exceto com `prefers-reduced-motion` ativo.
+
+    > **Exceções deliberadas a este item, não violações**: (a) a troca de
+    > ângulo do desenho técnico 2D (Frontal/Traseira/Esquerda/Direita/
+    > Explodida) especificada na Seção 12, e (b) a troca de `view`
+    > (`isometric`/`front`/`top`/`side`) do `ModuleViewer` especificada na
+    > Seção 9.6 — **ambas são instantâneas por design**, sempre, com ou sem
+    > `prefers-reduced-motion`. Nos dois casos animar a troca faria o canvas
+    > parecer uma câmera 3D livre em rotação, o que é explicitamente proibido
+    > (Seção 9 e Seção 9.6). Um `ux-auditor` aplicando este item não deve
+    > reprovar essas duas trocas de ângulo por ausência de transição — a
+    > ausência de transição *é* a implementação correta.
+11. Loading de bloco de conteúdo real usa skeleton na forma do conteúdo
+    (Seção 8) — nunca spinner central substituindo lista/tabela/card
+    inteiro (spinner pequeno dentro de botão durante ação pontual continua
+    permitido).
+12. Nenhum componente introduz cor, raio, sombra ou espaçamento fora dos
+    tokens das Seções 2–5 — se a tela "parecer precisar" de um valor novo,
+    isso é lacuna a reportar ao Product Designer, nunca decisão ad hoc do
+    Frontend Engineer.
+
+Este checklist não substitui os critérios de "não quebrar" da Seção 10
+(responsividade) — é adicional, focado em acabamento visual e vocabulário,
+não em quebra de layout.
