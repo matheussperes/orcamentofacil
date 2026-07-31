@@ -8,15 +8,21 @@ import { Shell } from "@/components/shell/Shell";
 // Router pra layout compartilhado — o contrato deixou a escolha a critério
 // do Frontend Engineer.
 //
-// Escopo desta task: só o Dashboard (`app/(app)/page.tsx`) mora dentro deste
-// grupo por enquanto. `/modulo`, `/ambientes`, `/biblioteca` e
+// Escopo original (Task 13.3b): só o Dashboard (`app/(app)/page.tsx`) morava
+// dentro deste grupo. `/modulo`, `/ambientes`, `/biblioteca` e
 // `/configuracoes/materiais` (laboratórios/telas Stage 12-13 anteriores)
-// continuam fora dele — ainda usam CSS legado (`.wrap`/`.card`, ver
-// `app/globals.css`) e não são destinos do menu principal em
-// `docs/Mapa-de-Telas.md`; envolvê-los no shell agora exigiria redesenhar
-// cada uma para não duplicar cabeçalho/voltar, fora do escopo de "Shell +
-// Dashboard" desta task. Registrado no relatório para o Maestro decidir
-// sequenciamento de retrofit futuro (13.3c+).
+// continuavam fora dele — CSS legado (`.wrap`/`.card`, ver
+// `app/globals.css`) e não eram destinos do menu principal em
+// `docs/Mapa-de-Telas.md` ainda ligados a dados reais; envolvê-los no shell
+// exigiria redesenhar cada uma para não duplicar cabeçalho/voltar. Registrado
+// no relatório para o Maestro decidir sequenciamento de retrofit futuro.
+//
+// Atualização (Task 13.7c, contrato .maestro/tmp/13.7c-contract.md):
+// `/biblioteca` (`app/(app)/biblioteca/page.tsx`) migrou pra dentro deste
+// grupo — CRUD real de `gabarito` (Supabase), com sidebar/topbar do shell.
+// `/modulo` e `/ambientes` continuam FORA (mesma Task 13.7c religou os dados
+// de `/modulo` ao Supabase, sem retrofit visual pro shell — fora do escopo
+// de "religar dados").
 //
 // Título/subtítulo da topbar: resolvidos por rota dentro de `Topbar.tsx`
 // (mapa simples via `usePathname`), não passados por aqui — ver comentário
