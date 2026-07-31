@@ -1,526 +1,136 @@
-# Status Atual, Decisões, Pendências e Próximos Passos
+# Status Atual
 
-> Atualizado em 2026-07-31 (Stage 13/Fase C COMPLETA — **Épico V2 completo**
-> — Tasks 13.0 a 13.7 TODAS concluídas — Fases A (Discovery), B (Motor/Dados)
-> e C (Experiência) TODAS concluídas; ver fim da Seção 6). Este arquivo é o ponto de partida de
-> qualquer sessão nova — leia antes de assumir o que já existe. O projeto
-> virou V2 em 2026-07-24 (ver Seção 1) — não confie em nada anterior a essa
-> data sobre arquitetura/motor sem checar contra os documentos da Seção 7.
+> Atualizado em 2026-07-31. Este arquivo é o ponto de partida de qualquer
+> sessão nova. Histórico task-a-task (auditorias, tentativas, decisões)
+> não vive mais aqui — está no `git log` e nos commits de merge de cada
+> branch `feature/<task-id>`. Este arquivo mantém só o essencial.
 
-## 1. Onde estamos agora (resumo de uma linha)
+## 1. Onde estamos
 
-O projeto deixou de ser "refatoração visual da V1" e virou **a V2 do
-produto**: painel de orçamento para marceneiros, motor de caixa (V3)
-estendido, persistência real multi-tenant via Supabase. **ÉPICO V2 COMPLETO** —
-**Fase A (discovery)**, **Fase B (motor + dados)** e **Fase C (experiência)
-TODAS CONCLUÍDAS**. Stages 10–13 concluídas e mescladas. Próximos passos
-dependem de nova conversa com operador (novo épico, item do Backlog futuro
-pós-MVP, ou operação/manutenção).
+**Épico V2 completo.** Painel de orçamento para marceneiros: motor de caixa
+paramétrico (V3), persistência multi-tenant real via Supabase, todas as telas
+da experiência construídas. Fases A (Discovery), B (Motor e dados) e C
+(Experiência/telas) — todas concluídas. Não há task planejada em aberto além
+do registrado em `docs/Backlog.md` (dívida de segurança não endereçada +
+"Backlog futuro pós-MVP", nada agendado).
 
-**A Stage 13 (Fase C — telas) já tem discovery/planejamento feito
-(2026-07-27)**: as 8 tasks (13.0-13.7) estão detalhadas com critério de
-aceitação e ordem de dependência no `docs/Backlog.md`, e as duas dívidas
-arquiteturais que ficaram em aberto (ver Seção 6) já têm decisão fechada,
-amarradas a tasks específicas — não é mais "pendência vaga". Tasks 13.0,
-13.1, 13.2a, 13.2b e 13.2c concluídas (Task 13.2 fechada por completo);
-**próximo passo real: executar a Task 13.3** (Shell `/orcamento/[id]`). É a
-mudança de fase mais significativa
-desde o início da V2 — sai de motor/dados puro e entra em UI (**Frontend
-Engineer** volta a ser o executor principal, UX Auditor de volta no loop).
+Próximos passos dependem de uma nova conversa com o operador: novo escopo,
+item do Backlog futuro, ou operação/manutenção do que já existe.
 
-## 2. Como orientar-se (leia nesta ordem)
+## 2. Como se orientar (leia nesta ordem)
 
-1. **`docs/00-briefing-v2-reorientacao_1.md`** — o briefing do operador que
-   disparou a V2. Fonte de verdade de produto/negócio.
-2. **`docs/PRD.md`** — visão, persona, jornada, requisitos funcionais, escopo
-   negativo, decisões D-01 a D-26 (todas fechadas ou assumidas).
-3. **`docs/Modelo-de-Dominio.md`** — a fundação técnica. `ItemOrcamento` union
-   (`BoxModule | Placa`), Parede/Ambiente/Conjunto, elementos contínuos
-   unificados (tampo/rodapé/tamponamento/fechamento), rateio de preço por
-   custo alocado, veio de chapa. **Já corrigido e auditado pelo operador**
-   (Seção 10 do próprio doc — todas as assunções confirmadas).
-4. **`docs/Mapa-de-Telas.md`** — IA em telas separadas (`/orcamento/[id]` com
+1. **`docs/PRD.md`** — visão, persona, jornada, requisitos, decisões D-01 a
+   D-26 (todas fechadas).
+2. **`docs/Modelo-de-Dominio.md`** — a fundação técnica: `ItemOrcamento`
+   union (`BoxModule | Placa`), Parede/Ambiente/Conjunto, elementos
+   contínuos, rateio de preço, veio de chapa.
+3. **`docs/Mapa-de-Telas.md`** — a árvore de telas (`/orcamento/[id]` com
    abas), derivada do modelo de domínio.
-5. **`docs/Backlog.md`** — o backlog de execução. Stages 1–9 são a
-   dívida técnica/visual da V1 (maioria concluída ou reabsorvida — ver a
-   tabela "Status das Stages 1–9 sob a ótica da V2" logo no início do Épico
-   V2). **Stages 10–13 são o trabalho real da V2** — é aqui que a próxima
-   sessão deve olhar para saber a próxima task.
-6. **`.maestro/agents/maestro.md`** e demais arquivos em `.maestro/` — o
-   framework de orquestração usado (branch efêmera por task → Code Auditor
-   [+ Security/UX Auditor quando aplicável] → merge `--no-ff` na branch
-   principal `claude/budget-planner-pipeline-fidr4y`, que faz papel de
-   `main` neste repo).
+4. **`docs/Design-System.md`** — tokens de cor/tipografia/espaçamento (v3,
+   sidebar navy + laranja). Não inventar valor visual fora daqui.
+5. **`docs/Backlog.md`** — o que ainda não foi feito (dívida de segurança
+   Stage 3, avaliações de upgrade Stage 4, ideias pós-MVP).
+6. **`.maestro/agents/maestro.md`** e `.maestro/` — o framework de
+   orquestração (branch efêmera → gates → merge `--no-ff` em `main`).
+7. `docs/archive/` — planejamento original V1, só para curiosidade
+   histórica. Não é fonte de verdade.
 
-## 3. O que está construído e funcionando
+## 3. O que existe e funciona
 
-### Motor de cálculo (V3 — único motor agora)
-- `lib/engine/box/*`: explosão recursiva de caixa → BOM, bin-packing/plano de
-  corte, migração idempotente de presets (`migrate.ts`).
-- `lib/engine/consolidar.ts` (novo — Task 10.1): `consolidarResultados`,
-  extraída de `engine.ts` (V1) porque era compartilhada com o caminho de
-  caixa. É o ponto de consolidação de BOM hoje.
-- `lib/orcamento.ts`: `ModuloOrcamento` é union discriminada por `origem` —
-  agora com 2 membros: `{ origem: "custom_box"; box: BoxModule }` e
-  `{ origem: "placa"; placa: Placa }` (Task 12.1). **Não colapsar em tipo
-  único.**
-- `lib/engine/placa/*` (novo — Task 12.1): primitiva `Placa` (peça plana sem
-  carcaça/vãos — prateleira, fechamento, painel, ripado) + `explodePlaca()`,
-  mesmo padrão puro de `box/explode.ts`. Reaproveita `BoxMaterial` (não criou
-  `MaterialRef`). `app/page.tsx` ainda não tem editor de Placa (fica pra Fase
-  C) — só o glue mínimo de tipagem pra continuar compilando.
-- `lib/engine/parede/*` (novo — Task 12.2): `Parede`, `Ambiente`,
-  `ElementoParede`, `ItemPosicionado`, `Faixa`, `AlturasFaixas`; `derivarY()`
-  (Y nunca digitado, D-20) e `validarParedeTier1`/`Tier2` (retornam
-  `EngineWarning[]` — primeiro uso real desse canal, antes sempre vazio no
-  caminho V3). Tier 3 (folgas/ergonomia) não implementado, é decisão do
-  briefing pra depois.
-- `lib/engine/conjunto/*` (novo — Task 12.3, primeira do **Motor Engineer**
-  — `.maestro/agents/motor-engineer.md`, não versionado): `detectarConjuntos()`
-  agrupa itens adjacentes por faixa (bordas encostadas, sem elemento
-  bloqueante entre eles); `aplicarOverrides()` aplica o handle de junção
-  manual. **`Conjunto` nunca tem tamanho 1** (módulo isolado usa `moduloId`
-  direto, Seção 3.4) — corrigido numa rodada de revisão do Maestro após a
-  primeira entrega incluir conjuntos de 1 por engano.
-- `lib/engine/elemento-continuo/*` (novo — Task 12.4): `ElementoContinuo`
-  unificado (tampo/rodapé/tamponamento/fechamento), dimensão derivada por
-  tipo (tampo reaproveita `explodePlaca` da Task 12.1 pra engrossamento/
-  dobra). `BayContent` deixa de ser union — tamponamento ESTRUTURAL saiu
-  (Seção 3.6), `migrate.ts` descarta presets antigos com esse bay, com aviso.
-  **Dívida A (agora com plano fechado, não mais vaga)**:
-  `BoxModule.tamponamento`/`TamponamentoInstancia` (tamponamento de
-  INSTÂNCIA, doc 12) continua ativo e coexistindo com o novo
-  `ElementoContinuo` tipo "tamponamento" até a **Task 13.2** — é lá que é
-  retirado (ver Backlog, Stage 13).
-- `lib/engine/box/{types,explode,cutting}.ts` + `lib/engine/types.ts` (Task
-  12.5 — veio de chapa): `BoxMaterial.temVeio?`, `Peca.temVeio`/`sentidoVeio`
-  (denormalizados). 22 pontos de peça em `box/explode.ts` classificados
-  individualmente (comentário por peça). `cutting.ts`: com veio, orientação
-  fixada em `expandirPecas` antes do empacotamento — `empacotarChapas` nunca
-  rotaciona essas peças, vão pra `foraDaChapa` se não couberem na orientação
-  fixa. **Escopo reduzido por decisão do operador**: só motor, sem UI —
-  "exibição/alteração visual para placas" do Backlog original fica pra
-  quando o editor de Placa existir (Fase C). **⚠️ Aviso**: aproveitamento de
-  chapas com `temVeio: true` vai piorar (ficar correto) — sem impacto visível
-  hoje, nenhum material cadastrado usa a flag ainda.
-- `lib/engine/precificacao/*` (novo — Task 12.6, Motor Engineer em **Opus**):
-  modelo de precificação V2 — 4 modos de preço (multiplicador/percentual/
-  por_chapa/fixo) + 3 de montagem + rateio por custo alocado + resumo de 6
-  campos + `RateioSnapshot` congelável. **`pricing.ts` V1 intocado**
-  (coexistência até a Fase C — ainda ativo em `app/page.tsx`, `app/modulo`,
-  `app/proposta`, `defaults.ts`). Decisão de negócio: markup só sobre
-  material; montagem/frete somados por cima. Rateio **modular por
-  componente** (móveis+frete por custo; montagem pela base do seu modo). O
-  exemplo trabalhado do briefing (R$19.000, casos de 19 e 20 chapas) é teste
-  de aceitação e fecha número a número.
-- `lib/orcamento.ts` (Task 12.7 — resolve a Dívida B1): `calcularOrcamentoMisto`
-  agora aceita `elementosContinuos?: ElementoContinuoResolvido[]` — cada
-  `ElementoContinuo` explodido vira um `ResultadoModulo` **sintético** em
-  `porModulo` (mesmo padrão de `BoxModule`/`Placa`; **não** em `globais`, que
-  é `PecaLinear[]`, formato V1 incompatível de shape). `AlvoResolvido`
-  continua sendo responsabilidade de quem chama (Conjunto/Parede → dimensões
-  é I/O de domínio) — isso sim fica pra Task 13.2. Trabalho de motor puro,
-  por isso não esperou a Stage 13.
-- **O motor V1 de templates foi removido por completo** (Task 10.1, 2026-07-24):
-  `lib/engine/engine.ts` (calcularEngine), `templates.ts`, `evaluator.ts`,
-  `lib/templateOverrides.ts`, `lib/validation/templates.ts`,
-  `app/api/calcular`, `app/api/templates`, `app/configuracoes/engenharia` —
-  todos removidos. 96 → 69 testes na época (23 eram do V1; nenhum órfão).
-- **168 testes passando hoje** (2026-07-27), cobrindo motor V3 completo
-  (box, placa, parede, conjunto, elemento-contínuo, precificação) — todos
-  os módulos listados acima têm suíte própria.
+**Motor de cálculo** (`lib/engine/*`, `lib/orcamento.ts`) — único motor (V1
+removido por completo): explosão de `BoxModule`/`Placa` em peças, bin-packing
+com restrição de veio, `Parede`/`Ambiente`/`Conjunto`/`ElementoContinuo`
+(tampo/rodapé/tamponamento/fechamento unificados), precificação V2 (4 modos
+de preço + 3 de montagem, rateio por custo alocado, `RateioSnapshot`
+congelável). `pricing.ts` V1 segue coexistindo intocado (consumido só como
+fallback/preview em `/modulo`).
 
-### Persistência e Auth (novo — Supabase, Tasks 11.1 + 11.2)
-- Projeto Supabase real conectado: **`orcamentofacil`**
-  (`ioakptuwhfvlirvrciwg`, `ca-central-1`, Postgres 17). Use as ferramentas
-  MCP do Supabase (`ToolSearch` por `mcp__7d44308e...`) para consultar/alterar.
-- **Prisma foi removido inteiramente** do projeto (schema, seed, client,
-  `bcryptjs`, `jose`). Autenticação própria (`lib/auth.ts`, `middleware.ts`
-  JWT) também removida.
-- Migrations aplicadas (versionadas em `supabase/migrations/`):
-  `organizacao` + `perfil` (Task 11.1), RLS habilitada, políticas, função
-  `private.org_do_usuario()` (SECURITY DEFINER, fora do PostgREST — não expor
-  outra função assim sem o mesmo cuidado) e trigger `on_auth_user_created`
-  que cria organização+perfil no signup (D-13 real).
-- **Task 11.2 (2026-07-27)**: 9 tabelas novas, todas com RLS + políticas
-  (`private.org_do_usuario()`, initplan-otimizada): `cliente`, `produto`,
-  `gabarito`, `orcamento`, `ambiente`, `parede`, `elemento_continuo`,
-  `linha_proposta`, `lista_material`. `organizacao_id` é denormalizado em
-  toda tabela (RLS direta por coluna, não via join na tabela pai — decisão
-  fechada pensando na Task 11.3). `gabarito` é a única com `organizacao_id`
-  nullable (null = base global read-only, D-15 — fork fica para a 11.4).
-  `lista_material` não tem política de UPDATE (snapshot imutável). `produto`
-  e `gabarito` nascem vazios — população é Task 11.4. Rascunho de referência
-  completo (spec de cada coluna) em `.maestro/tmp/schema.sql`.
-- Clientes Next.js: `lib/supabase/{client,server,middleware}.ts` — **nunca
-  misturar** o cliente de servidor com o de browser.
-- `get_advisors` (security) rodando **zero achados** em 2026-07-27 (conferido
-  pelo Maestro após a Task 11.2, não só relatado pelo executor) — rodar de
-  novo depois de qualquer migration nova (é grátis e pega RLS esquecida).
-- Rotas V1 de auth/clientes/orçamentos (Prisma) foram removidas junto — elas
-  nunca estiveram ligadas ao fluxo de caixa (só ao modelo V1). A Fase C
-  constrói o acesso a dados real contra o modelo novo.
+**Persistência e Auth** — Supabase real (`orcamentofacil`,
+`ioakptuwhfvlirvrciwg`). Multi-tenant por `organizacao` via RLS
+(`private.org_do_usuario()`), auth por Supabase Auth (`/login`, `/signup`,
+gate deny-by-default no `middleware.ts`). Tabelas: `organizacao`, `perfil`,
+`cliente`, `produto`, `gabarito`, `orcamento`, `ambiente`, `parede`,
+`elemento_continuo`, `linha_proposta`, `lista_material` — todas com RLS
+própria. Teste de isolamento por tenant em
+`supabase/tests/isolamento-tenant.sql` (rodar de novo após qualquer RLS
+nova). Storage: bucket privado `linha-proposta-renders` (renders de
+propostas). Prisma foi removido por completo.
 
-### UI existente (Tailwind + shadcn/ui, Stages 5–7 da V1)
-- Fundação Tailwind + shadcn/ui completa (`tailwind.config.ts`, tokens do
-  `docs/Design-System.md`, `components/ui/{button,stepper}.tsx`).
-- Bug estrutural corrigido (Task 7.1b): `lib/utils.ts`/`cn()` usa
-  `extendTailwindMerge` registrando os 7 tokens de fontSize customizados como
-  grupo próprio — sem isso, `tailwind-merge` descartava silenciosamente
-  classes de tamanho de fonte customizado combinadas com cor.
-- Laboratório `/modulo` (accordion Caixa→Divisões→Portas→Gavetas→Puxador +
-  canvas de seleção) já convertido e é a **base direta do Editor de Item** da
-  V2 (Task 13.1).
-- `app/page.tsx` (produção, página única) segue existindo mas **será
-  decomposto na Fase C** nas abas de `/orcamento/[id]` — não invista nele além
-  do necessário para não quebrar o build.
+**Telas** (shell autenticado `app/(app)/`, sidebar navy + topbar):
+- `/` — Dashboard (lista de orçamentos).
+- `/orcamento/[id]` — o coração do produto, 4 abas: Ambientes (elevação 2D,
+  posicionamento, Conjuntos, Elementos Contínuos), Corte & Material (plano
+  de corte agregado, lista de material congelável), Financeiro (resumo de 6
+  campos, modos de precificação/montagem), Proposta (Linhas de Proposta com
+  render automático, override com rebalanceamento, gera `/proposta/[id]/pdf`).
+- `/orcamento/[id]/item/[itemId]` — Editor de Item (módulo-caixa ou placa).
+- `/perfil` — dados da organização + pessoais, padrões de precificação.
+- `/catalogo` — CRUD de produtos (chapas/ferragens/fita/LED/acessórios).
+- `/biblioteca` — gabaritos reutilizáveis (base global + fork por
+  organização).
+- `/modulo` — laboratório de edição de gabaritos (mesmo núcleo do Editor de
+  Item).
+- `/dev/preview/*` — harnesses com dados mock, sem sessão, 404 em produção;
+  usados pra auditoria visual sem precisar logar.
 
-## 4. Decisões tomadas (não reabrir sem motivo novo)
+**Testes**: 290 passando (`npm run test`). `npm run lint`/`npm run typecheck`
+limpos.
 
-Todas as decisões D-01 a D-26 do briefing estão fechadas — ver `docs/PRD.md`
-Seção 7. Destaques que mais afetam código:
-- **Motor V3 mantido, V1 descartado** (feito). Motor **estendido** com Placa,
-  veio de chapa, Parede/Ambiente, elementos contínuos unificados, rateio.
-- **Supabase Auth + RLS, Prisma fora** (feito). Tenant = Organização.
-- **Elementos contínuos**: tampo/rodapé/tamponamento(4 posições)/fechamento
-  são o mesmo mecanismo, dimensão derivada (exceto rodapé/fechamento, que
-  aceitam override). Ver `docs/Modelo-de-Dominio.md` Seção 3.4/3.5.
-- **Engrossamento/dobra**: o parâmetro real é o **nível** (1/2/3), não a
-  espessura — `espessuraFinal = base × (1+nível)`. Vale para base 15mm e
-  18mm. Ver Seção 2.1 do Modelo de Domínio — **todas as assunções auditadas e
-  confirmadas pelo operador**.
-- **Posicionamento 1D com faixas**, não 2D livre.
-- **Rateio de preço por custo alocado** (área de peças do BOM, segregado por
-  material), não por ocupação do plano de corte nem por m². Congelamento no
-  fechamento da proposta é obrigatório.
-- **Cadência de execução visual**: agrupar tasks e validar em lote (decisão
-  do operador após a Stage 7) — não task-a-task como nas Stages 1-7.
-- **Design-System v3 (2026-07-28)**: substitui integralmente a v2 (tema
-  claro/neutro). Nova identidade a partir de 12 mockups de referência
-  (`docs/Imagem das Telas/`) + logo oficial (`public/logo/logo-{light,dark}.png`):
-  sidebar navy fixa (não é dark mode) + laranja como cor de destaque.
-  **Sem 3D real** — decisão explícita do operador, o canvas técnico
-  (`BoxCanvas`, `ElevacaoParede`, `PlanoCorteCanvas`) continua 2D, só fica
-  mais elegante (cor de material simulada). Telas já mescladas sob a v2
-  (`/modulo`, `/ambientes`) só recebem o retrofit na Task 13.3 (quando
-  migram pro shell real de qualquer forma) — não antes, pra não duplicar
-  trabalho. Ver `docs/Design-System.md` na íntegra antes de qualquer task
-  visual nova.
+## 4. Decisões que não devem ser reabertas sem motivo novo
 
-## 5. Lacuna vs. o PRD original (V1) — resolvida pela V2
+- Motor V3 é o único motor; **Placa** é peça plana (prateleira/fechamento/
+  ripado), distinta de `BoxModule` (móvel com carcaça).
+- Multi-tenant via Supabase RLS, tenant = Organização. Sem Prisma.
+- Elementos contínuos (tampo/rodapé/tamponamento/fechamento) são um único
+  mecanismo, dimensão derivada (exceto rodapé/fechamento, que aceitam
+  override manual).
+- Engrossamento/dobra de Placa: o parâmetro é o **nível** (1/2/3), não a
+  espessura em si.
+- Posicionamento é 1D com faixas (inferior/bancada/aéreo/torre), não 2D
+  livre.
+- Rateio de preço é por **custo alocado** (área de peças do BOM, segregado
+  por material) — nunca por ocupação do plano de corte nem por m².
+  Congelamento no fechamento da proposta é obrigatório.
+- Design System v3: sidebar navy fixa (não é dark mode) + laranja como
+  destaque. **Sem 3D real** no canvas técnico — decisão explícita do
+  operador.
+- Catálogo (`produto`) e Biblioteca (`gabarito`) são reais (Supabase), com
+  wiring de consumo ligado nas telas que usam preço/gabarito.
 
-O `docs/PRD-PIPELINE.md` (histórico, V1) é mantido só como referência — o
-`docs/PRD.md` (V2) o substitui. A lacuna que o STATUS.md antigo registrava
-("orçamento não persiste, tudo em useState/localStorage") está sendo resolvida
-pela própria Fase B (Stages 11-12): persistência real multi-tenant é
-requisito explícito da V2, não um débito à parte.
+## 5. Pendências reais (não bloqueiam nada, mas existem)
 
-## 6. Pendência em aberto agora (prioridade atual)
+- **Operador**: configurar o dashboard Supabase (Site URL/Redirect URLs +
+  template de e-mail "Confirm signup", ou desligar "Confirm email") antes de
+  criar a primeira conta real e validar os fluxos de escrita ponta-a-ponta
+  (o Maestro nunca cria conta nem digita senha).
+- **Operador**: cadastrar os ~380 padrões reais de MDF em `/catalogo` (ou via
+  Supabase Table Editor) — hoje só o catálogo seed genérico existe.
+- Dívida de segurança de baixa prioridade nunca endereçada — ver
+  `docs/Backlog.md` (Stage 3): headers de segurança, auditoria de operações
+  sensíveis, limite de cache de fórmulas.
+- Upgrades major (`next`, `vitest`) avaliados como risco real mas não
+  agendados — ver `docs/Backlog.md` (Stage 4).
+- Permissão de escrita em `organizacao`/`perfil` (`/perfil`) não tem
+  granularidade por papel — qualquer membro da org edita dados
+  financeiros/CNPJ da empresa. Registrado, não corrigido; decisão do
+  operador se/quando restringir.
 
-**Fases A e B COMPLETAS — Stages 10, 11 e 12 fechadas.** O modelo de dados
-multi-tenant está de pé (Stage 11) e o motor V3 tem todas as extensões da V2
-(Stage 12: Placa, Parede/Ambiente+Tier1/2, Conjuntos, Elementos Contínuos,
-veio de chapa, precificação+rateio, e a integração de tudo isso ao pipeline
-principal via Task 12.7). 168 testes verdes.
-
-**Task 13.0 concluída (2026-07-28)**: `BoxCanvas` ganhou um modo "conjunto"
-(`itens: {item, posicao}[]` + `alturas: AlturasFaixas`, aditivo — o modo
-`box` existente não mudou) via nova função pura `geometriaConjunto`, que
-calcula escala/origem pela bounding box do conjunto inteiro (X por
-`posicao.x`, Y por `derivarY(faixa, alturas)`, nunca digitado). 176/176
-testes (8 novos), lint/typecheck/build verdes, `/modulo` conferido ao vivo
-sem regressão. Detalhe completo em `docs/Backlog.md`, Task 13.0.
-
-**Task 13.1 concluída (2026-07-28)**: `/modulo` virou o Editor de Item
-dirigido por capacidade — edita `BoxModule` OU `Placa` via toggle, seções de
-Placa (dimensões/material/orientação/borda/engrossamento/ripado) derivadas
-do schema `CAPACIDADES` (`lib/orcamento.ts`, Modelo de Domínio Seção 4),
-seletor de lados do engrossamento com BOM ao vivo (`PlacaVisual.tsx`),
-sentido do veio visível/alterável (`Placa.sentidoVeio`, novo — fecha o
-placeholder que a Task 12.5 deixou em aberto de propósito), painel
-custo/peças/plano de corte unificado via `calcularOrcamentoMisto` (absorve
-a Task 7.3, nunca executada isoladamente). Sequenciada Motor → Frontend na
-mesma branch; 1 rodada de correção (grid blowout de SVG em mobile, mesma
-causa-raiz da Task 6.3b) revalidada pelo Maestro ao vivo. 185/185 testes.
-Detalhe completo em `docs/Backlog.md`, Task 13.1.
-
-**Task 13.2 quebrada em 3 sub-tasks (2026-07-28, planejamento do Maestro)**:
-era "a tela mais densa da Stage", grande demais pra uma branch efêmera só.
-Detalhe completo (descrição, critérios de aceitação, arquivos) já escrito em
-`docs/Backlog.md`:
-- **13.2a** — Elevação 2D + posicionamento + validação Tier 1/2. Rota nova
-  `/ambientes` (lab local, sem Supabase ainda — mesmo espírito de
-  `/modulo`). Só Frontend, toda a lógica pura já existe
-  (`validarParedeTier1`/`Tier2`, `BoxCanvas` modo conjunto da Task 13.0).
-- **13.2b** — Conjuntos + handle de junção. Backend (coluna
-  `parede.overrides_juncao jsonb`) → Frontend
-  (`detectarConjuntos`/`aplicarOverrides`, já existem desde a Task 12.3).
-- **13.2c** — Elementos contínuos + **resolve a Dívida A**: Motor (remove
-  `BoxModule.tamponamento`/`TamponamentoInstancia`) → Frontend (painel
-  lateral de elemento contínuo ao selecionar Conjunto, usa a integração já
-  pronta da Task 12.7; remove `TamponamentoConfig` de `app/page.tsx` e o
-  desenho antigo em `BoxCanvas.tsx`).
-
-**Task 13.2a concluída (2026-07-28)**: nova rota `/ambientes` (laboratório
-local, sem Supabase) — régua de largura + 4 faixas com alturas do perfil
-configuráveis, elementos de parede (janela/porta/tomada/hidráulico),
-itens posicionados via `lib/boxPresets.ts` atualizando o `BoxCanvas` modo
-conjunto (Task 13.0) ao vivo. `validarParedeTier1`/`Tier2` rodando a cada
-mudança com aviso em lista **e** destaque visual (nova prop
-`itensComAviso` em `BoxCanvasPropsConjunto`, reaproveitando
-`geometriaConjunto`). Validado ao vivo pelo Maestro (não só relato):
-destaque visual conferido por leitura de pixel do canvas (`#DC2626`),
-0 overflow em 3 breakpoints, sem erros de console. 196/196 testes.
-Achado não bloqueante durante a auditoria (sobreposição exata entre 2
-itens esconde o destaque de um deles — caso sintético, registrado no
-Backlog, não corrigido). Detalhe completo em `docs/Backlog.md`, Task 13.2a.
-
-**Task 13.2b concluída (2026-07-28)**: Backend adiciona
-`parede.overrides_juncao` (jsonb, RLS já pronta); Frontend liga
-`detectarConjuntos`/`aplicarOverrides` (Task 12.3) a `/ambientes` —
-contorno/colchete de conjunto + handle clicável de união/quebra no
-`BoxCanvas` modo conjunto. Override persistido em `localStorage` por
-decisão do Maestro (`/ambientes` ainda não tem `parede.id` real — a coluna
-fica pronta pra Task 13.3 usar de verdade). **1 rodada de correção real**
-achada pelo Maestro em auditoria ao vivo (não em teste automatizado): bug
-de corrida exposto por `reactStrictMode: true` apagava o override
-persistido no reload seguinte; corrigido com o inicializador preguiçoso do
-`useState` (mesmo padrão já usado por `parede`/`alturas` no arquivo) e
-revalidado ao vivo repetindo o cenário exato (adicionar 3 itens, quebrar
-handle, recarregar de verdade, confirmar que o estado persiste). 204/204
-testes, lint/typecheck limpos, 0 overflow em 3 breakpoints. Detalhe
-completo em `docs/Backlog.md`, Task 13.2b.
-
-**Task 13.2c concluída (2026-07-29) — fecha a Task 13.2 inteira**
-(13.2a/13.2b/13.2c todas mescladas). Remove por completo o tamponamento de
-instância (`BoxModule.tamponamento`, Dívida A) e liga o `ElementoContinuo`
-unificado a `/ambientes` pela primeira vez: painel lateral com BOM ao vivo,
-mais o primeiro mecanismo de seleção de Conjunto/item da tela (lista, não
-canvas). Decisão de domínio fechada (extremidade exposta): tamponamento
-sempre mira um módulo específico do bloco (nunca o bloco inteiro),
-esquerda/direita só nas pontas do Conjunto, base/topo em qualquer módulo.
-Verificado ao vivo pelo Maestro num bloco de 3 itens — bate exatamente.
-201/201 testes. 1 rodada de correção real (overflow em 375px, mesmo "grid
-blowout" de tasks anteriores, corrigido com `min-w-0`). Detalhe completo em
-`docs/Backlog.md`, Task 13.2c.
-
-**Bloqueio de dependência descoberto (2026-07-29) → auth primeiro.** A 13.3
-(shell) assume persistir orçamento/cliente no Supabase, mas isso exige
-sessão autenticada e **não existe login/signup no app** (toda a Stage 13 foi
-local-first). Operador decidiu: construir auth antes. Por isso a 13.3 virou
-**13.3a (Autenticação)** + **13.3b (Shell)**.
-
-**Task 13.3a concluída (2026-07-30)**: auth de verdade no app —
-`/login`+`/signup` (Supabase Auth), gate deny-by-default no `middleware.ts`
-(todo o app exige sessão exceto `/login`/`/signup`/`/auth/confirm`), rota de
-confirmação de e-mail, logout mínimo. Tokens v3 (`marinho`/`marca`) só nas
-telas novas — o resto do app ainda é v2 até o retrofit da 13.3b. 221 testes,
-segurança zero achados, auditado ao vivo. **Ação pendente do operador antes
-do teste E2E**: configurar no dashboard Supabase a Site URL/Redirect URLs e
-o template de e-mail "Confirm signup" (→ `/auth/confirm?token_hash=...`), ou
-desligar "Confirm email"; depois criar a 1ª conta (o Maestro não cria conta).
-
-**Task 13.3b concluída (2026-07-30)**: shell autenticado v3 (sidebar navy +
-topbar, route group `app/(app)/`), Dashboard `/` (lista orçamentos por
-status, rótulo = nome do cliente, 4 status reais do banco; KPIs monetários
-placeholder até o motor de preço da 13.5), retrofit visual v3 do app inteiro
-(`accent` azul→laranja global, `informacao`/`aviso` corrigidos, `marca`
-consolidado em `accent`, contorno de conjunto do `BoxCanvas` → `informacao`
-azul), e o **harness `/dev/preview`** (404 em produção via `NODE_ENV`) pro
-Maestro auditar telas protegidas sem logar. Auditado ao vivo via harness:
-desktop (sidebar sticky navy 264px, accent laranja, sem overflow) e drawer
-mobile (abre pra `left:0`) OK; 222 testes, tsc/lint/build limpos. **Nota**:
-na auditoria reportei um "bug" de drawer que era artefato de medição
-(transições CSS não compositam no Browser pane headless — ver
-[[maestro-orchestration-style]]); o executor trocou `transform`→`left`+
-data-state (funciona), o código estava correto. **Escopo deixado pra 13.3c+**:
-`/modulo`/`/ambientes`/`/biblioteca` ainda NÃO entraram no shell (só foram
-recoloridas via token); o `app/page.tsx` antigo (simulador de orçamento
-completo multi-módulo + gerar PDF) foi aposentado sem substituto ainda —
-reconstruído na 13.3c (orçamento real) / 13.5 (preço).
-
-**Task 13.3c concluída (2026-07-30)**: `/orcamento/[id]` (route group
-`(app)`) com 4 abas shadcn (underline accent laranja) — Ambientes viva (lab
-migrado via `components/ambientes/AmbientesLab.tsx`), Corte&Material/
-Financeiro/Proposta placeholder (13.4/13.5/13.6). Fluxo de novo orçamento
-(`/orcamento/novo`): Server Action `lib/orcamento/criar.ts` insere cliente +
-orcamento (rascunho), `organizacao_id` lido do `perfil` do usuário
-autenticado (nunca do client), RLS-safe, redirect pra `/orcamento/[id]`.
-**Primeiro write real no Supabase.** Estado profundo de Ambientes segue local
-escopado por orçamento (chave localStorage inclui o id; persistência disso em
-`ambiente`/`parede` é task futura dedicada) — cabeçalho persiste. Harness
-`/dev/preview/orcamento[/novo]` estendido. Auditado via harness: 4 abas +
-troca + placeholders + breadcrumb + form, sem overflow em 375; write path
-revisado (seguro). 224 testes, tsc/lint limpos. **Limitação menor conhecida**:
-se o insert de cliente passar mas o de orçamento falhar, sobra cliente órfão
-(sem transação — Supabase JS; aceitável MVP, cleanup futuro via RPC). Write
-E2E real só o operador valida (sessão).
-
-**Task 13.3d concluída (2026-07-30) — inserida por decisão do operador**
-("persistir o orçamento primeiro", antes do editor): estado profundo de
-Ambientes (parede, módulos posicionados, alturas, elementos contínuos,
-overrides de junção) migrou de `localStorage` pras tabelas Supabase que já
-existiam (`ambiente`/`parede`/`elemento_continuo`; `organizacao.alturas_padrao`
-pras alturas, nível ORG). `AmbientesLab` virou presentational (props
-`estadoInicial`/`onSalvar`) com 3 "donos de I/O": `AmbientesTabConectada`
-(Supabase real, `/orcamento/[id]`), `AmbientesTabMock` (harness, sem I/O),
-`AmbientesLabStandalone` (`/ambientes` sem orçamento pai, continua
-localStorage). Save é ação explícita ("Salvar alterações"), nunca autosave.
-`organizacao_id` sempre do `perfil` do usuário autenticado. Gap de schema
-documentado sem virar migration (`elemento_continuo` não tem coluna de cor —
-cor não sobrevive a reload, cai em fallback). **Nota de execução**: o agente
-que implementou foi interrompido no meio por limite de gasto da conta
-(`API error: monthly spend limit`) — o Maestro terminou a implementação
-diretamente (checks/commit/push) em vez de gastar outro agente, dado que o
-trabalho já estava quase completo e de boa qualidade. 237 testes,
-tsc/lint/`get_advisors` limpos, auditado ao vivo via harness (botão salvar +
-feedback + sem overflow). Write E2E real (persistir de verdade) só o
-operador valida.
-
-**Task 13.3e concluída (2026-07-30) — FECHA A TASK 13.3 INTEIRA**
-(13.3a auth → 13.3b shell/dashboard/retrofit → 13.3c orçamento/abas/novo →
-13.3d persistência → **13.3e editor de item**, todas mescladas). Núcleo do
-Editor de Item extraído de `app/modulo/page.tsx` pra
-`app/modulo/EditorItemNucleo.tsx` (padrão `estadoInicial`/`onSalvar`,
-idêntico ao `AmbientesLab` da 13.3d) — `/modulo` continua editando presets
-da biblioteca sem mudança de comportamento pretendida (agora com 2
-instâncias do núcleo, uma por origem, alternando via CSS `hidden`). Nova
-rota `/orcamento/[id]/item/[itemId]` edita um item REAL de `orcamento.itens`
-(Server Action `salvarItemOrcamento`, RLS-safe por construção — só escreve a
-coluna `itens`, nunca `organizacao_id`, a RLS da própria tabela já escopa
-leitura e escrita). Link "Editar item" adicionado na aba Ambientes. Fix
-incidental: `resetar()`/`resetarPlaca()` agora preservam o `id` do item
-(sem isso, "Resetar" um item real trocaria o itemId e quebraria o vínculo
-com a posição na parede). 238 testes, tsc/lint limpos, auditado via harness
-(save funcionando, `#B45309` laranja confirmado, sem overflow em 3
-breakpoints). **Limitação de auditoria registrada**: `/modulo` agora está
-atrás do gate de auth (13.3a) — o Maestro não conseguiu confirmar
-visualmente que não regrediu (só via tsc/lint/testes + revisão de código);
-validação visual real de `/modulo` é do operador.
-
-**Resumo do que a Task 13.3 entregou**: auth completa, shell v3 (sidebar+
-topbar), Dashboard, orçamento com 4 abas persistindo no Supabase (cabeçalho
-+ estado profundo de Ambientes + itens + editor de item), harness
-`/dev/preview/*` cobrindo shell/dashboard/orçamento/ambientes/editor pro
-Maestro auditar sem sessão. Retrofit visual v3 aplicado globalmente.
-
-**Task 13.4 concluída (2026-07-30)**: Corte & Material — aba funcional em
-`/orcamento/[id]`, plano de corte agregado (todos os itens do orçamento),
-reaproveitando `PlanoCorteCanvas`/`todasAsPecas` existentes com respeito a
-restrição de veio (Task 12.5); barra de aproveitamento por chapa (verde ≥70% /
-amber 40-70% / vermelho <40%); lista de material/pré-pedido via
-`montarLinhasInsumos` + itens manuais; congelamento explícito em `lista_material`
-(INSERT-only, `organizacao_id` do perfil); extração texto/CSV client-side;
-`resolverAlvoElemento` extraída pra `lib/ambiente/resolverAlvo.ts` (sem
-regressão); `OrcamentoAbas` controlado via `AbaAtivaContext`; harness
-`/dev/preview/orcamento` estendido. Zero migrations. Code Auditor (251/251
-testes), Security Auditor (zero achados), QA Engineer (251/251 + 4 estados),
-UX Auditor (0 overflow, cores confirmadas). Zero correções. Detalhe em
-`docs/Backlog.md` Task 13.4.
-
-**Task 13.5 concluída (2026-07-30)**: Financeiro — aba funcional em
-`/orcamento/[id]`, resumo de 6 campos (preço final, custo material, montagem,
-frete, lucro final, margem) calculado de verdade via primeira ligação real de
-`ratearPrecificacao` (Task 12.6) a uma tela — **resolve a Dívida B2**.
-Preço final em destaque visual (`accent`), lucro/margem coloridos por sinal
-(`sucesso`/`erro`). Seletores de modo de precificação (4 modos) e modo de
-montagem (3 modos), cada orçamento pode usar o padrão da organização ou
-override próprio (toggle). Frete editável, persistido em `orcamento.frete`.
-Nova leitura `lib/precificacao/carregarConfiguracao.ts` (resolve override
-orçamento vs. default organização) e Server Action
-`lib/orcamento/salvarConfiguracaoPrecificacao.ts` (RLS-safe). Extração de
-`lib/ambiente/calcularEngineOrcamento.ts` e `lib/ambiente/estadoMockPreenchido.ts`
-reaproveitadas por Corte&Material E Financeiro (sem lógica duplicada). Novo
-`components/ui/checkbox.tsx`. Migration aplicada no banco real:
-`supabase/migrations/20260730180000_fix_modo_montagem_padrao_fracao.sql`
-corrige bug pré-existente (default modo_montagem_padrao). Code Auditor
-(253/253 testes, 3 console.error considerado falso positivo → não bloqueado),
-Security Auditor (RLS ok, 4 observações não-bloqueantes), QA Engineer
-(253/253), UX Auditor (0 overflow em 3 breakpoints, cores confirmadas).
-Zero correções. Detalhe em `docs/Backlog.md` Task 13.5.
-
-**Task 13.6a concluída (2026-07-30)**: Aba "Proposta" de `/orcamento/[id]`
-agora é real — Linhas de Proposta com criação automática (1 linha = orçamento
-inteiro no primeiro load, sem recriar após split/mesclar), render automático
-via canvas-to-Supabase, split/mesclar de linhas, override manual com
-rebalanceamento via função pura `rebalancearLinhas` (preserva `Σ === precoFinal`
-exato, trata corretamente o caso trivial de 1 linha). **Primeira ligação real de
-`ratearPrecificacao` a grupos reais (um `GrupoItens` por Linha de Proposta) —
-fecha a Dívida B2 de vez.** Alerta "remover linha aumenta preço das demais"
-(briefing 5.2). Botão "Gerar proposta" navega para `/proposta/[orcamentoId]/pdf`
-(rota que Task 13.6b vai construir). Code Auditor (261→263 testes, 3ª fix final
-confirmada), Security Auditor (1 achado Médio não-bloqueante sobre bucket
-corrigido antes do merge), QA Engineer (reprovou Tentativa 1 por bug em
-`rebalancearLinhas` com 1 linha, corrigido com 2 testes novos, aprovado
-Tentativa 2), UX Auditor (0 overflow 375/768/1440px). Migration Supabase
-aplicada: bucket `linha-proposta-renders` + 4 políticas RLS.
-
-**Task 13.6b concluída (2026-07-30) — FECHA A TASK 13.6 INTEIRA**: Rota `/proposta/[id]/pdf` entregue — documento A4 imprimível com cabeçalho de emitente (dados reais da Organização + logo), dados do Cliente, Linhas de Proposta renderizadas com imagens via `createSignedUrl` server-side, prazo/pagamento/total. Sem custos internos expostos (confirmado por grep). CSS dedicado (`proposta-pdf.css`) fora do Tailwind, absorve Task 9.1. Harness `/dev/preview/proposta-pdf` público (rota real protegida por auth). Code Auditor (265/265 testes), Security Auditor (RLS ok, signed URLs seguras, 3 observações não-bloqueantes), QA Engineer (aprovado primeira tentativa), UX Auditor (conteúdo completo verificado ao vivo, cores de token confirmadas, 0 overflow em 3 breakpoints). Zero correções.
-
-**Task 13.7a concluída (2026-07-31)**: `/perfil` — nova rota do shell autenticado com Seção Organização (nome, CNPJ, endereço, telefone, logo, unidade, modo de precificação/montagem padrão) e Seção Perfil pessoal (nome, telefone, e-mail read-only). Seletores de modo de precificação/montagem extraídos como módulo compartilhado, reaproveitado por Financeiro (com toggle "usar padrão") e Perfil (edição direta). Server Actions `lib/organizacao/salvar.ts` e `lib/perfil/salvar.ts` com whitelist de colunas, RLS-safe. Code Auditor (267/267 testes), Security Auditor aprovado (RLS ok; achado não-bloqueante registrado: política UPDATE sem granularidade por papel — dívida pré-existente Task 11.1, primeira tela que expõe esse caminho, operador decide quando revogar), QA Engineer (extração 1:1, sem regressão), UX Auditor (0 overflow 375/768/1440px). Zero correções. **Nota de decisão**: Task 13.7 foi quebrada em 13.7a (Perfil, concluído) + 13.7b (Catálogo de produtos) + 13.7c (Biblioteca) — as 3 telas de catálogo são V1 puro (CSS/localStorage), escopo denso demais pra uma branch; wiring de consumo real (Catálogo em Corte&Material/Financeiro/Editor de Item; Biblioteca em `/modulo`) entra no escopo das sub-tasks.
-
-**Task 13.7b concluída (2026-07-31)**: `/catalogo` — nova rota com CRUD real de `produto` (Supabase): lista paginada + modal "Adicionar" com nome/tipo/código (Ferragem com seletor fechado), preço/unidade. Ligação de consumo em `CorteMaterialLab`, `FinanceiroLab`, `EditorItemNucleo` via `buscarCatalogoReal()` (fallback localStorage). Mapeamento `produto` → `Catalogo` reaproveitando `catalogoParaPrecos`. **Bug real encontrado e corrigido**: Select-dentro-de-Dialog (Radix) travava todos os botões após seleção — causa-raiz: `@radix-ui/react-presence` nunca completava animação de saída em aninhamento, deixando Select mounted e bloqueando pointer-events permanentemente. Fix raiz: remover classes de animação de saída em `SelectContent` — resolve qualquer futura combinação Select-em-Dialog. Código Auditor (283/283 testes), Security Auditor aprovado (RLS ok, whitelist ok, dependência nova verificada), QA Engineer aprovado primeira tentativa (fluxo completo: selecionar código, preencher, salvar, linha aparece). UX Auditor (0 overflow 375/768/1440px). Nenhuma migration.
-
-**Task 13.7c concluída (2026-07-31) — FECHA A TASK 13.7 E A STAGE 13 INTEIRAS**: `/biblioteca` — rota migrada pro shell autenticado com lista global + próprios (RLS filtra), badges visuais "Global"/"Seu módulo", filtro por categoria derivado dos valores distintos de `gabarito.categoria`. Excluir disponível só pra gabarito próprio (bloqueado em UI e via RLS). **Achado crítico durante implementação**: base global estava vazia desde Task 11.4 — regressão real (novo orçamento abriria biblioteca zerada). Migration nova aplicada no banco real: `supabase/migrations/20260731090000_seed_gabaritos_padrao.sql` semeia 6 módulos como gabaritos globais (6 linhas `organizacao_id null`, confirmado). `/modulo` religado com lógica **fork-on-save** (D-15): `onSalvarBox` → novo (zero), próprio (`UPDATE`), global (`RPC fork_gabarito` + grava + redireciona), feedback explícito "Cópia própria criada". Code Auditor (290/290 testes, build/lint/typecheck verdes; `lib/boxPresets.ts` intocado), Security Auditor aprovado (RLS OK, RPC segura contra id arbitrário/cross-tenant; 4 observações não-bloqueantes dívida pré-existente), QA Engineer aprovado (fork-on-save auditado linha por linha; 1 observação não-bloqueante: falha parcial entre fork e update deixa cópia órfã — janela estreita, não coberta, backlog), UX Auditor (badges/filtro/excluir OK, 0 overflow 375/768/1440px via harness `/dev/preview/biblioteca`). Fork E2E real (sessão + RPC real) = operador. **FECHA TASK 13.7 INTEIRA** (13.7a + 13.7b + 13.7c todas concluídas). **FECHA STAGE 13 INTEIRA** (13.0–13.7 todas concluídas). **ÉPICO V2 COMPLETO** (Fase A Discovery + Fase B Motor/Dados + Fase C Experiência todas concluídas — próximos passos dependem de nova conversa com operador).
-
-**Pendência do operador** (pra usar o app real com tasks até aqui concluídas): confirmar Stage 13 foi validada — configurar dashboard Supabase (Site URL/Redirect URLs + template e-mail "Confirm signup", ou desligar "Confirm email") e criar 1ª conta pra testes E2E real. Ver `docs/Backlog.md` Stage 13.
-
-**Mudança de fase importante**: as tasks da Stage 13 são majoritariamente UI
-— o **Frontend Engineer** volta a ser o executor principal, com **UX
-Auditor** de volta no loop de validação (`.maestro/pipelines/03-quality.md`);
-validar visualmente em lote por conjunto de telas (cadência do operador), não
-task-a-task.
-
-**As duas dívidas de integração do motor já têm decisão fechada** (não são
-mais "pendência em aberto" — são plano concreto, ver nota completa no
-Backlog acima da Stage 13):
-- **Dívida A** (`TamponamentoInstancia` vs. `ElementoContinuo`): retirada
-  amarrada à **Task 13.2** — único lugar que ainda usa o mecanismo antigo.
-- **Dívida B2** (rateio novo → telas): wiring amarrado à **Task 13.5** —
-  primeira tela que consome `ratearPrecificacao` de verdade.
-- (Dívida B1 — `ElementoContinuo` → pipeline — **já foi resolvida como
-  código** na Task 12.7, motor puro, sem depender de tela nenhuma.)
-
-`supabase/tests/isolamento-tenant.sql` (Task 11.3) é o teste de isolamento
-permanente: script `begin;...rollback;`, seguro de rodar contra o projeto
-real quantas vezes quiser, sem resíduo e sem precisar de `service_role_key`.
-Rode de novo depois de qualquer alteração de RLS futura.
-
-`produto`/`gabarito` (Task 11.4) já têm mecanismo de população (cópia no
-signup + fork), mas os ~380 padrões reais de MDF do operador ainda não foram
-cadastrados — decisão explícita dele de esperar a tela de catálogo da Fase C
-(Stage 13) ou usar o Supabase Table Editor diretamente antes disso, sem
-pressa.
-
-## 7. Convenções operacionais desta sessão (para a próxima também)
+## 6. Convenções operacionais desta esteira
 
 - **Model routing**: antes de executar qualquer task, recomende o modelo
-  (tag "Modelo Recomendado" de cada task no Backlog) e espere o operador
-  trocar (`/model ...`) e confirmar. Tasks de tooling/CRUD/SQL = Sonnet;
-  decisões arquiteturais densas (discovery, rateio financeiro) = Opus.
-- **Fluxo por task**: branch `feature/<task-id>` → subagente Executor
-  (Backend/Frontend Engineer) → validação independente do Maestro (Code
-  Auditor: build/lint/typecheck/test rodados de novo, não só relatados; UX
-  Auditor via `preview_start` + `getComputedStyle`/pixel quando for visual;
-  Security Auditor quando envolver RLS/secrets/infra) → merge `--no-ff` →
-  atualizar status da task no `docs/Backlog.md` → commit → push.
-- Screenshots do Browser pane dão timeout neste ambiente — usar `read_page` +
-  `javascript_tool` como evidência.
-- Memória do projeto (fora do repo, em `~/.claude/projects/.../memory/`) tem
-  notas equivalentes — útil se este arquivo ficar desatualizado antes de eu
-  lembrar de atualizá-lo de novo.
-
-## 8. Mapa de dependências do motor V1 — HISTÓRICO, já executado
-
-> Mantido só para auditoria histórica. O motor V1 **foi removido** na Task
-> 10.1 (2026-07-24). A tabela abaixo é o que existia antes da remoção —
-> não reflete mais o código atual.
-
-| Arquivo (removido) | Uso do V1 |
-|---|---|
-| `lib/engine/engine.ts`, `templates.ts`, `evaluator.ts` | Motor de fórmulas em si |
-| `lib/templateOverrides.ts` | Overrides de engenharia por template |
-| `app/api/templates/route.ts`, `app/api/calcular/route.ts` | Rotas servindo templates/cálculo V1 |
-| `app/configuracoes/engenharia/page.tsx` | Tela de edição de fórmulas/templates |
-| `prisma/seed.ts` (Prisma inteiro removido na Task 11.1) | Semeava dados de template no banco |
-| `lib/engine/engine.test.ts`, `evaluator.test.ts` | 23 testes do motor V1 |
+  ("Modelo Recomendado" no Backlog) e espere o operador confirmar.
+- **Fluxo por task**: branch `feature/<task-id>` → Executor (subagente) →
+  Code Auditor → Security Auditor (quando envolve RLS/secrets/infra) → QA
+  Engineer → UX Auditor ao vivo (feito pelo Maestro via Browser pane, não
+  por subagente — subagentes não têm ferramenta de browser) → merge
+  `--no-ff` em `main` → memory-manager sincroniza Backlog/Status → commit →
+  push.
+- Screenshots do Browser pane dão timeout neste ambiente — usar `read_page`
+  + `javascript_tool` (`getComputedStyle`, `getBoundingClientRect`,
+  `elementFromPoint`) como evidência.
+- Se um executor for interrompido no meio (limite de gasto, parar sem
+  terminar), o Maestro retoma via `SendMessage` ou redelega — nunca
+  implementa o código diretamente.
+- Retrospectiva (`improvement-agent`) roda ao final de cada Pipeline Stage
+  fechado — lições em `docs/Lessons-Learned.md`, propostas de mudança de
+  framework em `.maestro/proposals/` (aguardam decisão humana).

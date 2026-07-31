@@ -1,57 +1,30 @@
-# Budget Planner AI — Orçamento Fácil
+# OrçaFácil (orcamentofacil)
 
-> Plataforma web que gera orçamentos completos de móveis planejados em ~5 minutos,
-> sem necessidade de modelar o projeto no SketchUp.
+> Painel de orçamento para marceneiros. Monta módulos e placas num
+> box-builder paramétrico, posiciona numa parede 2D, calcula BOM/plano de
+> corte com restrição de veio, precifica com rateio por custo alocado e gera
+> uma proposta comercial em PDF — tudo com persistência multi-tenant real
+> (Supabase) e autenticação própria por organização.
 
-O usuário responde perguntas simples (ambiente, medidas, materiais, ferragens) e um
-**motor paramétrico de engenharia** explode cada móvel em peças, consolida a lista de
-materiais (BOM), calcula custos, aplica margem e gera uma proposta comercial em PDF.
+## Documentação
 
-**Meta:** reduzir um processo de 1–3 horas para ~5 minutos (redução > 90%).
+| Documento | Conteúdo |
+|---|---|
+| [`docs/PRD.md`](docs/PRD.md) | Visão, persona, jornada, requisitos, decisões de produto (D-01 a D-26) |
+| [`docs/Modelo-de-Dominio.md`](docs/Modelo-de-Dominio.md) | Fundação técnica: itens de orçamento, parede/ambiente/conjunto, elementos contínuos, precificação, veio de chapa |
+| [`docs/Mapa-de-Telas.md`](docs/Mapa-de-Telas.md) | Árvore de telas do produto |
+| [`docs/Design-System.md`](docs/Design-System.md) | Tokens de cor/tipografia/espaçamento (v3) |
+| [`docs/STATUS.md`](docs/STATUS.md) | **Comece por aqui** — estado atual, o que existe, decisões fechadas |
+| [`docs/Backlog.md`](docs/Backlog.md) | O que ainda não foi feito |
+| [`docs/Lessons-Learned.md`](docs/Lessons-Learned.md) | Aprendizados registrados ao final de cada etapa |
+| [`docs/archive/`](docs/archive/) | Planejamento original V1 (histórico, não é fonte de verdade) |
 
-## Documentação do Pipeline
+## Stack
 
-| # | Documento | Conteúdo |
-|---|-----------|----------|
-| 01 | [Visão Geral do Produto](docs/01-visao-geral.md) | Problema, objetivos, público-alvo, escopo do MVP |
-| 02 | [Arquitetura do Sistema](docs/02-arquitetura-sistema.md) | Fluxo de dados, módulos, stack tecnológica |
-| 03 | [Modelo de Dados](docs/03-modelo-de-dados.md) | Schema relacional, dicionário de dados, herança em cascata |
-| 04 | [Motor Paramétrico de Engenharia](docs/04-motor-parametrico.md) | Engine em 3 camadas, biblioteca de módulos, pipeline de explosão (BOM) |
-| 05 | [Pipeline Financeiro](docs/05-pipeline-financeiro.md) | Cálculo de chapas, custos diretos/indiretos, markup, simulador de margem |
-| 06 | [UX — Wizard de Orçamento](docs/06-ux-wizard.md) | Wizard de 6 etapas, barra linear de ocupação, heurísticas de sugestão |
-| 07 | [Onboarding e Estratégia de Preços](docs/07-onboarding-precos.md) | Biblioteca pré-carregada, modelagem Catálogo → Fornecedor → Preço |
-| 08 | [Roadmap e Backlog do MVP](docs/08-roadmap.md) | Sprints, backlog técnico, fases futuras (V2–V4) |
-| 09 | [DevOps, CI/CD e Testes](docs/09-devops-ci-cd.md) | Pipeline de CI/CD, testes de engenharia, hospedagem |
-| 10 | [Ajustes da V2 (backlog)](docs/10-v2-ajustes.md) | Config de cor por módulo, previews Canvas 2D, layout de paredes, configurador de engenharia, BOM unificada, cadastro de materiais |
-| 11 | [V3 — Box-builder CAD](docs/11-v3-box-builder.md) | Motor de caixa vazia + subdivisões recursivas, editor visual em Canvas, presets |
-| 12 | [Fase 3 — Laboratório × Produção](docs/12-fase3-lab-producao.md) | Plano de corte, categorias, assistente Ambiente→Tipo→Modelo, tamponamento de instância |
-| 13 | [Correções do box V3](docs/13-correcoes-box-v3.md) | Fix da travessa, prateleiras/fundo combináveis, tamponamento por lado, overrides rápidos, card colapsável, plano de corte geral |
+Next.js 14 (App Router) + TypeScript + Tailwind + shadcn/ui, Supabase
+(Postgres + Auth + Storage, RLS multi-tenant), Vitest.
 
-## Biblioteca de Engenharia (Templates Iniciais)
+## Esteira de execução
 
-Os 6 módulos essenciais do MVP estão em [`engine/templates/`](engine/templates/):
-
-- [`base_portas.json`](engine/templates/base_portas.json) — Módulo base inferior com portas
-- [`gaveteiro.json`](engine/templates/gaveteiro.json) — Gaveteiro
-- [`aereo_portas.json`](engine/templates/aereo_portas.json) — Módulo aéreo com portas
-- [`torre_quente.json`](engine/templates/torre_quente.json) — Torre quente / paneleiro
-- [`canto_reto.json`](engine/templates/canto_reto.json) — Módulo de canto
-- [`nicho.json`](engine/templates/nicho.json) — Nicho aberto
-
-O formato dos templates está especificado em
-[`engine/templates/SCHEMA.md`](engine/templates/SCHEMA.md).
-
-## Decisões de Arquitetura (resumo)
-
-1. **Fórmulas não editáveis no MVP** — templates fixos + parâmetros configuráveis pelo
-   usuário (espessuras, folgas, perdas). Editor de fórmulas (DSL) fica para a V2.
-2. **Biblioteca de módulos, não de ambientes** — o ambiente é apenas um agrupador de
-   módulos reutilizáveis. Um "Base 600" serve para cozinha, banheiro, lavanderia etc.
-3. **Motor de cálculo como função pura** — recebe medidas + template + parâmetros e
-   devolve a BOM. Sem estado, sem acoplamento com UI ou persistência.
-4. **Cálculo em duas etapas** — atômica (por módulo) e global (elementos contínuos:
-   tampos, rodapés).
-5. **Preços modelados como Catálogo → Fornecedor → Preço** — com base de referência
-   pré-carregada para eliminar o cold start.
-6. **Visão de longo prazo** — o motor de orçamento é o núcleo de um ERP comercial para
-   marcenarias (CRM, ordens de produção, lista de corte, compras, financeiro).
+Este projeto usa o framework Maestro (`.maestro/`) para orquestrar o
+desenvolvimento — ver `CLAUDE.md` na raiz e `.maestro/agents/maestro.md`.

@@ -3,8 +3,8 @@
 > **Fase A (Discovery) — artefato 2 de 4.** Fonte de requisitos:
 > `docs/00-briefing-v2-reorientacao_1.md`. Fonte do modelo:
 > `docs/Modelo-de-Dominio.md`. Mapa de telas: `docs/Mapa-de-Telas.md`.
-> `docs/PRD-PIPELINE.md` é o PRD histórico da V1 e fica como referência —
-> **este documento o substitui como PRD vigente.**
+> `docs/archive/PRD-PIPELINE.md` é o PRD histórico da V1 e fica como
+> referência — **este documento o substitui como PRD vigente.**
 
 ---
 

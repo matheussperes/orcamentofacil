@@ -379,8 +379,8 @@ type BayContent =
 type BayContent = { frente; prateleiras?; fundo? }
 ```
 
-- Parte do `docs/13-correcoes-box-v3.md` ("tamponamento por lado") fica
-  **obsoleta** — resolvia um problema que o modelo novo elimina.
+- Parte do `docs/archive/13-correcoes-box-v3.md` ("tamponamento por lado")
+  fica **obsoleta** — resolvia um problema que o modelo novo elimina.
 - **Presets em localStorage migram** via `lib/engine/box/migrate.ts` (já
   idempotente, já passou por 2 rodadas). Como é pré-lançamento e localStorage,
   descarte com aviso é aceitável para presets com bay de tamponamento.
