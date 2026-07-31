@@ -30,6 +30,10 @@ import { cn } from "@/lib/utils";
 // anteriores) NÃO entram nesta lista — não são destinos do menu principal
 // em `docs/Mapa-de-Telas.md`, são acessados a partir de dentro de um
 // orçamento/fluxo específico.
+//
+// Task 13.7a (contrato .maestro/tmp/13.7a-contract.md): "Perfil" ganha rota
+// real (`/perfil`) e sai da lista de placeholders — os demais continuam
+// inativos.
 interface ItemNav {
   rotulo: string;
   href: string | null;
@@ -42,7 +46,7 @@ const ITENS_NAV: ItemNav[] = [
   { rotulo: "Clientes", href: null, Icone: Users },
   { rotulo: "Biblioteca", href: "/biblioteca", Icone: BookOpen },
   { rotulo: "Catálogo", href: null, Icone: Package },
-  { rotulo: "Perfil", href: null, Icone: UserIcon },
+  { rotulo: "Perfil", href: "/perfil", Icone: UserIcon },
   { rotulo: "Configurações", href: null, Icone: Settings },
 ];
 
