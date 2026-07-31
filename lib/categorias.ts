@@ -4,7 +4,11 @@
 
 const CHAVE = "categorias";
 
-const CATEGORIAS_PADRAO = [
+// Task 13.7c (contrato .maestro/tmp/13.7c-contract.md) — exportada: `/biblioteca`
+// usa como sugestão inicial da lista de categorias do filtro (junto com os
+// valores distintos de `gabarito.categoria`, sem CRUD de categoria próprio no
+// schema — ver `components/biblioteca/GabaritoLab.tsx`).
+export const CATEGORIAS_PADRAO = [
   "Cozinha",
   "Quarto",
   "Sala",

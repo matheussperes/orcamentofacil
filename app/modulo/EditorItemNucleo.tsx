@@ -75,6 +75,12 @@ export interface ResultadoSalvarItem {
   /** Mensagem legível (Design-System Seção 11) — só presente quando `ok` é
    * `false`. */
   erro?: string;
+  /** Mensagem de SUCESSO customizada (Design-System Seção 11) — quando
+   * ausente e `ok` é `true`, o rodapé mostra "Salvo com sucesso." (Task
+   * 13.3e, comportamento padrão). Usada por `/modulo` (Task 13.7c) para
+   * avisar quando "Salvar" bifurcou (fork) um gabarito global em uma cópia
+   * própria (D-15) — ver `onSalvarBox` em `app/modulo/page.tsx`. */
+  mensagem?: string;
 }
 
 export interface EditorItemNucleoProps {
@@ -771,7 +777,7 @@ export function EditorItemNucleo({
             <Alert variant={resultadoSalvar.ok ? "sucesso" : "erro"} className="mt-3">
               <AlertDescription>
                 {resultadoSalvar.ok
-                  ? "Salvo com sucesso."
+                  ? (resultadoSalvar.mensagem ?? "Salvo com sucesso.")
                   : (resultadoSalvar.erro ?? "Não foi possível salvar.")}
               </AlertDescription>
             </Alert>

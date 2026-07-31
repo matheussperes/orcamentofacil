@@ -43,6 +43,14 @@ describe("isRotaPublica", () => {
     expect(isRotaPublica("/catalogo")).toBe(false);
   });
 
+  it("trata /dev/preview/biblioteca como pública (harness de /biblioteca, Task 13.7c — 404 em produção é responsabilidade da própria rota)", () => {
+    expect(isRotaPublica("/dev/preview/biblioteca")).toBe(true);
+  });
+
+  it("trata /biblioteca real como protegida — só o harness /dev/preview/biblioteca é pública (Task 13.7c, mesmo depois de mover pra dentro do shell)", () => {
+    expect(isRotaPublica("/biblioteca")).toBe(false);
+  });
+
   it("não trata /orcamento/[id] real nem /orcamento/[id]/item/[itemId] como públicas — só os harnesses /dev/preview/* são", () => {
     expect(isRotaPublica("/orcamento/abc-123")).toBe(false);
     expect(isRotaPublica("/orcamento/abc-123/item/xyz-789")).toBe(false);

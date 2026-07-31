@@ -52,6 +52,15 @@ const TITULOS_POR_ROTA: Record<string, { titulo: string; subtitulo?: string }> =
     titulo: "Catálogo",
     subtitulo: "Chapas, ferragens, fita, LEDs e acessórios (preview com dados mock)",
   },
+  // Task 13.7c (contrato .maestro/tmp/13.7c-contract.md)
+  "/biblioteca": {
+    titulo: "Biblioteca de módulos",
+    subtitulo: "Gabaritos prontos (base global + seus próprios) para usar nos orçamentos",
+  },
+  "/dev/preview/biblioteca": {
+    titulo: "Biblioteca de módulos",
+    subtitulo: "Gabaritos prontos (base global + seus próprios) para usar nos orçamentos (preview com dados mock)",
+  },
 };
 const TITULO_PADRAO = { titulo: "OrçaFácil" };
 

@@ -2,7 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { atualizarPreset, buscarPreset, salvarPreset, seedPresetsPadrao } from "@/lib/boxPresets";
+import { buscarGabaritoPorId } from "@/lib/gabarito/buscar";
+import { criarGabarito } from "@/lib/gabarito/criar";
+import { atualizarGabarito } from "@/lib/gabarito/atualizar";
+import { forkGabarito } from "@/lib/gabarito/fork";
 import { carregarCatalogo, coresDisponiveis } from "@/lib/catalog";
 import { listarCategorias } from "@/lib/categorias";
 import type { ModuloOrcamento } from "@/lib/orcamento";
@@ -14,10 +17,19 @@ import { EditorItemNucleo, caixaInicial, placaInicial, type ResultadoSalvarItem 
 // Task 13.1): esse NÚCLEO foi extraído para `EditorItemNucleo.tsx`, o mesmo
 // componente reaproveitado por `/orcamento/[id]/item/[itemId]` (edição de um
 // item real dentro de um orçamento — ver `lib/orcamento/salvarItem.ts`).
-// `/modulo` continua exatamente com o mesmo comportamento de antes: biblioteca
-// de presets em localStorage (`lib/boxPresets.ts`), seletor "Módulo-caixa /
-// Placa" e leitura de `?preset=ID` na URL — só que agora só orquestra ISSO,
-// delegando a UI de edição em si ao núcleo.
+// `/modulo` continua exatamente com o mesmo comportamento de antes: seletor
+// "Módulo-caixa / Placa" e leitura de `?preset=ID` na URL — só que agora só
+// orquestra ISSO, delegando a UI de edição em si ao núcleo.
+//
+// Atualização (Task 13.7c, contrato .maestro/tmp/13.7c-contract.md): a
+// biblioteca de presets do lado Módulo-caixa deixou de ser
+// `lib/boxPresets.ts` (localStorage) e passou a ser a tabela `gabarito`
+// (Supabase) — `lib/gabarito/{buscar,criar,atualizar,fork}.ts`, todos
+// CLIENT-SIDE (`lib/supabase/client.ts`) porque este componente é
+// `"use client"` sem Server Component pai que já busque isso. Ver
+// `onSalvarBox` abaixo pra lógica de FORK-ON-SAVE (D-15): editar um gabarito
+// GLOBAL nunca altera a linha global, a primeira alteração salva bifurca uma
+// cópia própria via RPC `fork_gabarito`.
 //
 // Duas instâncias de `EditorItemNucleo` ficam montadas ao mesmo tempo (uma
 // por origem) e alternam de VISIBILIDADE via CSS — nunca desmontam ao trocar
@@ -33,7 +45,11 @@ import { EditorItemNucleo, caixaInicial, placaInicial, type ResultadoSalvarItem 
 // ler `estadoInicial` na primeira renderização.
 export default function EditorModulo() {
   const [origemAtual, setOrigemAtual] = useState<ModuloOrcamento["origem"]>("custom_box");
-  const [presetEditando, setPresetEditando] = useState<{ id: string } | null>(null);
+  // `organizacaoId: null` = o gabarito sendo editado é da base GLOBAL
+  // (read-only) — decide o fork-on-save em `onSalvarBox` (D-15).
+  const [presetEditando, setPresetEditando] = useState<{ id: string; organizacaoId: string | null } | null>(
+    null
+  );
   const [pronto, setPronto] = useState(false);
   const [estadoInicialBox, setEstadoInicialBox] = useState<ModuloOrcamento>({
     origem: "custom_box",
@@ -45,39 +61,76 @@ export default function EditorModulo() {
   });
 
   useEffect(() => {
-    const cat = carregarCatalogo();
-    seedPresetsPadrao();
-    const cats = listarCategorias();
+    let cancelado = false;
 
-    const params = new URLSearchParams(window.location.search);
-    const presetId = params.get("preset");
-    const preset = presetId ? buscarPreset(presetId) : undefined;
+    async function iniciar() {
+      const cat = carregarCatalogo();
+      const cats = listarCategorias();
 
-    if (preset) {
-      setEstadoInicialBox({ origem: "custom_box", box: preset.box });
-      setPresetEditando({ id: preset.id });
-    } else {
-      const branco = coresDisponiveis(cat).find((c) => c.toLowerCase().includes("branco"));
-      setEstadoInicialBox({
-        origem: "custom_box",
-        box: caixaInicial(branco ?? "Branco TX", cats[0] ?? "Cozinha"),
-      });
-      setEstadoInicialPlaca({ origem: "placa", placa: placaInicial(branco ?? "Branco TX") });
+      const params = new URLSearchParams(window.location.search);
+      const presetId = params.get("preset");
+      const gabarito = presetId ? await buscarGabaritoPorId(presetId) : null;
+      if (cancelado) return;
+
+      if (gabarito) {
+        setEstadoInicialBox({ origem: "custom_box", box: gabarito.definicao });
+        setPresetEditando({ id: gabarito.id, organizacaoId: gabarito.organizacaoId });
+      } else {
+        const branco = coresDisponiveis(cat).find((c) => c.toLowerCase().includes("branco"));
+        setEstadoInicialBox({
+          origem: "custom_box",
+          box: caixaInicial(branco ?? "Branco TX", cats[0] ?? "Cozinha"),
+        });
+        setEstadoInicialPlaca({ origem: "placa", placa: placaInicial(branco ?? "Branco TX") });
+      }
+      setPronto(true);
     }
-    setPronto(true);
+
+    iniciar();
+    return () => {
+      cancelado = true;
+    };
   }, []);
 
   // Preset: só existe biblioteca pra módulo-caixa (Placa não tem persistência
   // ainda — ver nota original desta task no botão "Salvar" abaixo).
+  //
+  // Fork-on-save (Task 13.7c, D-15): editar um gabarito GLOBAL
+  // (`presetEditando.organizacaoId === null`) NUNCA altera a linha global — a
+  // primeira vez que o usuário salva, bifurca (RPC `fork_gabarito`) uma cópia
+  // própria da organização e IMEDIATAMENTE grava o `box` recém-editado nessa
+  // cópia (senão o fork sozinho perderia a diferença entre o que veio do
+  // global e o que acabou de mudar). `presetEditando` passa a apontar pro
+  // NOVO id — próximas alterações da MESMA sessão de edição viram `UPDATE`
+  // direto, sem fork de novo.
   async function onSalvarBox(modulo: ModuloOrcamento): Promise<ResultadoSalvarItem> {
     if (modulo.origem !== "custom_box") return { ok: false, erro: "Item inválido." };
     const box: BoxModule = modulo.box;
+    const nome = box.nome || "Módulo";
+    const categoria = box.categoria || "Cozinha";
+
+    if (presetEditando && presetEditando.organizacaoId === null) {
+      const fork = await forkGabarito(presetEditando.id);
+      if (!fork.ok || !fork.novoId) {
+        return { ok: false, erro: fork.erro ?? "Não foi possível criar sua cópia deste módulo global." };
+      }
+      const atualizado = await atualizarGabarito(fork.novoId, nome, categoria, box);
+      if (!atualizado.ok) {
+        return { ok: false, erro: atualizado.erro };
+      }
+      setPresetEditando({ id: fork.novoId, organizacaoId: atualizado.gabarito?.organizacaoId ?? null });
+      return { ok: true, mensagem: "Cópia própria criada — as próximas alterações são só suas." };
+    }
+
     if (presetEditando) {
-      atualizarPreset(presetEditando.id, { nome: box.nome || "Módulo", categoria: box.categoria || "Cozinha", box });
+      const atualizado = await atualizarGabarito(presetEditando.id, nome, categoria, box);
+      if (!atualizado.ok) return { ok: false, erro: atualizado.erro };
       return { ok: true };
     }
-    const p = salvarPreset(box.nome || "Módulo", box.categoria || "Cozinha", box);
-    setPresetEditando({ id: p.id });
+
+    const criado = await criarGabarito(nome, categoria, box);
+    if (!criado.ok || !criado.gabarito) return { ok: false, erro: criado.erro };
+    setPresetEditando({ id: criado.gabarito.id, organizacaoId: criado.gabarito.organizacaoId });
     return { ok: true };
   }
 
@@ -93,7 +146,9 @@ export default function EditorModulo() {
         </p>
         {presetEditando && origemAtual === "custom_box" && (
           <p className="muted" style={{ fontSize: 12, marginTop: -12 }}>
-            Editando um módulo já cadastrado — &quot;Salvar este módulo&quot; atualiza esse preset (não cria um novo).
+            {presetEditando.organizacaoId === null
+              ? "Editando um módulo da base global (somente leitura) — “Salvar este módulo” cria uma cópia própria na sua biblioteca, sem alterar o original."
+              : "Editando um módulo já cadastrado na sua biblioteca — “Salvar este módulo” atualiza esse gabarito (não cria um novo)."}
           </p>
         )}
         {/* Seletor de tipo de item: troca qual núcleo (custom_box × placa)

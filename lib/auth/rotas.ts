@@ -46,6 +46,10 @@
 // `/dev/preview/catalogo` (Task 13.7b): mesmo espírito — harness de
 // `/catalogo` (rota real, protegida, FORA desta lista) com produtos mock das
 // 5 categorias, sem Supabase.
+//
+// `/dev/preview/biblioteca` (Task 13.7c): mesmo espírito — harness de
+// `/biblioteca` (rota real, protegida, FORA desta lista, agora dentro do
+// grupo `(app)`) com gabaritos mock (global + próprios da org), sem Supabase.
 export const ROTAS_PUBLICAS = [
   "/login",
   "/signup",
@@ -57,6 +61,7 @@ export const ROTAS_PUBLICAS = [
   "/dev/preview/proposta-pdf",
   "/dev/preview/perfil",
   "/dev/preview/catalogo",
+  "/dev/preview/biblioteca",
 ] as const;
 
 /** Rotas que NÃO passam pelo gate de sessão do middleware. */
