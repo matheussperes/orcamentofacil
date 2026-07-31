@@ -1,9 +1,8 @@
 # Status Atual, Decisões, Pendências e Próximos Passos
 
-> Atualizado em 2026-07-31 (Stage 13/Fase C em progresso — Tasks 13.0 a 13.7a
-> concluídas — Task 13.2, Task 13.3, Task 13.4, Task 13.5, **Task 13.6
-> (13.6a + 13.6b) fechadas por completo**, Task 13.7a + 13.7b concluídas. Próximo passo: Task 13.7c.
-> ver fim da Seção 6). Este arquivo é o ponto de partida de
+> Atualizado em 2026-07-31 (Stage 13/Fase C COMPLETA — **Épico V2 completo**
+> — Tasks 13.0 a 13.7 TODAS concluídas — Fases A (Discovery), B (Motor/Dados)
+> e C (Experiência) TODAS concluídas; ver fim da Seção 6). Este arquivo é o ponto de partida de
 > qualquer sessão nova — leia antes de assumir o que já existe. O projeto
 > virou V2 em 2026-07-24 (ver Seção 1) — não confie em nada anterior a essa
 > data sobre arquitetura/motor sem checar contra os documentos da Seção 7.
@@ -12,16 +11,11 @@
 
 O projeto deixou de ser "refatoração visual da V1" e virou **a V2 do
 produto**: painel de orçamento para marceneiros, motor de caixa (V3)
-estendido, persistência real multi-tenant via Supabase. **Fase A (discovery)
-e Fase B (motor + dados) COMPLETAS — Stages 10, 11 e 12 fechadas.** Tudo
-concluído, mesclado e publicado: Task 10.1 (remoção do motor V1); Stage 11 —
-11.1 (Supabase Auth + RLS, Prisma fora), 11.2 (9 tabelas multi-tenant com
-RLS), 11.3 (teste de isolamento por tabela), 11.4 (catálogo: cópia no signup
-+ fork); Stage 12 — 12.1 (primitiva `Placa`), 12.2 (Parede/Ambiente +
-posicionamento 1D + Tier 1/2), 12.3 (conjuntos adjacentes + override), 12.4
-(elementos contínuos unificados), 12.5 (veio de chapa), 12.6 (precificação
-V2 + rateio por custo alocado), 12.7 (integra `ElementoContinuo` ao
-pipeline). 168 testes verdes.
+estendido, persistência real multi-tenant via Supabase. **ÉPICO V2 COMPLETO** —
+**Fase A (discovery)**, **Fase B (motor + dados)** e **Fase C (experiência)
+TODAS CONCLUÍDAS**. Stages 10–13 concluídas e mescladas. Próximos passos
+dependem de nova conversa com operador (novo épico, item do Backlog futuro
+pós-MVP, ou operação/manutenção).
 
 **A Stage 13 (Fase C — telas) já tem discovery/planejamento feito
 (2026-07-27)**: as 8 tasks (13.0-13.7) estão detalhadas com critério de
@@ -465,7 +459,9 @@ aplicada: bucket `linha-proposta-renders` + 4 políticas RLS.
 
 **Task 13.7a concluída (2026-07-31)**: `/perfil` — nova rota do shell autenticado com Seção Organização (nome, CNPJ, endereço, telefone, logo, unidade, modo de precificação/montagem padrão) e Seção Perfil pessoal (nome, telefone, e-mail read-only). Seletores de modo de precificação/montagem extraídos como módulo compartilhado, reaproveitado por Financeiro (com toggle "usar padrão") e Perfil (edição direta). Server Actions `lib/organizacao/salvar.ts` e `lib/perfil/salvar.ts` com whitelist de colunas, RLS-safe. Code Auditor (267/267 testes), Security Auditor aprovado (RLS ok; achado não-bloqueante registrado: política UPDATE sem granularidade por papel — dívida pré-existente Task 11.1, primeira tela que expõe esse caminho, operador decide quando revogar), QA Engineer (extração 1:1, sem regressão), UX Auditor (0 overflow 375/768/1440px). Zero correções. **Nota de decisão**: Task 13.7 foi quebrada em 13.7a (Perfil, concluído) + 13.7b (Catálogo de produtos) + 13.7c (Biblioteca) — as 3 telas de catálogo são V1 puro (CSS/localStorage), escopo denso demais pra uma branch; wiring de consumo real (Catálogo em Corte&Material/Financeiro/Editor de Item; Biblioteca em `/modulo`) entra no escopo das sub-tasks.
 
-**Task 13.7b concluída (2026-07-31)**: `/catalogo` — nova rota com CRUD real de `produto` (Supabase): lista paginada + modal "Adicionar" com nome/tipo/código (Ferragem com seletor fechado), preço/unidade. Ligação de consumo em `CorteMaterialLab`, `FinanceiroLab`, `EditorItemNucleo` via `buscarCatalogoReal()` (fallback localStorage). Mapeamento `produto` → `Catalogo` reaproveitando `catalogoParaPrecos`. **Bug real encontrado e corrigido**: Select-dentro-de-Dialog (Radix) travava todos os botões após seleção — causa-raiz: `@radix-ui/react-presence` nunca completava animação de saída em aninhamento, deixando Select mounted e bloqueando pointer-events permanentemente. Fix raiz: remover classes de animação de saída em `SelectContent` — resolve qualquer futura combinação Select-em-Dialog. Código Auditor (283/283 testes), Security Auditor aprovado (RLS ok, whitelist ok, dependência nova verificada), QA Engineer aprovado primeira tentativa (fluxo completo: selecionar código, preencher, salvar, linha aparece). UX Auditor (0 overflow 375/768/1440px). Nenhuma migration. **Próximo passo real: Task 13.7c** (Biblioteca).
+**Task 13.7b concluída (2026-07-31)**: `/catalogo` — nova rota com CRUD real de `produto` (Supabase): lista paginada + modal "Adicionar" com nome/tipo/código (Ferragem com seletor fechado), preço/unidade. Ligação de consumo em `CorteMaterialLab`, `FinanceiroLab`, `EditorItemNucleo` via `buscarCatalogoReal()` (fallback localStorage). Mapeamento `produto` → `Catalogo` reaproveitando `catalogoParaPrecos`. **Bug real encontrado e corrigido**: Select-dentro-de-Dialog (Radix) travava todos os botões após seleção — causa-raiz: `@radix-ui/react-presence` nunca completava animação de saída em aninhamento, deixando Select mounted e bloqueando pointer-events permanentemente. Fix raiz: remover classes de animação de saída em `SelectContent` — resolve qualquer futura combinação Select-em-Dialog. Código Auditor (283/283 testes), Security Auditor aprovado (RLS ok, whitelist ok, dependência nova verificada), QA Engineer aprovado primeira tentativa (fluxo completo: selecionar código, preencher, salvar, linha aparece). UX Auditor (0 overflow 375/768/1440px). Nenhuma migration.
+
+**Task 13.7c concluída (2026-07-31) — FECHA A TASK 13.7 E A STAGE 13 INTEIRAS**: `/biblioteca` — rota migrada pro shell autenticado com lista global + próprios (RLS filtra), badges visuais "Global"/"Seu módulo", filtro por categoria derivado dos valores distintos de `gabarito.categoria`. Excluir disponível só pra gabarito próprio (bloqueado em UI e via RLS). **Achado crítico durante implementação**: base global estava vazia desde Task 11.4 — regressão real (novo orçamento abriria biblioteca zerada). Migration nova aplicada no banco real: `supabase/migrations/20260731090000_seed_gabaritos_padrao.sql` semeia 6 módulos como gabaritos globais (6 linhas `organizacao_id null`, confirmado). `/modulo` religado com lógica **fork-on-save** (D-15): `onSalvarBox` → novo (zero), próprio (`UPDATE`), global (`RPC fork_gabarito` + grava + redireciona), feedback explícito "Cópia própria criada". Code Auditor (290/290 testes, build/lint/typecheck verdes; `lib/boxPresets.ts` intocado), Security Auditor aprovado (RLS OK, RPC segura contra id arbitrário/cross-tenant; 4 observações não-bloqueantes dívida pré-existente), QA Engineer aprovado (fork-on-save auditado linha por linha; 1 observação não-bloqueante: falha parcial entre fork e update deixa cópia órfã — janela estreita, não coberta, backlog), UX Auditor (badges/filtro/excluir OK, 0 overflow 375/768/1440px via harness `/dev/preview/biblioteca`). Fork E2E real (sessão + RPC real) = operador. **FECHA TASK 13.7 INTEIRA** (13.7a + 13.7b + 13.7c todas concluídas). **FECHA STAGE 13 INTEIRA** (13.0–13.7 todas concluídas). **ÉPICO V2 COMPLETO** (Fase A Discovery + Fase B Motor/Dados + Fase C Experiência todas concluídas — próximos passos dependem de nova conversa com operador).
 
 **Pendência do operador** (pra usar o app real com tasks até aqui concluídas): confirmar Stage 13 foi validada — configurar dashboard Supabase (Site URL/Redirect URLs + template e-mail "Confirm signup", ou desligar "Confirm email") e criar 1ª conta pra testes E2E real. Ver `docs/Backlog.md` Stage 13.
 
