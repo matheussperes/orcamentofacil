@@ -38,6 +38,20 @@ import { distribuir } from "./rateio";
 // um estado matematicamente válido (a soma continua batendo exato), mas
 // operacionalmente estranho; cabe à UI (Design-System Seção 7.13, Alert)
 // avisar o usuário da consequência, não a esta função decidir por ele.
+//
+// Correção Task 13.6a (QA-Decline-Payload.md, achado #1, tentativa 1):
+// quando `linhasAtuais` tem UMA única linha total (estado default D-17, a
+// aba Proposta nasce assim), não existem "outras" linhas para absorver a
+// diferença entre `novoValor` e `precoFinal` — `distribuir(restante, [])`
+// devolve `[]` e não há nada para redistribuir. Decisão: nesse caso
+// específico a função FIXA o valor da única linha em `precoFinal`,
+// ignorando `novoValor` — o valor de uma linha única É o preço final por
+// definição matemática (não existe "outra parte" pra absorver diferença),
+// então aceitar um valor diferente quebraria o invariante sem chance de
+// correção. Guardar essa regra AQUI (na função pura, não só na UI) garante
+// `Σ valorRateado === round2(precoFinal)` para qualquer chamador — inclusive
+// chamadas diretas de teste/futuro código, não só o fluxo `LinhaPropostaCard`
+// → `PropostaLab`.
 export interface LinhaRateada {
   id: string;
   valorRateado: number;
@@ -72,12 +86,19 @@ export function rebalancearLinhas(
   if (!existe) return linhasAtuais;
 
   const precoFinalR = round2(precoFinal);
-  const novoValorR = round2(novoValor);
-  const restante = round2(precoFinalR - novoValorR);
 
   // Índices das "outras" linhas (preservando a ordem original) — a última
   // delas absorve o resíduo de `distribuir`.
   const outras = linhasAtuais.filter((l) => l.id !== idLinhaEditada);
+
+  // Linha única total: nada para redistribuir (ver comentário acima) — o
+  // valor da única linha é sempre `precoFinal`, `novoValor` é ignorado.
+  if (outras.length === 0) {
+    return linhasAtuais.map((l) => ({ id: l.id, valorRateado: precoFinalR }));
+  }
+
+  const novoValorR = round2(novoValor);
+  const restante = round2(precoFinalR - novoValorR);
   const pesos = outras.map((l) => l.valorRateado);
   const redistribuidos = distribuir(restante, pesos);
   const valorPorId = new Map<string, number>(outras.map((l, i) => [l.id, redistribuidos[i]]));

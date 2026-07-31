@@ -112,6 +112,24 @@ describe("rebalancearLinhas", () => {
     expect(resultado.find((l) => l.id === "c")?.valorRateado).toBe(100);
   });
 
+  it("1 linha total (D-17, estado default): override é IGNORADO, valor fica preso a precoFinal (QA-Decline-Payload achado #1)", () => {
+    // Reprodução exata do achado do QA: chamar com uma única linha e um
+    // `novoValor` diferente de `precoFinal` não deve quebrar o invariante —
+    // não há "outras" linhas para absorver a diferença, então a função fixa
+    // o valor da única linha em `precoFinal`, ignorando o que foi digitado.
+    const linhas: LinhaRateada[] = [{ id: "unica", valorRateado: 1000 }];
+    const resultado = rebalancearLinhas(linhas, "unica", 1500, 1000);
+    expect(resultado).toEqual([{ id: "unica", valorRateado: 1000 }]);
+    expect(somaValores(resultado)).toBe(1000);
+  });
+
+  it("1 linha total: mesmo com novoValor MENOR que precoFinal, o valor continua preso a precoFinal", () => {
+    const linhas: LinhaRateada[] = [{ id: "unica", valorRateado: 500 }];
+    const resultado = rebalancearLinhas(linhas, "unica", 100, 500);
+    expect(resultado).toEqual([{ id: "unica", valorRateado: 500 }]);
+    expect(somaValores(resultado)).toBe(500);
+  });
+
   it("id inexistente devolve o array original sem alteração", () => {
     const linhas: LinhaRateada[] = [
       { id: "a", valorRateado: 500 },
