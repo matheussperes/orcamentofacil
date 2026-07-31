@@ -25,9 +25,19 @@
 -- 20260727090000_cliente.sql), sem precisar de uma tabela de metadados
 -- própria para o Storage.
 
-insert into storage.buckets (id, name, public)
-values ('linha-proposta-renders', 'linha-proposta-renders', false)
-on conflict (id) do nothing;
+-- `file_size_limit` (5 MB, 5242880 bytes) e `allowed_mime_types` (só PNG)
+-- restringem o bucket ao mesmo contrato que `lib/linha-proposta/storage.ts`
+-- já respeita no upload (`contentType: "image/png"`, capturado via
+-- `canvas.toDataURL("image/png")` em `canvasParaBlobPng`) — sem essa
+-- restrição no bucket, qualquer usuário autenticado poderia subir conteúdo
+-- arbitrário (não-imagem) dentro da pasta da própria organização, já que a
+-- RLS abaixo só escopa por organização, não por tipo/tamanho de arquivo
+-- (achado do security-auditor, Task 13.6a).
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('linha-proposta-renders', 'linha-proposta-renders', false, 5242880, array['image/png'])
+on conflict (id) do update set
+  file_size_limit = excluded.file_size_limit,
+  allowed_mime_types = excluded.allowed_mime_types;
 
 -- RLS de storage.objects já vem habilitada por padrão no Supabase (tabela do
 -- sistema, gerenciada pela extensão de Storage) — só criamos as políticas,
