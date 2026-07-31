@@ -1495,12 +1495,52 @@ jornada do cliente, agora sobre Tailwind + shadcn/ui).
   **Status**: ✅ Concluído (2026-07-30, mesclada em `feature/13.6b-pdf-proposta`). Rota `/proposta/[id]/pdf` (standalone, fora do shell `(app)` mas atrás do gate de auth padrão — só o dono da organização acessa) renderiza documento A4 imprimível: cabeçalho com dados reais do emitente (Organização: nome, CNPJ, endereço, telefone, logo via `logo_url` ou fallback `/logo/logo-dark.png`), bloco de dados do cliente (nome, telefone, endereço), seção por Linha de Proposta (imagem via `createSignedUrl` server-side novo em `lib/supabase/server.ts`, descrição, valor), prazo de entrega, forma de pagamento (texto livre editável em `useState`, sem coluna no schema — escopo de curto prazo), total (soma direta de `valorRateado` congelado, sem recalcular rateio). Nenhum custo interno exposto (material/montagem/frete confirmado por grep). Card de citação de marca fixo (texto do mockup #12). Botão "Imprimir/Salvar em PDF" (`window.print()`), some em `@media print`. CSS dedicado fora do Tailwind (`app/proposta/[id]/pdf/proposta-pdf.css`, padrão v1 mantido — `app/proposta/proposta.css` intocado). **Absorve a Task 9.1**: tokens de cor `marinho-900` e `accent-vivid` já estão embarcados (Design-System Seção 7.22). Harness `/dev/preview/proposta-pdf` público (teste protege que `/proposta/[id]/pdf` real continua autenticado). Code Auditor (265/265 testes), Security Auditor aprovado (RLS em cada camada, signed URLs corretas, defesa em profundidade, 3 observações não-bloqueantes: TTL de 1h poderia ser menor, erro de leitura degrada silenciosamente, `logo_url` sem restrição de origem), QA Engineer aprovado de primeira (total bate, nenhum custo interno exposto, placeholder funcionando, `app/proposta/page.tsx` V1 intocado), UX Auditor (conteúdo completo verificado ao vivo via harness, cores confirmadas por leitura de estilo computado, `@media print` ok, 0 overflow em 375/768/1440px, sem erros de console reais). Zero migrations. **FECHA A TASK 13.6 INTEIRA** (13.6a + 13.6b ambas concluídas).
 - **NOTA — Task 13.6 FECHADA POR COMPLETO**: 13.6a (Linhas de Proposta) + 13.6b (PDF imprimível) ambas concluídas em 2026-07-30. Proposta é a última aba persistida de `/orcamento/[id]` que envolve render de conjunto — o restante da Stage 13 (13.7) é CRUD de catálogo, isolado.
 
-- **Task 13.7** — Perfil / Organização + Catálogo de produtos + Biblioteca
-  (absorve a 8.1). CRUD de `produto` (Task 11.4, RLS já pronta — inclusive
-  onde o operador cadastra os ~380 padrões de MDF, se ainda não tiver feito
-  via Table Editor) e `gabarito` (fork via `fork_gabarito`, Task 11.4).
-  **Isolada** — pode ser feita em paralelo com qualquer outra task da Stage,
-  não depende de canvas/posicionamento. 🟡 Média · Sonnet.
+- **Task 13.7 quebrada em 13.7a + 13.7b + 13.7c** (decision 2026-07-31: as 3
+  telas de catálogo hoje são 100% CSS/localStorage legado V1, nunca
+  convertidas pro Tailwind/Supabase, escopo denso demais pra uma branch
+  efêmera só). Operador confirmou que diferente da Dívida B2 (adiar o
+  wiring), aqui o wiring de consumo real (Catálogo em Corte&Material /
+  Financeiro / Editor de Item; Biblioteca em `/modulo`) **ENTRA no escopo das
+  sub-tasks**, não fica adiado.
+
+- **Task 13.7a — `/perfil`**: nova rota dentro do shell autenticado
+  (`app/(app)/perfil/page.tsx`), item "Perfil" do menu lateral agora ativo
+  (`components/shell/Sidebar.tsx`, antes `href: null`). Seção Organização:
+  nome, CNPJ, endereço, telefone, logo (campo de texto/URL simples, sem upload
+  — escopo documentado, upload de imagem fica pra task própria de Storage tipo
+  a 13.6a), unidade (mm/cm), modo de precificação padrão, modo de montagem
+  padrão, preview de logo com fallback (`ImageOff`). Seção Perfil pessoal:
+  nome, telefone (editáveis), e-mail (só leitura). Dois botões "Salvar
+  alterações" independentes (Organização / Perfil pessoal), cada um com
+  Server Action RLS-safe (`lib/organizacao/salvar.ts`,
+  `lib/perfil/salvar.ts`) com whitelist explícita de colunas. **Extração**: o
+  seletor de modo de precificação/montagem (4 modos + 3 modos, cada um com
+  campo numérico) virou módulo compartilhado
+  (`components/precificacao/SeletorModoPrecificacao.tsx`/`SeletorModoMontagem.tsx`),
+  reaproveitado por `FinanceiroLab` (Task 13.5, com toggle "usar padrão da
+  organização", exclusivo) E por `/perfil` (edição direta do padrão, sem
+  toggle). Harness `/dev/preview/perfil` novo. 🟢 Média · Sonnet.
+  **Status**: ✅ Concluído (2026-07-31, mesclada em `feature/13.7a-perfil`).
+  Build/lint/typecheck/test verdes (267/267). Security Auditor aprovado —
+  RLS confirmada, whitelist de colunas correta, sem escalonamento via `papel`
+  / `organizacao_id`. **Achado importante registrado pra decisão futura do
+  operador (não-bloqueante, dívida pré-existente Task 11.1)**: política de
+  UPDATE de `organizacao`/`perfil` libera qualquer papel (`admin`/`vendedor`
+  /`projetista`), sem granularidade — 13.7a é a **primeira tela que expõe
+  esse caminho de escrita de verdade na UI** (antes só existia no schema);
+  decidir quando revogar ou detalhar por papel. QA Engineer aprovado
+  (extração 1:1 confirmada, sem regressão no Financeiro, `AmbientesLab`
+  intocado). UX Auditor: 0 overflow em 375/768/1440px, sem erros de console,
+  Financeiro reconferido ao vivo. Nenhuma migration.
+
+- **Task 13.7b — Catálogo de produtos** (`/catalogo`): CRUD de `produto` com
+  populate real (os ~380 padrões de MDF do operador); ligação do consumo de
+  catálogo (hoje `lib/catalog.ts` via localStorage) às telas que já existem
+  (Corte&Material, Financeiro, Editor de Item). 🟡 Média · Sonnet.
+
+- **Task 13.7c — Biblioteca** (absorve a 8.1): rota `/biblioteca` migrada pra
+  shell v3 (Tailwind/shadcn), wiring de fork de `gabarito` (Task 11.4) ligado
+  ao Editor de Item. 🟡 Média · Sonnet.
 
 ---
 
