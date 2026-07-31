@@ -77,7 +77,31 @@ const SelectContent = React.forwardRef<
     <SelectPrimitive.Content
       ref={ref}
       className={cn(
-        "relative z-50 max-h-[--radix-select-content-available-height] min-w-[8rem] overflow-y-auto overflow-x-hidden rounded-md border border-cinza-200 bg-cinza-0 text-cinza-900 shadow-md data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 origin-[--radix-select-content-transform-origin]",
+        // Fix (Task 13.7b, bug real reportado pelo ux-auditor): sem classe de
+        // saída (`data-[state=closed]:animate-out`/`fade-out-0`/`zoom-out-95`),
+        // de propósito. Causa raiz: `@radix-ui/react-select` usa
+        // `@radix-ui/react-presence` para não desmontar o conteúdo do Select
+        // enquanto uma animação de saída CSS está "rodando" — ele compara
+        // `getComputedStyle(node).animationName` antes/depois do fechamento
+        // para decidir se espera o evento `animationend` antes de desmontar.
+        // Quando esse conteúdo está aninhado dentro de um `Dialog` (também
+        // Radix, também "modal", também fazendo layout/hideOthers/focus-trap
+        // no mesmo instante), essa leitura de estilo computado é frágil o
+        // suficiente para nunca disparar `animationend` de forma confiável —
+        // e quando isso acontece o Select nunca desmonta de verdade: seu
+        // `DismissableLayer`/`hideOthers`/`FocusScope` continuam "presos"
+        // travando `pointer-events` do `DialogContent` em `none` para sempre
+        // (confirmado lendo `@radix-ui/react-dismissable-layer` e
+        // `@radix-ui/react-presence`), e todo clique dentro do Dialog
+        // (Cancelar/Salvar/X) passa direto pro `DialogOverlay` atrás dele —
+        // exatamente o sintoma reportado (`elementFromPoint` devolvendo outro
+        // elemento, Escape parando de funcionar). Sem classe de saída,
+        // `animationName` no fechamento resolve pra `none` e o Presence
+        // desmonta o conteúdo do Select de forma síncrona, sem depender de
+        // nenhum evento de animação — elimina a trava na raiz, em vez de só
+        // escondê-la. Entrada (`animate-in`/`fade-in-0`/`zoom-in-95`)
+        // continua intacta.
+        "relative z-50 max-h-[--radix-select-content-available-height] min-w-[8rem] overflow-y-auto overflow-x-hidden rounded-md border border-cinza-200 bg-cinza-0 text-cinza-900 shadow-md data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 origin-[--radix-select-content-transform-origin]",
         position === "popper" &&
           "data-[side=bottom]:translate-y-1 data-[side=left]:-translate-x-1 data-[side=right]:translate-x-1 data-[side=top]:-translate-y-1",
         className
