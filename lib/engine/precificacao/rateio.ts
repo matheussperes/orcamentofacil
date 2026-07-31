@@ -26,7 +26,12 @@ function round4(n: number): number {
 // Distribui `total` (R$) entre pesos, arredondando cada linha a centavos; a
 // ÚLTIMA linha absorve o resíduo, de modo que Σ == round2(total) exato
 // (Seção 5.2, invariante de arredondamento). Se Σpesos == 0, divide igualmente.
-function distribuir(total: number, pesos: number[]): number[] {
+//
+// Exportada (Task 13.6a, contrato .maestro/tmp/13.6a-contract.md) — o
+// rebalanceamento de override manual de Linha de Proposta
+// (`./rebalancear.ts`) reaproveita o MESMO invariante de arredondamento
+// (última posição absorve o resíduo) em vez de duplicar a lógica.
+export function distribuir(total: number, pesos: number[]): number[] {
   const n = pesos.length;
   if (n === 0) return [];
   const totalR = round2(total);

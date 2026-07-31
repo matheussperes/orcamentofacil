@@ -3,7 +3,6 @@
 import { useState, type ReactNode } from "react";
 import { FileText, LayoutGrid, Scissors, Wallet } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { AbaPlaceholder } from "./AbaPlaceholder";
 import { AbaAtivaProvider } from "./AbaAtivaContext";
 import { usePageHeader } from "@/components/shell/PageHeaderContext";
 
@@ -43,6 +42,13 @@ import { usePageHeader } from "@/components/shell/PageHeaderContext";
 // para "Financeiro" (`abaFinanceiro`), também `forceMount` — `FinanceiroLab`
 // guarda a configuração de precificação/montagem/frete em edição em
 // `useState` local, que não deve se perder ao trocar de aba.
+//
+// Task 13.6a (contrato .maestro/tmp/13.6a-contract.md): mesmo slot pattern
+// para "Proposta" (`abaProposta`), também `forceMount` — `PropostaLab` guarda
+// as Linhas de Proposta (split/mesclar/override em edição) em `useState`
+// local, mesma razão das outras 3 abas. Isto substitui o placeholder
+// (`<AbaPlaceholder titulo="Proposta" task="13.6" />`) que existia desde a
+// Task 13.3c.
 export interface OrcamentoAbasProps {
   clienteNome: string;
   /** Id curto (8 primeiros caracteres do uuid, maiúsculo) — usado só como
@@ -62,9 +68,19 @@ export interface OrcamentoAbasProps {
   /** Conteúdo da aba "Financeiro" — Task 13.5, mesmo espírito das outras
    * duas: `FinanceiroTabConectada` (real) ou `FinanceiroTabMock` (harness). */
   abaFinanceiro: ReactNode;
+  /** Conteúdo da aba "Proposta" — Task 13.6a, mesmo espírito das outras 3:
+   * `PropostaTabConectada` (real) ou `PropostaTabMock` (harness). */
+  abaProposta: ReactNode;
 }
 
-export function OrcamentoAbas({ clienteNome, idCurto, abaAmbientes, abaCorteMaterial, abaFinanceiro }: OrcamentoAbasProps) {
+export function OrcamentoAbas({
+  clienteNome,
+  idCurto,
+  abaAmbientes,
+  abaCorteMaterial,
+  abaFinanceiro,
+  abaProposta,
+}: OrcamentoAbasProps) {
   // Sobrescreve a Topbar com o breadcrumb "Orçamentos / <nome do cliente>"
   // (Design-System Seção 6) enquanto esta página estiver montada — ver
   // `components/shell/PageHeaderContext.tsx`.
@@ -108,8 +124,8 @@ export function OrcamentoAbas({ clienteNome, idCurto, abaAmbientes, abaCorteMate
         <TabsContent value="financeiro" forceMount className="data-[state=inactive]:hidden">
           {abaFinanceiro}
         </TabsContent>
-        <TabsContent value="proposta">
-          <AbaPlaceholder titulo="Proposta" task="13.6" />
+        <TabsContent value="proposta" forceMount className="data-[state=inactive]:hidden">
+          {abaProposta}
         </TabsContent>
       </Tabs>
     </AbaAtivaProvider>

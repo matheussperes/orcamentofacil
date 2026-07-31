@@ -3,10 +3,12 @@ import { buscarOrcamentoPorId } from "@/lib/orcamento/buscar";
 import { carregarEstadoAmbiente } from "@/lib/ambiente/carregar";
 import { buscarUltimaListaMaterial } from "@/lib/lista-material/buscarUltima";
 import { carregarConfiguracaoPrecificacao } from "@/lib/precificacao/carregarConfiguracao";
+import { carregarOuCriarLinhasProposta } from "@/lib/linha-proposta/carregar";
 import { OrcamentoAbas } from "@/components/orcamento/OrcamentoAbas";
 import { AmbientesTabConectada } from "@/components/ambientes/AmbientesTabConectada";
 import { CorteMaterialTabConectada } from "@/components/orcamento/CorteMaterialTabConectada";
 import { FinanceiroTabConectada } from "@/components/orcamento/FinanceiroTabConectada";
+import { PropostaTabConectada } from "@/components/orcamento/PropostaTabConectada";
 
 // Task 13.3c (contrato .maestro/tmp/13.3c-contract.md) — shell de
 // `/orcamento/[id]` com 4 abas. Server Component: busca o orçamento (RLS
@@ -39,6 +41,13 @@ import { FinanceiroTabConectada } from "@/components/orcamento/FinanceiroTabCone
 // `orcamento.modo_precificacao`/`modo_montagem`/`frete` contra os defaults
 // de `organizacao.modo_precificacao_padrao`/`modo_montagem_padrao`) — passa
 // pra `OrcamentoAbas` via slot `abaFinanceiro`.
+//
+// Task 13.6a (contrato .maestro/tmp/13.6a-contract.md): a aba "Proposta"
+// reaproveita `estadoAmbiente`/`configuracaoPrecificacao` (mesmas leituras,
+// nenhuma duplicada) e soma `carregarOuCriarLinhasProposta` — que tanto LÊ
+// as Linhas de Proposta já existentes quanto CRIA a linha default (D-17,
+// "linha = ambiente") no primeiro carregamento, quando ainda não existe
+// nenhuma — passa pra `OrcamentoAbas` via slot `abaProposta`.
 export default async function OrcamentoPage({ params }: { params: { id: string } }) {
   const orcamento = await buscarOrcamentoPorId(params.id);
 
@@ -50,6 +59,7 @@ export default async function OrcamentoPage({ params }: { params: { id: string }
   const estadoAmbiente = await carregarEstadoAmbiente(orcamento.id);
   const ultimaCongeladaEm = await buscarUltimaListaMaterial(orcamento.id);
   const configuracaoPrecificacao = await carregarConfiguracaoPrecificacao(orcamento.id);
+  const linhasProposta = await carregarOuCriarLinhasProposta(orcamento.id, estadoAmbiente);
 
   return (
     <OrcamentoAbas
@@ -71,6 +81,15 @@ export default async function OrcamentoPage({ params }: { params: { id: string }
           orcamentoId={orcamento.id}
           estadoInicial={estadoAmbiente}
           configuracaoInicial={configuracaoPrecificacao}
+        />
+      }
+      abaProposta={
+        <PropostaTabConectada
+          orcamentoId={orcamento.id}
+          organizacaoId={linhasProposta.organizacaoId}
+          estadoInicial={estadoAmbiente}
+          configuracaoInicial={configuracaoPrecificacao}
+          linhasIniciais={linhasProposta.linhas}
         />
       }
     />

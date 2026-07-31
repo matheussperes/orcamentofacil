@@ -676,6 +676,9 @@ interface BoxCanvasPropsItemUnico {
   /** Modo "gavetas": seleciona o VÃO cujo conteúdo de gaveta vai editar/excluir. */
   vaoGavetaSelecionado?: string | null;
   onSelecionarVaoGaveta?: (id: string) => void;
+  /** Task 13.6a (contrato .maestro/tmp/13.6a-contract.md) — ver comentário
+   * completo na prop homônima de `BoxCanvasPropsConjunto`, abaixo. */
+  onCanvasReady?: (canvas: HTMLCanvasElement | null) => void;
 }
 
 interface BoxCanvasPropsConjunto {
@@ -715,6 +718,19 @@ interface BoxCanvasPropsConjunto {
   onSelecionarPorta?: undefined;
   vaoGavetaSelecionado?: undefined;
   onSelecionarVaoGaveta?: undefined;
+  /** Task 13.6a (contrato .maestro/tmp/13.6a-contract.md) — mudança pequena e
+   * ADITIVA: `BoxCanvas` não expunha o `<canvas>` interno pro caller (só
+   * usava a `ref` internamente). A aba "Proposta" precisa capturar o
+   * `<canvas>` do modo conjunto para gerar a imagem de render de cada Linha
+   * de Proposta (`canvas.toDataURL('image/png')` — ver
+   * `components/orcamento/LinhaPropostaCard.tsx`). Chamado a cada commit
+   * (não só na montagem) com o elemento atual — sem esta prop, nenhum
+   * comportamento muda (nenhum consumidor existente a passa: `/modulo`,
+   * `/ambientes`, Corte&Material). Existe também no modo item único
+   * (`BoxCanvasPropsItemUnico`, acima) pela mesma razão de simetria de tipo
+   * já usada nas outras props (`comercial`, etc.), embora esta task só use o
+   * modo conjunto. */
+  onCanvasReady?: (canvas: HTMLCanvasElement | null) => void;
 }
 
 type BoxCanvasProps = BoxCanvasPropsItemUnico | BoxCanvasPropsConjunto;
@@ -737,6 +753,7 @@ export function BoxCanvas(props: BoxCanvasProps) {
     onSelecionarPorta,
     vaoGavetaSelecionado = null,
     onSelecionarVaoGaveta,
+    onCanvasReady,
   } = props;
   // Conjunto é sempre "bonito"/não interativo por padrão (equivalente a
   // `comercial`) — a ÚNICA interatividade do modo conjunto é o handle de
@@ -750,6 +767,16 @@ export function BoxCanvas(props: BoxCanvasProps) {
   // mesmos retângulos de g.rects) — puramente apresentacional, não afeta
   // onToggleVao/modoSelecao/vaosSelecionados.
   const [hoverId, setHoverId] = useState<string | null>(null);
+
+  // Task 13.6a — entrega o `<canvas>` pro caller (ver comentário da prop).
+  // Efeito PRÓPRIO, separado do de desenho abaixo: só precisa rodar quando a
+  // referência do elemento muda (nunca, na prática, com `ref` de
+  // `useRef` — o nó DOM é estável entre renders), mas roda a cada commit
+  // desta função (`onCanvasReady` como única dependência) para não exigir
+  // que o caller memoize um `ref` próprio.
+  useEffect(() => {
+    onCanvasReady?.(ref.current);
+  }, [onCanvasReady]);
 
   useEffect(() => {
     const ctx = ref.current?.getContext("2d");

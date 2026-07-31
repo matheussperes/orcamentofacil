@@ -14,6 +14,14 @@ const alertVariants = cva(
         aviso: "border-l-aviso bg-aviso-subtle",
         erro: "border-l-erro bg-erro-subtle",
         sucesso: "border-l-sucesso bg-sucesso-subtle",
+        // Task 13.6a (contrato .maestro/tmp/13.6a-contract.md) — variante
+        // "informacao" já especificada em Design-System.md Seção 7.13
+        // ("boxes ⓘ recorrentes") mas nunca implementada até aqui (as 3
+        // variantes acima eram as únicas existentes). Reaproveita os tokens
+        // `informacao`/`informacao-subtle` já presentes em
+        // `tailwind.config.ts` (Seção 2.4) — primeiro uso: alerta fixo da
+        // aba Proposta ("remover um ambiente aumenta o preço dos demais").
+        informacao: "border-l-informacao bg-informacao-subtle",
       },
     },
     defaultVariants: {
