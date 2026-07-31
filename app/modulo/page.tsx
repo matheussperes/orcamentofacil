@@ -89,7 +89,7 @@ export default function EditorModulo() {
           Monte a caixa vazia, divida em vãos e aplique portas/gavetas nos vãos selecionados — ou
           configure uma placa avulsa (prateleira, fechamento, painel).{" "}
           <a href="/">← calculadora</a> · <a href="/biblioteca">Biblioteca de módulos</a> ·{" "}
-          <a href="/configuracoes/materiais">Materiais</a>
+          <a href="/catalogo">Catálogo</a>
         </p>
         {presetEditando && origemAtual === "custom_box" && (
           <p className="muted" style={{ fontSize: 12, marginTop: -12 }}>

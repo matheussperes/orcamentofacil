@@ -31,7 +31,12 @@ export interface Catalogo {
   freteFixo: number;
 }
 
-const NOMES_FERRAGENS: Record<string, { nome: string; unidade: string }> = {
+// Task 13.7b (contrato .maestro/tmp/13.7b-contract.md) — exportado (era
+// privado deste módulo) para `lib/produto/mapear.ts`/os formulários de
+// `/catalogo` reaproveitarem a mesma lista de códigos fixos de ferragem que
+// o motor de caixa emite (`lib/engine/box/explode.ts`), evitando duplicar a
+// lista em dois lugares.
+export const NOMES_FERRAGENS: Record<string, { nome: string; unidade: string }> = {
   dobradica_35: { nome: "Dobradiça 35mm", unidade: "un" },
   corredica_par: { nome: "Corrediça (par)", unidade: "par" },
   puxador: { nome: "Puxador", unidade: "un" },
