@@ -1,8 +1,8 @@
 # Status Atual, Decisões, Pendências e Próximos Passos
 
-> Atualizado em 2026-07-30 (Stage 13/Fase C em progresso — Tasks 13.0 a 13.4
-> concluídas — Task 13.2, Task 13.3 e Task 13.4 fechadas por completo. Pausa
-> anterior à 13.4 foi levantada — próximo passo: Task 13.5.
+> Atualizado em 2026-07-30 (Stage 13/Fase C em progresso — Tasks 13.0 a 13.6
+> concluídas — Task 13.2, Task 13.3, Task 13.4, Task 13.5 e **Task 13.6
+> (13.6a + 13.6b) fechadas por completo**. Próximo passo: Task 13.7.
 > ver fim da Seção 6). Este arquivo é o ponto de partida de
 > qualquer sessão nova — leia antes de assumir o que já existe. O projeto
 > virou V2 em 2026-07-24 (ver Seção 1) — não confie em nada anterior a essa
@@ -461,11 +461,9 @@ corrigido antes do merge), QA Engineer (reprovou Tentativa 1 por bug em
 Tentativa 2), UX Auditor (0 overflow 375/768/1440px). Migration Supabase
 aplicada: bucket `linha-proposta-renders` + 4 políticas RLS.
 
-**Próximo passo real: Task 13.6b** (PDF imprimível com marca da Proposta).
-Depois: **13.7**. **Pendência do operador** (pra usar o app real): confirmar
-que a Task 13.5 foi validada — configurar dashboard Supabase (Site URL/
-Redirect URLs + template e-mail, ou desligar "Confirm email") e criar 1ª conta
-pra testes E2E real. Ver `docs/Backlog.md` Stage 13.
+**Task 13.6b concluída (2026-07-30) — FECHA A TASK 13.6 INTEIRA**: Rota `/proposta/[id]/pdf` entregue — documento A4 imprimível com cabeçalho de emitente (dados reais da Organização + logo), dados do Cliente, Linhas de Proposta renderizadas com imagens via `createSignedUrl` server-side, prazo/pagamento/total. Sem custos internos expostos (confirmado por grep). CSS dedicado (`proposta-pdf.css`) fora do Tailwind, absorve Task 9.1. Harness `/dev/preview/proposta-pdf` público (rota real protegida por auth). Code Auditor (265/265 testes), Security Auditor (RLS ok, signed URLs seguras, 3 observações não-bloqueantes), QA Engineer (aprovado primeira tentativa), UX Auditor (conteúdo completo verificado ao vivo, cores de token confirmadas, 0 overflow em 3 breakpoints). Zero correções. **Próximo passo real: Task 13.7** (Catálogo/Biblioteca).
+
+**Pendência do operador** (pra usar o app real com tasks até aqui concluídas): confirmar Stage 13 foi validada — configurar dashboard Supabase (Site URL/Redirect URLs + template e-mail "Confirm signup", ou desligar "Confirm email") e criar 1ª conta pra testes E2E real. Ver `docs/Backlog.md` Stage 13.
 
 **Mudança de fase importante**: as tasks da Stage 13 são majoritariamente UI
 — o **Frontend Engineer** volta a ser o executor principal, com **UX
