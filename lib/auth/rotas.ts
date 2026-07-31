@@ -38,6 +38,10 @@
 // documento imprimível `/proposta/[id]/pdf` (rota real, protegida, FORA
 // desta lista) com dados mock de organização/cliente/linhas de proposta,
 // sem Supabase.
+//
+// `/dev/preview/perfil` (Task 13.7a): mesmo espírito — harness de `/perfil`
+// (rota real, protegida, FORA desta lista) com dados mock de Organização e
+// Perfil pessoal, sem Supabase.
 export const ROTAS_PUBLICAS = [
   "/login",
   "/signup",
@@ -47,6 +51,7 @@ export const ROTAS_PUBLICAS = [
   "/dev/preview/orcamento/novo",
   "/dev/preview/orcamento/item",
   "/dev/preview/proposta-pdf",
+  "/dev/preview/perfil",
 ] as const;
 
 /** Rotas que NÃO passam pelo gate de sessão do middleware. */

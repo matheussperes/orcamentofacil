@@ -31,6 +31,10 @@ describe("isRotaPublica", () => {
     expect(isRotaPublica("/dev/preview/proposta-pdf")).toBe(true);
   });
 
+  it("trata /dev/preview/perfil como pública (harness de /perfil, Task 13.7a — 404 em produção é responsabilidade da própria rota)", () => {
+    expect(isRotaPublica("/dev/preview/perfil")).toBe(true);
+  });
+
   it("não trata /orcamento/[id] real nem /orcamento/[id]/item/[itemId] como públicas — só os harnesses /dev/preview/* são", () => {
     expect(isRotaPublica("/orcamento/abc-123")).toBe(false);
     expect(isRotaPublica("/orcamento/abc-123/item/xyz-789")).toBe(false);
@@ -42,6 +46,10 @@ describe("isRotaPublica", () => {
 
   it("trata a raiz (Dashboard) como protegida", () => {
     expect(isRotaPublica("/")).toBe(false);
+  });
+
+  it("trata /perfil real como protegida — só o harness /dev/preview/perfil é pública (Task 13.7a)", () => {
+    expect(isRotaPublica("/perfil")).toBe(false);
   });
 
   it("trata os laboratórios (/modulo, /biblioteca, /ambientes) como protegidos — decisão 13.3a", () => {

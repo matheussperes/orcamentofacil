@@ -40,6 +40,12 @@ const TITULOS_POR_ROTA: Record<string, { titulo: string; subtitulo?: string }> =
   },
   "/orcamento/novo": { titulo: "Novo orçamento" },
   "/dev/preview/orcamento/novo": { titulo: "Novo orçamento (preview)" },
+  // Task 13.7a (contrato .maestro/tmp/13.7a-contract.md)
+  "/perfil": { titulo: "Perfil", subtitulo: "Dados da organização e da sua conta" },
+  "/dev/preview/perfil": {
+    titulo: "Perfil",
+    subtitulo: "Dados da organização e da sua conta (preview com dados mock)",
+  },
 };
 const TITULO_PADRAO = { titulo: "OrçaFácil" };
 

@@ -3,11 +3,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
 import { calcularEngineOrcamento } from "@/lib/ambiente/calcularEngineOrcamento";
 import { carregarCatalogo, catalogoParaPrecos, type Catalogo } from "@/lib/catalog";
 import { PRECOS_REFERENCIA } from "@/lib/engine/prices";
@@ -16,6 +15,9 @@ import type { EstadoAmbiente } from "@/lib/ambiente/estado";
 import type { ConfiguracaoPrecificacaoCarregada } from "@/lib/precificacao/carregarConfiguracao";
 import type { ResultadoSalvarConfiguracao } from "@/lib/orcamento/salvarConfiguracaoPrecificacao";
 import { formatarMoeda } from "@/lib/format";
+import { fracaoParaPercent } from "@/components/precificacao/formatoPercentual";
+import { rotuloModoPrecificacao, SeletorModoPrecificacao } from "@/components/precificacao/SeletorModoPrecificacao";
+import { rotuloModoMontagem, SeletorModoMontagem } from "@/components/precificacao/SeletorModoMontagem";
 import { useIrParaAba } from "./AbaAtivaContext";
 
 // Task 13.5 (contrato .maestro/tmp/13.5-contract.md) — componente
@@ -43,13 +45,6 @@ export interface FinanceiroLabProps {
     montagem: ModoMontagem | null,
     frete: number
   ) => Promise<ResultadoSalvarConfiguracao>;
-}
-
-function percentParaFracao(percent: number): number {
-  return percent / 100;
-}
-function fracaoParaPercent(fracao: number): number {
-  return Math.round(fracao * 10000) / 100;
 }
 
 function CampoResumo({
@@ -214,26 +209,7 @@ export function FinanceiroLab({ orcamentoId: _orcamentoId, estadoInicial, config
           </Label>
         </div>
         {!usarPadraoPrecificacao && (
-          <div className="flex flex-wrap items-end gap-sm">
-            <div>
-              <Label htmlFor="precificacao-modo">Modo</Label>
-              <Select
-                value={precificacaoLocal.modo}
-                onValueChange={(v) => setPrecificacaoLocal(novoModoPrecificacao(v, precificacaoLocal))}
-              >
-                <SelectTrigger id="precificacao-modo" className="w-48">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="multiplicador">Multiplicador sobre material</SelectItem>
-                  <SelectItem value="percentual">Percentual sobre material</SelectItem>
-                  <SelectItem value="por_chapa">Valor por chapa</SelectItem>
-                  <SelectItem value="fixo">Valor fixo</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <CampoNumericoModoPrecificacao valor={precificacaoLocal} onChange={setPrecificacaoLocal} />
-          </div>
+          <SeletorModoPrecificacao valor={precificacaoLocal} onChange={setPrecificacaoLocal} />
         )}
       </section>
 
@@ -250,22 +226,7 @@ export function FinanceiroLab({ orcamentoId: _orcamentoId, estadoInicial, config
           </Label>
         </div>
         {!usarPadraoMontagem && (
-          <div className="flex flex-wrap items-end gap-sm">
-            <div>
-              <Label htmlFor="montagem-modo">Modo</Label>
-              <Select value={montagemLocal.modo} onValueChange={(v) => setMontagemLocal(novoModoMontagem(v, montagemLocal))}>
-                <SelectTrigger id="montagem-modo" className="w-48">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="percentual_material">Percentual sobre material</SelectItem>
-                  <SelectItem value="por_chapa">Valor por chapa</SelectItem>
-                  <SelectItem value="manual">Valor manual</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <CampoNumericoModoMontagem valor={montagemLocal} onChange={setMontagemLocal} />
-          </div>
+          <SeletorModoMontagem valor={montagemLocal} onChange={setMontagemLocal} />
         )}
       </section>
 
@@ -298,172 +259,6 @@ export function FinanceiroLab({ orcamentoId: _orcamentoId, estadoInicial, config
           </Alert>
         )}
       </section>
-    </div>
-  );
-}
-
-function rotuloModoPrecificacao(modo: ModoPrecificacao): string {
-  switch (modo.modo) {
-    case "multiplicador":
-      return `× ${modo.fator}`;
-    case "percentual":
-      return `+${fracaoParaPercent(modo.percentual)}%`;
-    case "por_chapa":
-      return `${formatarMoeda(modo.valorChapa)}/chapa`;
-    case "fixo":
-      return formatarMoeda(modo.valor);
-  }
-}
-
-function rotuloModoMontagem(modo: ModoMontagem): string {
-  switch (modo.modo) {
-    case "percentual_material":
-      return `${fracaoParaPercent(modo.percentual)}% do material`;
-    case "por_chapa":
-      return `${formatarMoeda(modo.valorChapa)}/chapa`;
-    case "manual":
-      return formatarMoeda(modo.valor);
-  }
-}
-
-function novoModoPrecificacao(modo: string, atual: ModoPrecificacao): ModoPrecificacao {
-  switch (modo) {
-    case "multiplicador":
-      return { modo: "multiplicador", fator: 2 };
-    case "percentual":
-      return { modo: "percentual", percentual: 0.5 };
-    case "por_chapa":
-      return { modo: "por_chapa", valorChapa: 100 };
-    case "fixo":
-      return { modo: "fixo", valor: 1000 };
-    default:
-      return atual;
-  }
-}
-function novoModoMontagem(modo: string, atual: ModoMontagem): ModoMontagem {
-  switch (modo) {
-    case "percentual_material":
-      return { modo: "percentual_material", percentual: 0.1 };
-    case "por_chapa":
-      return { modo: "por_chapa", valorChapa: 30 };
-    case "manual":
-      return { modo: "manual", valor: 200 };
-    default:
-      return atual;
-  }
-}
-
-function CampoNumericoModoPrecificacao({
-  valor,
-  onChange,
-}: {
-  valor: ModoPrecificacao;
-  onChange: (v: ModoPrecificacao) => void;
-}) {
-  if (valor.modo === "multiplicador") {
-    return (
-      <div className="w-32">
-        <Label htmlFor="precificacao-fator">Fator</Label>
-        <Input
-          id="precificacao-fator"
-          type="number"
-          step="0.1"
-          min={0}
-          value={valor.fator}
-          onChange={(e) => onChange({ modo: "multiplicador", fator: Number(e.target.value) || 0 })}
-        />
-      </div>
-    );
-  }
-  if (valor.modo === "percentual") {
-    return (
-      <div className="w-32">
-        <Label htmlFor="precificacao-percentual">Percentual (%)</Label>
-        <Input
-          id="precificacao-percentual"
-          type="number"
-          step="1"
-          min={0}
-          value={fracaoParaPercent(valor.percentual)}
-          onChange={(e) => onChange({ modo: "percentual", percentual: percentParaFracao(Number(e.target.value) || 0) })}
-        />
-      </div>
-    );
-  }
-  if (valor.modo === "por_chapa") {
-    return (
-      <div className="w-32">
-        <Label htmlFor="precificacao-valor-chapa">Valor/chapa (R$)</Label>
-        <Input
-          id="precificacao-valor-chapa"
-          type="number"
-          step="0.01"
-          min={0}
-          value={valor.valorChapa}
-          onChange={(e) => onChange({ modo: "por_chapa", valorChapa: Number(e.target.value) || 0 })}
-        />
-      </div>
-    );
-  }
-  return (
-    <div className="w-32">
-      <Label htmlFor="precificacao-valor-fixo">Valor fixo (R$)</Label>
-      <Input
-        id="precificacao-valor-fixo"
-        type="number"
-        step="0.01"
-        min={0}
-        value={valor.valor}
-        onChange={(e) => onChange({ modo: "fixo", valor: Number(e.target.value) || 0 })}
-      />
-    </div>
-  );
-}
-
-function CampoNumericoModoMontagem({ valor, onChange }: { valor: ModoMontagem; onChange: (v: ModoMontagem) => void }) {
-  if (valor.modo === "percentual_material") {
-    return (
-      <div className="w-32">
-        <Label htmlFor="montagem-percentual">Percentual (%)</Label>
-        <Input
-          id="montagem-percentual"
-          type="number"
-          step="1"
-          min={0}
-          value={fracaoParaPercent(valor.percentual)}
-          onChange={(e) =>
-            onChange({ modo: "percentual_material", percentual: percentParaFracao(Number(e.target.value) || 0) })
-          }
-        />
-      </div>
-    );
-  }
-  if (valor.modo === "por_chapa") {
-    return (
-      <div className="w-32">
-        <Label htmlFor="montagem-valor-chapa">Valor/chapa (R$)</Label>
-        <Input
-          id="montagem-valor-chapa"
-          type="number"
-          step="0.01"
-          min={0}
-          value={valor.valorChapa}
-          onChange={(e) => onChange({ modo: "por_chapa", valorChapa: Number(e.target.value) || 0 })}
-        />
-      </div>
-    );
-  }
-  return (
-    <div className="w-32">
-      <Label htmlFor="montagem-valor-manual">Valor (R$)</Label>
-      <Input
-        id="montagem-valor-manual"
-        type="number"
-        step="0.01"
-        min={0}
-        value={valor.valor}
-        onChange={(e) => onChange({ modo: "manual", valor: Number(e.target.value) || 0 })}
-      />
     </div>
   );
 }
