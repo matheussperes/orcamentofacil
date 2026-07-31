@@ -1,0 +1,375 @@
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { FileText } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { calcularEngineOrcamento } from "@/lib/ambiente/calcularEngineOrcamento";
+import { carregarCatalogo, catalogoParaPrecos, type Catalogo } from "@/lib/catalog";
+import { PRECOS_REFERENCIA } from "@/lib/engine/prices";
+import { ratearPrecificacao, rebalancearLinhas, type GrupoItens } from "@/lib/engine/precificacao";
+import type { EstadoAmbiente } from "@/lib/ambiente/estado";
+import type { ItemPosicionado } from "@/lib/engine/parede";
+import type { ConfiguracaoPrecificacaoCarregada } from "@/lib/precificacao/carregarConfiguracao";
+import { idDoItem, nomeDoItem, type ModuloOrcamento } from "@/lib/orcamento";
+import type { ItemDoConjunto } from "@/app/components/BoxCanvas";
+import { gerarDescricaoLinha } from "@/lib/linha-proposta/descricao";
+import type {
+  LinhaProposta,
+  PatchLinhaProposta,
+  ResultadoLinhaProposta,
+  ResultadoOperacaoLinhaProposta,
+} from "@/lib/linha-proposta/tipos";
+import { LinhaPropostaCard, type ItemDisponivel } from "./LinhaPropostaCard";
+import { useIrParaAba } from "./AbaAtivaContext";
+
+// Task 13.6a (contrato .maestro/tmp/13.6a-contract.md) — componente
+// PRESENTACIONAL da aba "Proposta" (mesmo espírito de `CorteMaterialLab.tsx`/
+// `FinanceiroLab.tsx`): recebe o `EstadoAmbiente` já carregado (a MESMA
+// leitura das outras 3 abas) + a `ConfiguracaoPrecificacaoCarregada` (Task
+// 13.5, reaproveitada sem duplicar) + as `linhasIniciais` já carregadas/
+// criadas no servidor (`lib/linha-proposta/carregar.ts`) e liga de verdade
+// `ratearPrecificacao` a GRUPOS REAIS (um `GrupoItens` por Linha de Proposta)
+// — RESOLVE A DÍVIDA B2 de vez (Task 13.5 usava um grupo único trivial,
+// documentado como provisório em `FinanceiroLab.tsx`, que esta task NÃO
+// altera — ele continua com o grupo único de propósito, ver contrato).
+//
+// Toda escrita (criar/atualizar/excluir linha, regenerar imagem, resolver
+// URL de exibição) é injetada via props — este componente não sabe de
+// Supabase (`PropostaTabConectada`/`PropostaTabMock` decidem a implementação
+// real, mesmo padrão das outras 3 abas).
+export interface PropostaLabProps {
+  orcamentoId: string;
+  estadoInicial: EstadoAmbiente;
+  configuracaoInicial: ConfiguracaoPrecificacaoCarregada;
+  linhasIniciais: LinhaProposta[];
+  onCriarLinha: (titulo: string, itens: string[], descricao: string) => Promise<ResultadoLinhaProposta>;
+  onAtualizarLinha: (id: string, patch: PatchLinhaProposta) => Promise<ResultadoOperacaoLinhaProposta>;
+  onExcluirLinha: (id: string) => Promise<ResultadoOperacaoLinhaProposta>;
+  onRegenerarImagem: (
+    linhaId: string,
+    blob: Blob
+  ) => Promise<{ ok: true; imagemUrl: string } | { ok: false; erro: string }>;
+  onResolverUrlImagem: (imagemUrl: string) => Promise<string | null>;
+}
+
+export function PropostaLab({
+  orcamentoId,
+  estadoInicial,
+  configuracaoInicial,
+  linhasIniciais,
+  onCriarLinha,
+  onAtualizarLinha,
+  onExcluirLinha,
+  onRegenerarImagem,
+  onResolverUrlImagem,
+}: PropostaLabProps) {
+  const irParaAba = useIrParaAba();
+  const router = useRouter();
+
+  const [catalogo, setCatalogo] = useState<Catalogo | null>(null);
+  useEffect(() => {
+    setCatalogo(carregarCatalogo());
+  }, []);
+  const precos = catalogo ? catalogoParaPrecos(catalogo) : PRECOS_REFERENCIA;
+
+  const resultadoEngine = useMemo(() => calcularEngineOrcamento(estadoInicial), [estadoInicial]);
+
+  const [linhas, setLinhas] = useState<LinhaProposta[]>(linhasIniciais);
+  // Overrides manuais ainda não refletidos no `valorRateado` persistido em
+  // cada linha — `null` = "nenhum override ativo, mostra o rateio ao vivo".
+  // Resetado explicitamente (não via useEffect amplo) toda vez que o
+  // CONJUNTO de itens de alguma linha muda (split/mesclar/criação) — ver
+  // `handleDividirLinha`/`handleMesclarSelecionadas` — porque o peso de
+  // custo alocado de cada linha mudou, tornando os overrides anteriores sem
+  // sentido matemático.
+  const [valoresOverride, setValoresOverride] = useState<Record<string, number> | null>(null);
+  const [selecionadasParaMesclar, setSelecionadasParaMesclar] = useState<Set<string>>(new Set());
+  const [erroGeral, setErroGeral] = useState<string | null>(null);
+  const [criandoLinhaInicial, setCriandoLinhaInicial] = useState(false);
+
+  const modulosPorItemId = useMemo(() => {
+    const m = new Map<string, ModuloOrcamento>();
+    for (const modulo of estadoInicial.modulos) m.set(idDoItem(modulo), modulo);
+    return m;
+  }, [estadoInicial.modulos]);
+
+  const posicoesPorItemId = useMemo(() => {
+    const m = new Map<string, ItemPosicionado>();
+    for (const posicao of estadoInicial.parede.itens) m.set(posicao.itemId, posicao);
+    return m;
+  }, [estadoInicial.parede.itens]);
+
+  function itensDoConjuntoDaLinha(linha: LinhaProposta): ItemDoConjunto[] {
+    return linha.itens
+      .map((itemId) => {
+        const item = modulosPorItemId.get(itemId);
+        const posicao = posicoesPorItemId.get(itemId);
+        return item && posicao ? { item, posicao } : null;
+      })
+      .filter((v): v is ItemDoConjunto => v !== null);
+  }
+
+  function itensDisponiveisDaLinha(linha: LinhaProposta): ItemDisponivel[] {
+    return linha.itens
+      .map((itemId) => {
+        const item = modulosPorItemId.get(itemId);
+        return item ? { itemId, nome: nomeDoItem(item) } : null;
+      })
+      .filter((v): v is ItemDisponivel => v !== null);
+  }
+
+  // Wiring real do rateio (contrato: "fecha a Dívida B2 de vez") — um
+  // `GrupoItens` por Linha de Proposta, nunca mais o grupo único trivial.
+  const grupos: GrupoItens[] = useMemo(() => linhas.map((l) => ({ id: l.id, itemIds: l.itens })), [linhas]);
+
+  const resultadoRateio = useMemo(() => {
+    if (!resultadoEngine.ok) return { ok: false as const };
+    try {
+      const snapshot = ratearPrecificacao(resultadoEngine.engine, grupos, configuracaoInicial.config, precos);
+      return { ok: true as const, snapshot };
+    } catch (erro) {
+      console.error("[proposta] falha ao ratear precificação por linha:", erro);
+      return { ok: false as const };
+    }
+  }, [resultadoEngine, grupos, configuracaoInicial.config, precos]);
+
+  function valorAtualDaLinha(linhaId: string): number {
+    if (valoresOverride && valoresOverride[linhaId] !== undefined) return valoresOverride[linhaId];
+    if (!resultadoRateio.ok) return 0;
+    return resultadoRateio.snapshot.grupos.find((g) => g.id === linhaId)?.valorRateado ?? 0;
+  }
+
+  async function handleSalvarTextos(linhaId: string, patch: { titulo?: string; descricao?: string }) {
+    const resultado = await onAtualizarLinha(linhaId, patch);
+    if (resultado.ok) {
+      setLinhas((atuais) => atuais.map((l) => (l.id === linhaId ? { ...l, ...patch } : l)));
+    }
+    return resultado;
+  }
+
+  function handleOverrideValor(linhaId: string, novoValor: number) {
+    if (!resultadoRateio.ok) return;
+    const precoFinal = resultadoRateio.snapshot.resumo.precoFinal;
+    const atuais = linhas.map((l) => ({ id: l.id, valorRateado: valorAtualDaLinha(l.id) }));
+    const rebalanceadas = rebalancearLinhas(atuais, linhaId, novoValor, precoFinal);
+    setValoresOverride(Object.fromEntries(rebalanceadas.map((l) => [l.id, l.valorRateado])));
+    // Persistência incremental (contrato: "já são persistidos incrementalmente
+    // conforme o rateio roda") — decisão documentada em `rebalancear.ts` e
+    // aqui: persiste no exato momento em que um rebalanceamento REALMENTE
+    // roda (esta ação do usuário), não a cada leitura do valor computado
+    // automaticamente (que nunca muda o dado em si, só é a leitura ao vivo
+    // do rateio) — evita escritas redundantes a cada render.
+    for (const l of rebalanceadas) {
+      onAtualizarLinha(l.id, { valorRateado: l.valorRateado }).then((r) => {
+        if (!r.ok) setErroGeral(r.erro ?? "Não foi possível salvar o valor rebalanceado de uma das linhas.");
+      });
+    }
+  }
+
+  async function handleDividirLinha(linha: LinhaProposta, itemIdsSelecionados: string[]) {
+    const restantes = linha.itens.filter((id) => !itemIdsSelecionados.includes(id));
+    if (itemIdsSelecionados.length === 0 || restantes.length === 0) {
+      return { ok: false, erro: "Selecione ao menos um item, sem esvaziar a linha original." };
+    }
+    const modulosSelecionados = itemIdsSelecionados
+      .map((id) => modulosPorItemId.get(id))
+      .filter((m): m is ModuloOrcamento => m !== undefined);
+    const descricaoNova = gerarDescricaoLinha(modulosSelecionados);
+    const resultadoCriar = await onCriarLinha("Nova linha", itemIdsSelecionados, descricaoNova);
+    if (!resultadoCriar.ok) return resultadoCriar;
+    const resultadoAtualizar = await onAtualizarLinha(linha.id, { itens: restantes });
+    if (!resultadoAtualizar.ok) return resultadoAtualizar;
+    setLinhas((atuais) => [
+      ...atuais.map((l) => (l.id === linha.id ? { ...l, itens: restantes } : l)),
+      resultadoCriar.linha,
+    ]);
+    setValoresOverride(null);
+    return { ok: true as const };
+  }
+
+  async function handleMesclarSelecionadas() {
+    const selecionadas = linhas.filter((l) => selecionadasParaMesclar.has(l.id));
+    if (selecionadas.length < 2) return;
+    const [alvo, ...restantes] = selecionadas;
+    const itensUnidos = Array.from(new Set(selecionadas.flatMap((l) => l.itens)));
+    const tituloUnido = selecionadas.map((l) => l.titulo).join(" + ");
+    const resultadoAtualizar = await onAtualizarLinha(alvo.id, { itens: itensUnidos, titulo: tituloUnido });
+    if (!resultadoAtualizar.ok) {
+      setErroGeral(resultadoAtualizar.erro ?? "Não foi possível mesclar as linhas selecionadas.");
+      return;
+    }
+    for (const l of restantes) {
+      const resultadoExcluir = await onExcluirLinha(l.id);
+      if (!resultadoExcluir.ok) {
+        setErroGeral(resultadoExcluir.erro ?? "Não foi possível remover uma das linhas mescladas.");
+      }
+    }
+    const idsRemovidos = new Set(restantes.map((l) => l.id));
+    setLinhas((atuais) =>
+      atuais
+        .filter((l) => !idsRemovidos.has(l.id))
+        .map((l) => (l.id === alvo.id ? { ...l, itens: itensUnidos, titulo: tituloUnido } : l))
+    );
+    setSelecionadasParaMesclar(new Set());
+    setValoresOverride(null);
+  }
+
+  function toggleSelecaoMesclar(linhaId: string) {
+    setSelecionadasParaMesclar((atuais) => {
+      const novo = new Set(atuais);
+      if (novo.has(linhaId)) novo.delete(linhaId);
+      else novo.add(linhaId);
+      return novo;
+    });
+  }
+
+  async function handleRegenerarImagem(linhaId: string, blob: Blob) {
+    const resultado = await onRegenerarImagem(linhaId, blob);
+    if (resultado.ok) {
+      setLinhas((atuais) => atuais.map((l) => (l.id === linhaId ? { ...l, imagemUrl: resultado.imagemUrl } : l)));
+    }
+    return resultado;
+  }
+
+  async function handleCriarLinhaInicial() {
+    if (!resultadoEngine.ok) return;
+    setCriandoLinhaInicial(true);
+    const itemIds = resultadoEngine.engine.porModulo.map((m) => m.moduloId);
+    const modulos = itemIds.map((id) => modulosPorItemId.get(id)).filter((m): m is ModuloOrcamento => m !== undefined);
+    const resultado = await onCriarLinha("Linha 1", itemIds, gerarDescricaoLinha(modulos));
+    setCriandoLinhaInicial(false);
+    if (resultado.ok) setLinhas((atuais) => [...atuais, resultado.linha]);
+    else setErroGeral(resultado.erro);
+  }
+
+  const [gerandoProposta, setGerandoProposta] = useState(false);
+  async function handleGerarProposta() {
+    setGerandoProposta(true);
+    setErroGeral(null);
+    // "Congela" os `valorRateado` atuais (contrato) — persiste o valor
+    // exibido AGORA (computado ao vivo ou já rebalanceado por override) na
+    // coluna `linha_proposta.valor_rateado`, que até aqui só era escrita em
+    // overrides manuais (ver `handleOverrideValor`). É este o ato de
+    // "congelamento" (mesma leitura do comentário original da migration,
+    // 20260727090600_linha_proposta.sql: "congelado no fechamento") — a
+    // imutabilidade/versão para impressão em si é escopo da Task 13.6b.
+    const resultados = await Promise.all(
+      linhas.map((l) => onAtualizarLinha(l.id, { valorRateado: valorAtualDaLinha(l.id) }))
+    );
+    setGerandoProposta(false);
+    const falhou = resultados.find((r) => !r.ok);
+    if (falhou) {
+      setErroGeral(falhou.erro ?? "Não foi possível congelar os valores da proposta. Tente novamente.");
+      return;
+    }
+    // Task 13.6b (fora de escopo desta task) constrói `/proposta/[id]/pdf` de
+    // verdade — aqui só o botão + navegação, como pedido pelo contrato.
+    router.push(`/proposta/${orcamentoId}/pdf`);
+  }
+
+  if (!resultadoEngine.ok) {
+    return (
+      <Alert variant="erro">
+        <AlertDescription>
+          Não foi possível calcular a proposta deste orçamento. Volte para a aba Ambientes e confira a
+          configuração dos itens posicionados.
+        </AlertDescription>
+      </Alert>
+    );
+  }
+
+  if (resultadoEngine.engine.porModulo.length === 0) {
+    return (
+      <div className="flex flex-col items-center gap-sm rounded-lg border border-cinza-200 bg-cinza-0 p-xl py-3xl text-center shadow-xs">
+        <FileText className="h-8 w-8 text-cinza-300" aria-hidden="true" />
+        <h2 className="text-titulo-card text-cinza-700">Nenhum item para propor ainda</h2>
+        <p className="max-w-sm text-corpo-pequeno text-cinza-500">
+          As linhas de proposta são criadas a partir dos itens posicionados na aba Ambientes. Adicione
+          ao menos um item para gerar a proposta aqui.
+        </p>
+        <Button variant="primary" onClick={() => irParaAba("ambientes")}>
+          Ir para Ambientes
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-lg">
+      <Alert variant="informacao">
+        <AlertDescription>
+          Remover um ambiente aumenta o preço dos demais; regenere a proposta depois de dividir, mesclar
+          ou editar o valor de uma linha.
+        </AlertDescription>
+      </Alert>
+
+      {linhas.length === 0 ? (
+        <div className="flex flex-col items-center gap-sm rounded-lg border border-cinza-200 bg-cinza-0 p-xl py-3xl text-center shadow-xs">
+          <FileText className="h-8 w-8 text-cinza-300" aria-hidden="true" />
+          <h2 className="text-titulo-card text-cinza-700">Nenhuma linha de proposta ainda</h2>
+          <p className="max-w-sm text-corpo-pequeno text-cinza-500">
+            Crie a primeira linha cobrindo todos os itens deste orçamento — depois é possível dividir ou
+            mesclar linhas.
+          </p>
+          <Button variant="primary" onClick={handleCriarLinhaInicial} disabled={criandoLinhaInicial}>
+            {criandoLinhaInicial ? "Criando…" : "Criar linha de proposta"}
+          </Button>
+        </div>
+      ) : (
+        <>
+          <div className="flex flex-col gap-lg">
+            {linhas.map((linha) => (
+              <LinhaPropostaCard
+                key={linha.id}
+                linha={linha}
+                alturas={estadoInicial.alturas}
+                itensDoConjunto={itensDoConjuntoDaLinha(linha)}
+                itensDisponiveis={itensDisponiveisDaLinha(linha)}
+                valorAtual={valorAtualDaLinha(linha.id)}
+                mostrarSelecaoMesclar={linhas.length > 1}
+                selecionadaParaMesclar={selecionadasParaMesclar.has(linha.id)}
+                onToggleSelecaoMesclar={() => toggleSelecaoMesclar(linha.id)}
+                onSalvarTextos={(patch) => handleSalvarTextos(linha.id, patch)}
+                onOverrideValor={(novoValor) => handleOverrideValor(linha.id, novoValor)}
+                onDividir={(itemIds) => handleDividirLinha(linha, itemIds)}
+                onRegenerarImagem={(blob) => handleRegenerarImagem(linha.id, blob)}
+                onResolverUrlImagem={onResolverUrlImagem}
+              />
+            ))}
+          </div>
+
+          {selecionadasParaMesclar.size >= 2 && (
+            <div className="flex justify-start">
+              <Button variant="primary" onClick={handleMesclarSelecionadas}>
+                Mesclar {selecionadasParaMesclar.size} linhas selecionadas
+              </Button>
+            </div>
+          )}
+
+          {resultadoRateio.ok && resultadoRateio.snapshot.warnings.length > 0 && (
+            <Alert variant="aviso">
+              <AlertDescription>
+                {resultadoRateio.snapshot.warnings.length} aviso(s) no rateio por linha: itens fora de
+                qualquer Linha de Proposta não entram no valor rateado. Divida ou edite as linhas para
+                incluí-los.
+              </AlertDescription>
+            </Alert>
+          )}
+
+          <section className="flex flex-col items-start gap-sm rounded-lg border border-cinza-200 bg-cinza-0 p-xl shadow-xs">
+            <Button variant="primary" onClick={handleGerarProposta} disabled={gerandoProposta}>
+              {gerandoProposta ? "Gerando…" : "Gerar proposta"}
+            </Button>
+            {erroGeral && (
+              <Alert variant="erro" className="w-full">
+                <AlertDescription>{erroGeral}</AlertDescription>
+              </Alert>
+            )}
+          </section>
+        </>
+      )}
+    </div>
+  );
+}

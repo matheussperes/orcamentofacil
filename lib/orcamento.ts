@@ -51,6 +51,14 @@ export function profundidadeDoItem(m: ModuloOrcamento): number {
 export function corExternaDoItem(m: ModuloOrcamento): string | undefined {
   return m.origem === "custom_box" ? m.box.caixa.cor : m.placa.material.cor;
 }
+// Task 13.6a (contrato .maestro/tmp/13.6a-contract.md) — nome legível do
+// item (`box.nome`/`placa.nome`), usado pela descrição pré-preenchida e pela
+// UI de split de Linha de Proposta (`lib/linha-proposta/`). Não existia como
+// export próprio até aqui (só usado inline dentro deste arquivo, linhas
+// ~113/125).
+export function nomeDoItem(m: ModuloOrcamento): string {
+  return m.origem === "custom_box" ? m.box.nome : m.placa.nome;
+}
 
 // Schema de capacidades (Modelo de Domínio, Seção 4 — Task 13.1). Cada tipo
 // de item declara quais seções de configuração se aplicam a ele. O Editor de
