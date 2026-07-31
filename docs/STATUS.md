@@ -445,11 +445,27 @@ Security Auditor (RLS ok, 4 observações não-bloqueantes), QA Engineer
 (253/253), UX Auditor (0 overflow em 3 breakpoints, cores confirmadas).
 Zero correções. Detalhe em `docs/Backlog.md` Task 13.5.
 
-**Próximo passo real: Task 13.6** (Linhas de Proposta). Depois: **13.7**.
-**Pendência do operador** (pra usar o app real): confirmar que a Task 13.5
-foi validada — configurar dashboard Supabase (Site URL/Redirect URLs +
-template e-mail, ou desligar "Confirm email") e criar 1ª conta pra testes E2E
-real. Ver `docs/Backlog.md` Stage 13.
+**Task 13.6a concluída (2026-07-30)**: Aba "Proposta" de `/orcamento/[id]`
+agora é real — Linhas de Proposta com criação automática (1 linha = orçamento
+inteiro no primeiro load, sem recriar após split/mesclar), render automático
+via canvas-to-Supabase, split/mesclar de linhas, override manual com
+rebalanceamento via função pura `rebalancearLinhas` (preserva `Σ === precoFinal`
+exato, trata corretamente o caso trivial de 1 linha). **Primeira ligação real de
+`ratearPrecificacao` a grupos reais (um `GrupoItens` por Linha de Proposta) —
+fecha a Dívida B2 de vez.** Alerta "remover linha aumenta preço das demais"
+(briefing 5.2). Botão "Gerar proposta" navega para `/proposta/[orcamentoId]/pdf`
+(rota que Task 13.6b vai construir). Code Auditor (261→263 testes, 3ª fix final
+confirmada), Security Auditor (1 achado Médio não-bloqueante sobre bucket
+corrigido antes do merge), QA Engineer (reprovou Tentativa 1 por bug em
+`rebalancearLinhas` com 1 linha, corrigido com 2 testes novos, aprovado
+Tentativa 2), UX Auditor (0 overflow 375/768/1440px). Migration Supabase
+aplicada: bucket `linha-proposta-renders` + 4 políticas RLS.
+
+**Próximo passo real: Task 13.6b** (PDF imprimível com marca da Proposta).
+Depois: **13.7**. **Pendência do operador** (pra usar o app real): confirmar
+que a Task 13.5 foi validada — configurar dashboard Supabase (Site URL/
+Redirect URLs + template e-mail, ou desligar "Confirm email") e criar 1ª conta
+pra testes E2E real. Ver `docs/Backlog.md` Stage 13.
 
 **Mudança de fase importante**: as tasks da Stage 13 são majoritariamente UI
 — o **Frontend Engineer** volta a ser o executor principal, com **UX
