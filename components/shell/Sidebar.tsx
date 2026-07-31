@@ -34,6 +34,9 @@ import { cn } from "@/lib/utils";
 // Task 13.7a (contrato .maestro/tmp/13.7a-contract.md): "Perfil" ganha rota
 // real (`/perfil`) e sai da lista de placeholders — os demais continuam
 // inativos.
+//
+// Task 13.7b (contrato .maestro/tmp/13.7b-contract.md): "Catálogo" ganha
+// rota real (`/catalogo`) e sai da lista de placeholders.
 interface ItemNav {
   rotulo: string;
   href: string | null;
@@ -45,7 +48,7 @@ const ITENS_NAV: ItemNav[] = [
   { rotulo: "Orçamentos", href: null, Icone: FileText },
   { rotulo: "Clientes", href: null, Icone: Users },
   { rotulo: "Biblioteca", href: "/biblioteca", Icone: BookOpen },
-  { rotulo: "Catálogo", href: null, Icone: Package },
+  { rotulo: "Catálogo", href: "/catalogo", Icone: Package },
   { rotulo: "Perfil", href: "/perfil", Icone: UserIcon },
   { rotulo: "Configurações", href: null, Icone: Settings },
 ];

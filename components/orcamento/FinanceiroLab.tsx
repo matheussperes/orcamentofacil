@@ -8,7 +8,8 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { calcularEngineOrcamento } from "@/lib/ambiente/calcularEngineOrcamento";
-import { carregarCatalogo, catalogoParaPrecos, type Catalogo } from "@/lib/catalog";
+import { catalogoParaPrecos, type Catalogo } from "@/lib/catalog";
+import { buscarCatalogoReal } from "@/lib/produto/buscar";
 import { PRECOS_REFERENCIA } from "@/lib/engine/prices";
 import { ratearPrecificacao, type ModoMontagem, type ModoPrecificacao, type ResumoFinanceiro } from "@/lib/engine/precificacao";
 import type { EstadoAmbiente } from "@/lib/ambiente/estado";
@@ -82,9 +83,18 @@ function CampoResumo({
 export function FinanceiroLab({ orcamentoId: _orcamentoId, estadoInicial, configuracaoInicial, onSalvar }: FinanceiroLabProps) {
   const irParaAba = useIrParaAba();
 
+  // Task 13.7b (contrato .maestro/tmp/13.7b-contract.md) — catálogo REAL da
+  // organização (Supabase, `produto`), substituindo `carregarCatalogo()`
+  // (localStorage) — mesmo comentário completo em `CorteMaterialLab.tsx`.
   const [catalogo, setCatalogo] = useState<Catalogo | null>(null);
   useEffect(() => {
-    setCatalogo(carregarCatalogo());
+    let cancelado = false;
+    buscarCatalogoReal().then((c) => {
+      if (!cancelado) setCatalogo(c);
+    });
+    return () => {
+      cancelado = true;
+    };
   }, []);
   const precos = catalogo ? catalogoParaPrecos(catalogo) : PRECOS_REFERENCIA;
 

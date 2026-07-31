@@ -20,11 +20,11 @@ import {
 } from "@/lib/engine/box/tree";
 import type { LadoPlaca, Placa } from "@/lib/engine/placa/types";
 import {
-  carregarCatalogo,
   catalogoParaPrecos,
   coresDisponiveis,
   type Catalogo,
 } from "@/lib/catalog";
+import { buscarCatalogoReal } from "@/lib/produto/buscar";
 import { montarLinhasInsumos } from "@/lib/insumos";
 import { calcularPreco } from "@/lib/engine/pricing";
 import {
@@ -194,9 +194,22 @@ export function EditorItemNucleo({
   const [salvando, setSalvando] = useState(false);
   const [resultadoSalvar, setResultadoSalvar] = useState<ResultadoSalvarItem | null>(null);
 
+  // Task 13.7b (contrato .maestro/tmp/13.7b-contract.md) — catálogo REAL da
+  // organização (Supabase, `produto`), substituindo `carregarCatalogo()`
+  // (localStorage) — mesmo comentário completo em `CorteMaterialLab.tsx`.
+  // `coresDisponiveis(catalogo)`/`espessurasDaCor(catalogo, cor)` (dropdowns
+  // de material em `PortasCard`/`GavetasCard`/`PlacaDimensoesCard`) e
+  // `catalogoParaPrecos` continuam funcionando sem nenhuma mudança porque o
+  // shape `Catalogo` não mudou — só a origem do dado.
   useEffect(() => {
-    setCatalogo(carregarCatalogo());
+    let cancelado = false;
+    buscarCatalogoReal().then((c) => {
+      if (!cancelado) setCatalogo(c);
+    });
     setCategorias(listarCategorias());
+    return () => {
+      cancelado = true;
+    };
   }, []);
 
   const cores = useMemo(

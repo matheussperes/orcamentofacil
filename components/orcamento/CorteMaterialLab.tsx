@@ -18,7 +18,8 @@ import {
 import { PlanoCorteCanvas } from "@/app/components/PlanoCorteCanvas";
 import { todasAsPecas, montarLinhasInsumos } from "@/lib/insumos";
 import { planoDeCorte } from "@/lib/engine/box/cutting";
-import { carregarCatalogo, catalogoParaPrecos, type Catalogo } from "@/lib/catalog";
+import { catalogoParaPrecos, type Catalogo } from "@/lib/catalog";
+import { buscarCatalogoReal } from "@/lib/produto/buscar";
 import { PRECOS_REFERENCIA } from "@/lib/engine/prices";
 import { calcularEngineOrcamento } from "@/lib/ambiente/calcularEngineOrcamento";
 import type { EstadoAmbiente } from "@/lib/ambiente/estado";
@@ -86,9 +87,23 @@ export function CorteMaterialLab({
 }: CorteMaterialLabProps) {
   const irParaAba = useIrParaAba();
 
+  // Task 13.7b (contrato .maestro/tmp/13.7b-contract.md) — catálogo REAL da
+  // organização (Supabase, `produto`), em vez do antigo `carregarCatalogo()`
+  // (localStorage). Mesmo padrão de efeito+estado; só passa de síncrono para
+  // assíncrono. Enquanto `catalogo` ainda é `null` (primeira renderização,
+  // antes do efeito resolver), os cálculos abaixo usam `PRECOS_REFERENCIA`
+  // como fallback — o mesmo fallback que `buscarCatalogoReal` já aplicaria
+  // internamente em caso de catálogo vazio/erro, então não há divergência
+  // visível, só evita um "flash" de zero antes do fetch responder.
   const [catalogo, setCatalogo] = useState<Catalogo | null>(null);
   useEffect(() => {
-    setCatalogo(carregarCatalogo());
+    let cancelado = false;
+    buscarCatalogoReal().then((c) => {
+      if (!cancelado) setCatalogo(c);
+    });
+    return () => {
+      cancelado = true;
+    };
   }, []);
   const precos = catalogo ? catalogoParaPrecos(catalogo) : PRECOS_REFERENCIA;
 
