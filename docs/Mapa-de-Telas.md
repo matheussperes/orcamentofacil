@@ -6,6 +6,19 @@
 > inverso. A ordem de construção destas telas está no `docs/Backlog.md`
 > (Fase C).
 
+> **Parcialmente superado pela Fase D (2026-08-01).** Este arquivo **não foi
+> reescrito** para o corte de lançamento V2.1 — permanece como o inventário de
+> telas da Fase A. A Fase D introduziu ou alterou superfície de navegação que
+> este mapa **não reflete**: seletor de ambiente/parede com indicação
+> permanente do que está em edição (RF-19), área de segurança no perfil
+> (RF-31), preset de elemento de parede (RF-25), segundo modo "3D estático" no
+> Editor de Item (RF-38), catálogo unificado que **elimina** as abas por
+> categoria (RF-30), dashboard sem prazo de entrega (RF-33). Para essas
+> mudanças, o inventário vigente é `docs/Backlog.md` (contratos de task) e
+> `docs/Design-System.md` §9.6 e §15.4 — não este arquivo. O restante deste
+> mapa (árvore de navegação, telas da Fase A/B, rastreabilidade tela→entidade)
+> continua válido e não foi tocado.
+
 ---
 
 ## 1. Princípios de navegação

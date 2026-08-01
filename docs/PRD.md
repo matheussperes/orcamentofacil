@@ -291,7 +291,7 @@ reabertas** (nenhuma recebe número D próprio; o endereço canônico é o model
 | **Q-3** — agrupamento cross-faixa é comercial, físico, ou os dois? | Resolvida: **os dois coexistem**. `Conjunto` continua **físico** (mesma parede, mesma faixa, adjacência automática, base de tampo/rodapé/tamponamento); `LinhaProposta` é o agrupamento **comercial**, criado pelo usuário, podendo cruzar faixas **e paredes** dentro do ambiente. Nunca colapsar num botão só — Modelo 3.3 e 6 |
 | **Q-4** — qual o BOM de cada modelo de tampo? | Resolvida: tampo tem **três** modelos (`simples` · `engrossado` · `dobrado`); a escolha é **modelo antes da espessura**; espessuras válidas por modelo (simples 15/18/25 · engrossado/dobrado 30/45/60 base 15 e 36/54 base 18); **6 mm nunca**; BOM do `simples` fechado com exemplo trabalhado — Modelo 2.1 e 3.4.1 |
 | Item 5.2 — "pé direito" redundante | Resolvido: `Parede.altura` é a altura física; `peDireito` é o **limite superior de instalação do aéreo**. Não são o mesmo campo, e o rótulo de UI precisa dizer isso — Modelo 3.2.1 |
-| Item 5.3 — rolo de fita apareceu com tamanhos diferentes | Resolvido por construção: **tamanho do rolo é campo do catálogo**, nunca constante no código; o cálculo de rolos lê do cadastro — Modelo 11.5. Cadastrar os tamanhos reais é tarefa de dados do operador, não decisão de produto |
+| Item 5.3 — rolo de fita apareceu com tamanhos diferentes | Decidido como produto, **não construído ainda**: tamanho do rolo é **campo novo do catálogo** (categoria `fita`), nunca constante no código; o cálculo de rolos lê do cadastro — Modelo 11.5. O campo **não existe hoje** (`lib/produto/tipos.ts`: a especificação de `fita` é só `{ unidade: "m" }`) — criá-lo é **task própria no Backlog**, com a task de motor que lê o campo dependendo dela, no mesmo padrão do kerf. Não há decisão de produto pendente aqui; há trabalho a fazer. Cadastrar os tamanhos reais, depois do campo existir, é tarefa de dados do operador |
 | **Substituição do algoritmo de bin-packing** (adendo do operador, substitui a D-32 revogada) | Resolvida: **guilhotina com lista de retângulos livres + meta-heurística (simulated annealing ou algoritmo genético, escolha do motor-engineer)**, **100% TypeScript**, executada num **Web Worker do navegador**. **Kerf** (espessura de serra) vira parâmetro, com campo `espessuraSerraPadraoMm` no perfil da organização (default **3 mm**, editável, `0` válido). **Zero infraestrutura nova**: sem worker externo, sem fila, sem tabela, sem entidade, sem RLS nova. Fecha juntos os itens **3.1** (bug de aproveitamento) e **3.3** (troca de algoritmo) do backlog pré-lançamento — Modelo 8.1–8.6. Detalhe do requisito: **RF-34** (Seção 10.3) |
 | Item 5.4 — rotação de peças × veio da chapa | Resolvido no modelo: **bin-packing só rotaciona quando `!temVeio`** — Modelo 8, invariante V3. A restrição **não muda** com o algoritmo novo: ele não passa a girar peça com veio para ganhar aproveitamento nem restringe peça sem veio. A falha de empacotamento relatada (item 3.1) é corrigida pelo RF-34 — Modelo 8.3 e 8.6 |
 | Item 5.7 — chapa de 6 mm não contada | Regra fechada: **tudo na categoria "chapa" conta como chapa**, sem limiar de aproveitamento em lugar nenhum (Modelo 5.2). A causa (filtro no cálculo × classificação errada no catálogo) precisa ser **verificada no dado antes** de mexer no código — é critério de investigação, não decisão em aberto |
@@ -306,6 +306,8 @@ task de execução**: quem esbarrar numa delas para e devolve ao operador.
 | **Q-6** | Status de esteira (visita agendada / projeto 3D / aguardando aprovação) é **campo select manual** ou **workflow real** com transições automáticas? | Bloqueia **só** o item de dashboard (RF-33, backlog 5.10). Não bloqueia mais nada. Sem resposta, **não existe tipo, enum nem coluna** de status de esteira (Modelo 11.3). Workflow automático é projeto próprio e está fora do corte de lançamento em qualquer cenário |
 | **Q-13** | **Excluir conta** (item 4.15) apaga o **usuário** ou a **organização inteira**? E o que acontece quando o usuário excluído é o único da org — orçamentos, catálogo e gabaritos são apagados, anonimizados ou retidos por prazo? | Bloqueia **só** a parte destrutiva do RF-31. A troca de senha e a área de segurança não dependem disso. Como é operação irreversível sobre dado de cliente final (LGPD), não se implementa por dedução |
 | **Q-14** | O `ModuleViewer` lança **só com cor sólida**, ou o catálogo passa a mapear **textura real de madeira** por padrão de MDF (`textureUrl`)? | Bloqueia **só** a prop `textureUrl` do RF-38 — o visualizador com cor sólida não depende dela. Não é decisão técnica (a modelagem é trivial, Modelo 4.1), é **custo de produto e conteúdo**: curar, recortar, converter para WebP, hospedar e **manter** ~380 texturas de padrões reais quando o fornecedor troca a linha. **Recomendação técnica registrada pelo data-architect: lançar com cor sólida.** Enquanto não houver resposta, a prop existe no componente e nada no catálogo a alimenta |
+| **Q-15** | Os badges **"Em andamento"** e **"Fechado"** que a Design-System §2.5 fixa são **valores novos do status comercial do orçamento**? Hoje o domínio e o banco têm quatro (`rascunho · enviado · aprovado · recusado`), a Design-System desenhou cinco, e "recusado" ficou sem token. "Fechado" está descrito lá como *"arquivado/finalizado — distinto de aprovado"*, ou seja, **etapa comercial** — e **não** é o congelamento do RF-22, que não é status. Duas leituras: **(a)** são etapas de esteira e caem dentro da **Q-6**, e nada nasce antes da resposta dela; **(b)** são dois valores comerciais novos, e "recusado" ganha token | Bloqueia **só** os badges dos cards de orçamento (dashboard e lista). Sem resposta, **nenhum valor novo de status e nenhum token novo** nascem. **Não bloqueia o RF-22**: congelado nunca foi status (Modelo 5.4.1, invariante I2) |
+| **Q-16** | Depois de congelado, **o que ainda pode ser feito com o orçamento — e existe "reabrir"?** Três comportamentos, com efeito comercial diferente: **(a)** a edição é **bloqueada** até uma ação explícita de "reabrir" (que exigiria descongelar, hoje proibido — Modelo 5.4.1, invariante I4); **(b)** a edição é livre e a tela **avisa** *"há mudanças depois do congelamento, regenere a proposta"* — o que exige um detector que **não existe hoje** (`orcamento.atualizado_em` existe mas nada o mantém, então não dá para comparar datas); **(c)** a edição é livre e **silenciosa**, e a proposta segue exibindo o valor congelado até um novo "Gerar proposta". Pesa na decisão que o cliente final já recebeu um PDF com o valor congelado | Bloqueia **só** o comportamento **pós**-congelamento: nenhuma ação de descongelar/reabrir, nenhum bloqueio de escrita e nenhum aviso de "proposta desatualizada" nascem por dedução — enquanto não houver resposta, **nenhuma tela pode afirmar que uma proposta congelada está desatualizada**, porque não há dado que sustente a afirmação. **Não bloqueia** o campo `congeladoEm`, o predicado, o ato de congelar nem o aceite do RF-22 (10.4 item 2) |
 
 > **Extintas em 2026-07-31 — não são pendências, não reabrir:** ~~Q-8~~
 > (onde roda o worker Python), ~~Q-9~~ (mecanismo de fila), ~~Q-10~~ (limiar de
@@ -320,11 +322,14 @@ task de execução**: quem esbarrar numa delas para e devolve ao operador.
 > correção**, não há mais nada a esperar: os itens 3.1 e 3.3 são a mesma
 > entrega, dentro do RF-34 — `docs/Modelo-de-Dominio.md` Seção 8.6.
 
-> **Q-1, Q-2, Q-3, Q-4, Q-5 e Q-7 estão fechadas** (7.3). As três acima (Q-6,
-> Q-13, Q-14) são as únicas perguntas vivas, e nenhuma bloqueia um lote
-> inteiro — cada uma trava **um item** (dashboard de esteira · exclusão de
-> conta · textura do visualizador). O **Lote 3 (plano de corte) deixou de ter
-> qualquer bloqueio** com o encerramento das Q-8 a Q-12.
+> **Q-1, Q-2, Q-3, Q-4, Q-5 e Q-7 estão fechadas** (7.3). As cinco acima (Q-6,
+> Q-13, Q-14, Q-15 e Q-16) são as únicas perguntas vivas, e nenhuma bloqueia um
+> lote inteiro — cada uma trava **um item** (dashboard de esteira · exclusão de
+> conta · textura do visualizador · badges de status · comportamento
+> pós-congelamento). O **Lote 3 (plano de corte) deixou de ter qualquer
+> bloqueio** com o encerramento das Q-8 a Q-12. **Q-15 e Q-16 nasceram em
+> 2026-08-01**, da modelagem do estado congelado (Modelo 5.4.1): são o que
+> restou de decisão do operador depois que a parte de domínio foi fechada.
 
 ---
 
@@ -344,9 +349,16 @@ task de execução**: quem esbarrar numa delas para e devolve ao operador.
 5. **Conteúdo dos módulos padrão (D-10).** Não é engenharia — é curadoria de
    catálogo. Custo real de conteúdo do produto; planejar quem cria e em que
    volume antes do lançamento.
-6. **Veio de chapa (RF-11).** Ao restringir a rotação, o aproveitamento do
-   plano de corte vai piorar (ficar correto). Avisar o operador antes de o
-   número mudar, para não parecer regressão.
+6. ~~**Veio de chapa (RF-11).**~~ **RESOLVIDO — não é mais risco ativo, é fato
+   passado.** Nota histórica, mantida com o número para não quebrar as
+   referências cruzadas. A restrição de rotação foi **entregue na Task 12.5
+   (Fase B, concluída) e está em produção**: `lib/engine/box/cutting.ts` só
+   gira peça quando `!temVeio`. A piora de aproveitamento (isto é, a correção
+   do número) **já aconteceu**, e o aviso ao operador já não tem objeto —
+   ninguém precisa ser avisado de uma mudança de duas fases atrás. Quem for
+   reescrever o motor de corte no RF-34 **preserva** essa restrição (Modelo 8,
+   invariante V3); não a introduz, e não anuncia como novidade um número que
+   não vai mudar por causa dela.
 
 ### Riscos acrescentados na Fase D (2026-07-31)
 
@@ -396,7 +408,9 @@ task de execução**: quem esbarrar numa delas para e devolve ao operador.
     do mesmo móvel sobe. Subir por estar certo é o comportamento desejado;
     subir em silêncio, não. O operador precisa ver a troca **na primeira vez
     que configurar o kerf**, e a comunicação disso é requisito, não cortesia
-    — mesma natureza do aviso do risco 6 (veio). Contrapeso na mesma entrega:
+    — é o mesmo padrão "subir por estar certo" do veio (risco 6), com a
+    diferença de que aquele já foi entregue e este ainda não.
+    Contrapeso na mesma entrega:
     a meta-heurística **nunca piora** o resultado com os mesmos parâmetros
     (invariante V6), então parte do aumento é reabsorvida.
 
@@ -449,7 +463,7 @@ Três razões para a fase separada:
    tampo simples).
 3. **Reabrir a V2 apagaria a rastreabilidade.** Reescrever as Seções 1–9 para
    "atualizar" faria sumir o registro de que o congelamento estava
-   especificado desde a Fase A e mesmo assim não foi construído (risco 10).
+   especificado desde a Fase A e mesmo assim não foi construído (risco 9).
    Esse registro é o ativo mais útil desta rodada.
 
 **O que a Fase D entrega:** o produto vendável ao primeiro cliente pagante.
@@ -486,7 +500,7 @@ pendente.
 | RF-19 | **Ambiente e parede navegáveis na aplicação.** Cadastrar, editar, ordenar e nomear ambientes dentro do orçamento; N paredes por ambiente com nome livre; seletor de parede que expande o painel daquela parede; **indicação visual permanente de qual ambiente e qual parede estão em edição** | 0.1–0.3 · 0.6 · 2.3–2.6 | 🔴 |
 | RF-20 | **Alturas de faixa herdadas com override por parede.** Perfil da organização define o default; a parede sobrescreve **campo a campo**; a UI mostra "herdado" vs "customizado" e oferece "voltar ao herdado" (que apaga o campo, não copia o valor); salvar o perfil avisa que a mudança **propaga** para as paredes não customizadas. Rótulo de `peDireito` passa a dizer o que ele é: limite superior de instalação do aéreo | 0.4 · 5.1 · 5.2 · D-27 | |
 | RF-21 | **Posicionamento por vão até o vizinho.** O campo que o marceneiro preenche é o vão até o módulo vizinho do lado escolhido; o sistema converte para X absoluto ao salvar e reconverte para vão ao exibir, dos dois lados. Apagar um módulo do meio **não move nenhum outro** — só o vão exibido cresce. Vão negativo é erro, não aviso | 2.18 · D-28 | |
-| RF-22 | **Congelamento real da proposta.** A proposta e a lista de material fechada são lidas de um **snapshot persistido**, nunca recalculadas na renderização. Navegar entre abas, dar F5 ou reabrir dias depois exibe **exatamente** o valor congelado. Recalcular o plano de corte (RF-34) depois do congelamento **não retroage** sobre a lista congelada | 0.7 · 1.4 | 🔴 — ver 10.4 |
+| RF-22 | **Congelamento real da proposta.** O orçamento passa a ter um campo próprio `congeladoEm` (data/hora, `null` = nunca congelado), **ortogonal ao `status` comercial** — congelado não é um valor de status. Só a ação **"Gerar proposta"** grava esse campo, no mesmo ato em que grava o `valorRateado` de **todas** as linhas. Com `congeladoEm` preenchido (`estaCongelado()`), toda superfície que exibe valor de proposta — aba Proposta, PDF e dashboard — **lê o valor persistido**; com `congeladoEm` nulo, exibe o rateio ao vivo. Navegar entre abas, dar F5 ou reabrir dias depois exibe **exatamente** o valor congelado. Recongelar sobrescreve; **descongelar não existe**. Recalcular o plano de corte (RF-34) depois do congelamento **não retroage** sobre a lista congelada | 0.7 · 1.4 · Modelo 5.4.1 | 🔴 — ver 10.4 · comportamento **pós**-congelamento ⛔ **Q-16** |
 | RF-23 | **Estado de aplicação confiável.** Salvar em qualquer aba propaga para as demais (invalidação de cache após mutação); a aba atual vive na URL e sobrevive ao F5; "atualizar render" funciona sem recarregar a página; o link "calculadora" do editor leva ao destino certo | 1.1–1.3 · 1.8 | 🔴 |
 | RF-24 | **Criar módulo do zero.** O que falta é o **ponto de entrada na UI**, a partir de `/biblioteca` e do menu lateral: um caminho "criar novo" que abre a **mesma tela de edição de módulo já existente** (`/modulo`), sem gabarito de origem, produzindo um gabarito **privado à organização**. Não é página nova nem capacidade nova de backend — a criação do zero já existe (`lib/gabarito/criar.ts`, `origem_gabarito_id: null`). Promoção org → global existe, é **cópia** e é **exclusiva do operador** — não há botão para o marceneiro | 2.1 · D-31 | 🔴 |
 | RF-25 | **Elementos de parede completos.** Tipo **pedra** (bancada/mármore de terceiros); **edição após adicionar**, tanto pela linha da lista quanto pelo clique na representação 2D; referência de medida escolhível em X (esquerda/direita) e Y (chão/teto), com **rótulos descritivos** ("Distância da parede esquerda", "Altura do chão"), nunca "X" e "Y"; **preset por organização** para elementos recorrentes — só nome, **fora do catálogo**, sem preço e sem status | 2.7–2.12 · D-29 | |
@@ -524,17 +538,40 @@ Valem para **qualquer** task da Fase D, não só para o RF que os cita.
    Regra geral, para o que não estiver na tabela: **se o termo só existe porque
    alguém precisou escrever uma spec, ele não vai para a tela.**
 
-2. **Congelamento é testado, não conferido (RF-22).** A causa raiz apontada
-   pelo backlog-fonte é dupla — **falta de invalidação de cache após mutação**
-   e **estado de aba fora da URL** — e os cinco bugs reportados
-   (proposta desatualizada, F5 voltando para "ambientes", "atualizar render"
-   inerte, salvar que não propaga, valor que muda ao navegar) têm essa causa
-   única. Aceite mínimo:
-   - a proposta é lida do snapshot persistido, e existe teste que **falha** se
-     alguém voltar a recalculá-la na renderização;
+2. **Congelamento é testado, não conferido (RF-22).** O mecanismo está definido
+   em `docs/Modelo-de-Dominio.md` Seção **5.4.1**: campo `congeladoEm`
+   (data/hora, `null` = não congelado) no `Orçamento`, **ortogonal ao `status`**,
+   predicado `estaCongelado(o) = o.congeladoEm !== null`, gravado **só** pela
+   ação "Gerar proposta" junto com o `valorRateado` de todas as linhas.
+
+   **O defeito que o marceneiro relatou é do lado da leitura, não da escrita.**
+   As escritas já existem em produção (`components/orcamento/PropostaLab.tsx`
+   grava `valor_rateado` de todas as linhas no "Gerar proposta";
+   `lib/proposta-pdf/carregar.ts` já lê o campo). O que falta é o campo
+   `congeladoEm` e a **condicional de leitura**: a tela recalcula o rateio a
+   cada render e exibe o número recalculado, em vez de checar `estaCongelado()`
+   e ler o valor persistido. Quem receber esta entrega **não reimplementa a
+   escrita** — corrige a leitura. Junto convivem as duas causas de estado já
+   apontadas pelo backlog-fonte (**falta de invalidação de cache após mutação**
+   e **estado de aba fora da URL**), que explicam os demais bugs reportados
+   (F5 voltando para "ambientes", "atualizar render" inerte, salvar que não
+   propaga). Aceite mínimo:
+   - com `congeladoEm !== null`, aba Proposta, PDF e dashboard leem o
+     `valorRateado` persistido, e existe teste que **falha** se alguém voltar a
+     recalcular na renderização;
+   - com `congeladoEm === null`, o rateio ao vivo continua sendo o valor
+     exibido — é estimativa de trabalho, e mudar é o comportamento correto;
+   - congelar é ato **atômico e total**: ou grava `congeladoEm` e o
+     `valorRateado` de todas as linhas, ou não grava nada;
    - soma das linhas == preço final, verificado por teste automatizado;
    - navegar entre abas, dar F5 e reabrir o orçamento produzem **o mesmo
      número**, sempre.
+
+   > **O que este aceite não decide:** o que acontece com o orçamento **depois**
+   > de congelado — edição bloqueada, edição livre com aviso de "desatualizado",
+   > ou edição livre e silenciosa, e se existe "reabrir" — é a **Q-16** (7.4),
+   > em aberto. Nada disso bloqueia o campo, o predicado nem este aceite; quem
+   > esbarrar no comportamento pós-congelamento **para e devolve ao operador**.
 
    > A diferença de R$ 6,00 relatada no walkthrough (esperado 4.578,77 ×
    > exibido 4.584,77) precisa ser **reproduzida com dado real** antes de se
@@ -549,8 +586,8 @@ Valem para **qualquer** task da Fase D, não só para o RF que os cita.
    ambiente ou orçamento nunca toca em `organizacao.alturas_padrao`
    (risco 8) — hoje toca, e isso precisa cair junto com a entrega do RF-20.
 
-5. **Decisão pendente não vira palpite.** Ao esbarrar em **Q-6, Q-13 ou Q-14**
-   (Seção 7.4), a task **para** e devolve ao operador. Nenhuma coluna, enum,
+5. **Decisão pendente não vira palpite.** Ao esbarrar em **Q-6, Q-13, Q-14,
+   Q-15 ou Q-16** (Seção 7.4), a task **para** e devolve ao operador. Nenhuma coluna, enum,
    limiar numérico ou pipeline de conteúdo nasce de dedução. (Q-8 a Q-12 não
    estão nesta lista porque **deixaram de existir** — não é que foram
    respondidas.)

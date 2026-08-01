@@ -144,10 +144,10 @@ variação um passo mais escura da mesma família, não uma cor nova.
 
 ```ts
 sucesso:    { DEFAULT: "#16A34A", subtle: "#F0FDF4", border: "#86EFAC" }, // "Aprovado", "Ativo", deltas positivos (+18,6%)
-erro:       { DEFAULT: "#DC2626", subtle: "#FEF2F2", border: "#FCA5A5" }, // ações destrutivas, validação Tier 1 violada (bloqueante)
+erro:       { DEFAULT: "#DC2626", subtle: "#FEF2F2", border: "#FCA5A5" }, // ações destrutivas, validação Tier 1 violada (bloqueante), status "Recusado" (ver 2.5)
 aviso:      { DEFAULT: "#A16207", subtle: "#FFFBEB", border: "#FDE68A" }, // validação Tier 2 (não bloqueante) — atenção que não é erro nem seleção
-informacao: { DEFAULT: "#2563EB", subtle: "#EFF6FF", border: "#BFDBFE" }, // ícone "ⓘ", status "Em andamento", KPI icon azul
-roxo:       { DEFAULT: "#7C3AED", subtle: "#F3E8FF", border: "#DDD6FE" }, // status "Fechado", KPI icon roxo, tag de categoria
+informacao: { DEFAULT: "#2563EB", subtle: "#EFF6FF", border: "#BFDBFE" }, // ícone "ⓘ", KPI icon azul, badge "Em andamento" RESERVADO — sem origem confirmada, Q-15 em aberto (ver 2.5)
+roxo:       { DEFAULT: "#7C3AED", subtle: "#F3E8FF", border: "#DDD6FE" }, // KPI icon roxo, tag de categoria, badge "Fechado" RESERVADO — sem origem confirmada, Q-15 em aberto (ver 2.5)
 ```
 
 > Nota: `informacao` reaproveita o hex que era o `accent` (azul) da v2 —
@@ -188,18 +188,46 @@ Os mockups mostram duas fontes de cor para o mesmo conjunto de status
 para "Rascunho" e verde para "Enviado"; a lista usa cinza para "Rascunho" e
 azul para "Enviado"). Isto é inconsistência do mockup estático, não uma
 regra deliberada — **decisão do Product Designer**: fixar um mapeamento
-único, determinístico, usado em toda a UI (donut, chips, lista, filtros):
+único, determinístico, usado em toda a UI (donut, chips, lista, filtros).
 
-| Status | Fundo | Texto | Token |
-|---|---|---|---|
-| Rascunho | `cinza-100` `#F1F5F9` | `cinza-600` `#475569` | neutro — ainda não tem ação pendente |
-| Em andamento | `informacao-subtle` `#EFF6FF` | `informacao` `#2563EB` | informativo — trabalho em progresso |
-| Enviado | `accent-subtle` `#FFF3E0` | `accent` `#B45309` | atenção — aguardando resposta do cliente |
-| Aprovado | `sucesso-subtle` `#F0FDF4` | `sucesso` `#16A34A` | positivo — cliente aceitou |
-| Fechado | `roxo-subtle` `#F3E8FF` | `roxo` `#7C3AED` | arquivado/finalizado — distinto de "aprovado" |
+> **Correção de auditoria (reprovação da Fase D, Observação 1)**: esta
+> tabela fixava 5 badges — `Rascunho · Em andamento · Enviado · Aprovado ·
+> Fechado` — mas o domínio e o código real
+> (`lib/orcamento/buscar.ts:11`) só têm 4 valores de `status`:
+> `rascunho | enviado | aprovado | recusado`. `recusado` não tinha token
+> visual; `Em andamento` e `Fechado` não têm origem confirmada no domínio.
+> O Data Architect registrou a pendência como **Q-15**
+> (`docs/Modelo-de-Dominio.md` Seção 11.3): os dois badges são valores novos
+> do enum comercial, ou são etapas de esteira que caem dentro da **Q-6**
+> (também em aberto)? Nenhuma das duas hipóteses foi decidida — não é papel
+> do Product Designer decidir. A tabela abaixo corrige o que tem origem
+> confirmada (`recusado`, token adicionado) e marca **explicitamente como
+> reservado** o que não tem (`Em andamento`, `Fechado`), no mesmo padrão que
+> o Modelo de Domínio já usa para pendências ("sem origem — Q-15 em
+> aberto"). Não implementar filtro, contagem no donut nem lógica de
+> transição para os dois badges reservados antes da Q-15 ser respondida.
+
+| Status | Fundo | Texto | Token | Situação |
+|---|---|---|---|---|
+| Rascunho | `cinza-100` `#F1F5F9` | `cinza-600` `#475569` | neutro — ainda não tem ação pendente | confirmado — `status: "rascunho"` |
+| Enviado | `accent-subtle` `#FFF3E0` | `accent` `#B45309` | atenção — aguardando resposta do cliente | confirmado — `status: "enviado"` |
+| Aprovado | `sucesso-subtle` `#F0FDF4` | `sucesso` `#16A34A` | positivo — cliente aceitou | confirmado — `status: "aprovado"` |
+| Recusado | `erro-subtle` `#FEF2F2` | `erro` `#DC2626` | negativo — cliente rejeitou a proposta | confirmado — `status: "recusado"` (token novo, adicionado nesta correção) |
+| Em andamento | `informacao-subtle` `#EFF6FF` | `informacao` `#2563EB` | informativo — trabalho em progresso | **RESERVADO — sem origem confirmada no domínio, Q-15 em aberto**. Não decidido se é valor novo de `status` ou etapa de esteira (Q-6) |
+| Fechado | `roxo-subtle` `#F3E8FF` | `roxo` `#7C3AED` | arquivado/finalizado — distinto de "aprovado" | **RESERVADO — sem origem confirmada no domínio, Q-15 em aberto**. Não decidido se é valor novo de `status` ou etapa de esteira (Q-6). **Não é** o mesmo conceito que "congelado" (`congeladoEm`, Modelo 5.4.1) — congelar é o valor da proposta ficar imutável, "Fechado" seria (se existir) uma etapa comercial de `status`; podem coincidir na prática mas não são a mesma coisa |
 
 Mesmo mapeamento de cor para o donut do Dashboard (fatias na mesma ordem e
-cor da tabela acima) e para qualquer filtro de status em `/orcamentos`.
+cor da tabela acima) e para qualquer filtro de status em `/orcamentos`,
+**restrito aos 4 status confirmados** enquanto a Q-15 não for respondida —
+o donut e os filtros não devem oferecer "Em andamento" nem "Fechado" como
+opção até então.
+
+> **Nota para o Backlog (Tasks 5.7–5.9, dashboard/orçamentos recentes)**: a
+> parte visual desses badges — exibir "Em andamento"/"Fechado" no card — fica
+> pendente até a Q-15 ser respondida. Isso **não bloqueia** o resto da task:
+> remover prazo de entrega e adicionar valor final/custo usam dados que já
+> existem (`Orcamento`, resumo financeiro — Modelo 5.5) e podem ser
+> executados livremente.
 
 ### 2.6 Paleta de ícone de KPI (dashboard, catálogo)
 
@@ -483,10 +511,13 @@ segmento atual em `text-cinza-900 font-medium`, separador `/` em
 
 `px-[10px] py-[2px] rounded-full text-legenda font-medium` (pill —
 `rounded-full`, não `rounded-md`, diferente da v2). Variantes = mapeamento
-da Seção 2.5 (`rascunho`, `em-andamento`, `enviado`, `aprovado`, `fechado`)
-+ variante genérica `neutro` (`cinza-100`/`cinza-600`, usada para "Global"
-na Biblioteca) e `sucesso-solido` (usada para "Ativo" no Catálogo e "Seu
-módulo" na Biblioteca: `bg-sucesso-subtle text-sucesso`).
+da Seção 2.5, **4 confirmadas**: `rascunho`, `enviado`, `aprovado`,
+`recusado` (token novo — ver correção de auditoria em 2.5) + variante
+genérica `neutro` (`cinza-100`/`cinza-600`, usada para "Global" na
+Biblioteca) e `sucesso-solido` (usada para "Ativo" no Catálogo e "Seu
+módulo" na Biblioteca: `bg-sucesso-subtle text-sucesso`). As variantes
+`em-andamento` e `fechado` são **reservadas, não implementar ainda** —
+sem origem confirmada no domínio, Q-15 em aberto (ver 2.5).
 
 ### 7.7 Tabela → shadcn `Table`
 
@@ -570,9 +601,12 @@ distinguíveis à primeira vista.
   `accent-vivid` a 16% de opacidade no topo até 0% na base, pontos
   `fill-accent-vivid` `4px`, grid horizontal `stroke-cinza-100`, eixo
   `text-legenda text-cinza-500`.
-- **Donut** ("Orçamentos por status"): fatias na ordem e cor da Seção 2.5
-  (cinza/informação/accent/sucesso/roxo), espessura de anel proporcional a
-  ~28% do raio, valor total centralizado (`text-valor-destaque`) + rótulo
+- **Donut** ("Orçamentos por status"): fatias na ordem e cor da Seção 2.5,
+  restrito aos 4 status confirmados (cinza/accent/sucesso/erro — Rascunho/
+  Enviado/Aprovado/Recusado). Os tokens `informação` e `roxo` ("Em
+  andamento"/"Fechado") são reservados e não entram no donut até a Q-15 ser
+  respondida (ver 2.5). Espessura de anel proporcional a ~28% do raio, valor
+  total centralizado (`text-valor-destaque`) + rótulo
   (`text-corpo-pequeno text-cinza-500`), legenda lateral com ponto colorido
   `8px` + label + contagem + percentual.
 - Tooltip de hover: `bg-cinza-900 text-cinza-0 rounded-md px-sm py-xs
@@ -689,7 +723,10 @@ por tipo de componente:
 > Se uma implementação futura adicionar rotação de câmera, iluminação ou
 > qualquer biblioteca de renderização 3D (three.js, react-three-fiber etc.)
 > a este componente, ela está violando este documento e o PRD — reportar,
-> não implementar.
+> não implementar. **Exceção escopada**: ver Seção 9.6 (`ModuleViewer`), que
+> autoriza três.js/react-three-fiber num componente distinto e restrito —
+> essa exceção não estende nem enfraquece a proibição acima para o canvas
+> técnico 2D desta seção.
 
 ### 9.1 O que muda em relação à v2 (traço técnico → traço "elegante")
 
@@ -1016,6 +1053,14 @@ Maestro sobre quando/como sequenciar essa migração**, fora do escopo deste
 artefato de especificação.
 
 ## 14. Cobertura dos Blueprints
+
+> **Nota (2026-08-01)**: `docs/Mapa-de-Telas.md` é o inventário da Fase A e
+> está **parcialmente superado** pela Fase D — ele não lista a superfície de
+> navegação nova (RF-19, RF-25, RF-30, RF-31, RF-33, RF-38). A cobertura
+> abaixo vale para o que o Mapa de Telas efetivamente lista; os componentes
+> introduzidos pela Fase D estão cobertos pelas Seções 9.6 e 15.4 deste
+> documento e pelos contratos de task do `docs/Backlog.md`, não pelo Mapa de
+> Telas.
 
 Todo componente citado em `docs/Mapa-de-Telas.md` e visível nos 12 mockups
 tem especificação nesta revisão: Botão, Card, KPI Card, Sidebar de
