@@ -34,14 +34,6 @@
 >
 > Na mesma revisão entrou a nota do **`ModuleViewer`** (visualização 3D
 > estática e não-interativa, exceção pontual e estreita) — **Seção 4.1**.
->
-> **Correção da reauditoria (2026-08-01).** Duas entradas, ambas aditivas:
-> a **Seção 5.4.1** define pela primeira vez **o estado congelado do
-> Orçamento** (`congeladoEm`), que PRD, Design-System e este documento vinham
-> usando sem nunca definir — com duas perguntas de operador abertas em
-> consequência (**Q-15** e **Q-16**, em 11.3); e o trecho da **Seção 8** que
-> dizia que o motor "hoje rotaciona sem restrição" foi corrigido: a restrição de
-> veio **já está implementada** desde a Task 12.5 (Fase B).
 
 ---
 
@@ -937,7 +929,7 @@ Props e origem de cada uma — **nenhuma exige campo novo no domínio central**:
 | `width`, `height`, `depth` (mm) | `BoxModule.largura` · `.altura` · `.profundidade` (`lib/engine/box/types.ts`) | ✅ já existe |
 | `view` | estado de UI (botão de vista), não é dado de domínio | ✅ não é domínio |
 | `color?` (hex) | **derivado** de `BoxModule.material.cor` pela função `corParaHex()` já existente (`app/components/ModulePreview.tsx`) | ✅ já existe, com ressalva abaixo |
-| `textureUrl?` | **sem origem hoje** — ver Q-14 (Seção 11.3) | ⛔ pendência do operador |
+| `textureUrl?` | **[2026-08-02] `especificacao.texturaUrl` do Produto tipo `chapa`** — Q-14 respondida, ver 4.1.1 | ✅ origem definida (imagens são pré-requisito de conteúdo) |
 
 **Fonte única de verdade.** O `ModuleViewer` recebe as **mesmas dimensões e a
 mesma geometria derivadas do `BoxModule`** que o canvas 2D já consome. É
@@ -970,6 +962,62 @@ a linha. Isso é custo de produto e conteúdo. Registrado como **Q-14** (Seção
 11.3). **Recomendação registrada: lançar com cor sólida.** Enquanto Q-14 não
 for respondida, `textureUrl` permanece prop opcional sem origem no domínio — a
 prop existe no componente, mas nada no catálogo a alimenta.
+
+#### 4.1.1 [V2.1] Textura real — Q-14 respondida (2026-08-02)
+
+> **Decisão do operador (2026-08-02)**: **textura real**, mapeando os ~380
+> padrões de madeira do catálogo. A recomendação de lançar só com cor sólida foi
+> **rejeitada**. `textureUrl` deixa de ser prop órfã e ganha origem no domínio.
+
+**Onde vive**: campo opcional dentro do jsonb `especificacao` do `Produto` tipo
+`chapa` — exatamente onde `cor` e `espessura` já moram.
+
+```ts
+interface EspecificacaoChapa {   // lib/produto/tipos.ts
+  cor: string
+  espessura: number
+  corHex?: string      // recomendação da 4.1, permanece opcional
+  texturaUrl?: string  // [Q-14] caminho da imagem de textura; ausente ⇒ cor sólida
+}
+```
+
+**Por que campo, e não tabela própria** (a alternativa foi considerada):
+
+| Critério | Veredicto |
+|---|---|
+| Cardinalidade | **1–1** com a linha de `produto` (um padrão de chapa, uma textura). Tabela 1–1 é join sem ganho |
+| Atributos próprios | Nenhum. É uma string de caminho — sem dimensão física, sem escala, sem repetição, sem metadados que alguém consulte |
+| Consulta por textura | Não existe nenhuma. Ninguém pergunta "quais produtos usam esta textura" |
+| Compartilhamento entre orgs | O **arquivo** é compartilhado (bucket público curado pelo operador); a **referência** não precisa ser — `produto` já é cópia por org (D-15) e a cópia do signup leva `especificacao` inteira junto, textura incluída, sem trabalho extra |
+| Custo de errar | Baixo nos dois sentidos: promover a tabela depois é migration de leitura simples |
+
+Conclusão: **campo simples basta**. Uma tabela `textura` só se justificaria se a
+imagem ganhasse atributos próprios (escala em mm, orientação do veio na imagem,
+autoria/licença) — nenhum deles foi pedido.
+
+**Regras**:
+
+1. `texturaUrl` é **opcional**. Ausente ⇒ o `ModuleViewer` cai em `color`
+   (`corParaHex`, A-19). O fallback continua sendo **um** e é o já existente —
+   não nasce um terceiro caminho de cor.
+2. É **caminho relativo dentro do bucket de texturas**, nunca URL externa. Uma
+   URL arbitrária vinda do formulário de catálogo viraria hotlink para domínio
+   de terceiro dentro do canvas do usuário. Validação na escrita, no catálogo.
+3. As imagens são **conteúdo do operador**, em bucket **read-only** para
+   `authenticated`: uma cópia só, compartilhada por todas as orgs — não 380
+   imagens por tenant.
+4. Nada de textura é persistido no **item** (`BoxModule`/`MaterialRef`). A
+   resolução é na renderização, igual à cor (4.1). O motivo é o mesmo: cópia
+   denormalizada congelaria a textura em orçamento antigo e multiplicaria a
+   string por milhares de peças.
+5. O plano de corte e a precificação **não** enxergam textura. É dado de
+   exibição, não entra em BOM, custo nem rateio.
+
+> **Pré-requisito de conteúdo, não de código**: as ~380 imagens precisam ser
+> fornecidas, curadas e hospedadas pelo operador. Sem elas o campo existe e fica
+> vazio, e o produto se comporta exatamente como o cenário "cor sólida". Isso é
+> pré-requisito explícito da task — nota para o `backlog-planner`, não para o
+> modelo.
 
 ---
 
@@ -1040,187 +1088,196 @@ Invariantes obrigatórios (viram teste — briefing 8 "Verificação"):
 ### 5.4 Congelamento (briefing 5.2 "detalhes que mordem")
 
 Como o rateio depende do aninhamento do orçamento inteiro, **adicionar um item
-altera o valor de todos os outros**. `valorRateado` é persistido **no ato de
-congelamento** (definido em **5.4.1**), não recalculado na renderização —
-proposta congelada é imutável até ser congelada de novo. Alerta de UI
-obrigatório: remover um ambiente **aumenta** o preço dos demais; proposta se
-regenera, nunca se edita por subtração de linha.
+altera o valor de todos os outros**. `valorRateado` é persistido no
+fechamento da proposta, não recalculado na renderização — proposta enviada é
+imutável. Alerta de UI obrigatório: remover um ambiente **aumenta** o preço
+dos demais; proposta se regenera, nunca se edita por subtração de linha.
 
-### 5.4.1 [Fase D] O estado congelado do Orçamento — definição
+### 5.4.1 [V2.1] Estado congelado do orçamento — `congeladoEm`, e a reabertura (Q-16)
 
-> **Correção do achado bloqueante 1 da reauditoria de 2026-08-01.** Até aqui
-> PRD, Design-System e este documento usavam "no fechamento" e "não congelado"
-> como se fossem estado consultável do `Orçamento`, e **nenhum dos três o
-> definia**. O código dizia isso na cara: `lib/orcamento/buscar.ts:11` só tem
-> `'rascunho' | 'enviado' | 'aprovado' | 'recusado'`, e
-> `lib/lista-material/congelar.ts:20-29` registra o executor **parando e
-> reportando** exatamente esta lacuna — relato que nunca chegou aos documentos.
-> Esta seção fecha a parte que é modelagem. O que é decisão do operador virou
-> **Q-15** e **Q-16** (11.3), e **nenhuma das duas bloqueia** o que está
-> definido aqui.
+> **Origem**: achado bloqueante 1 da reauditoria de 2026-08-01
+> (`.maestro/tmp/Spec-Decline-Payload.md`). PRD, Modelo, Design-System e código
+> usavam "no fechamento" e "orçamento não congelado" como se fossem estado
+> consultável — e ele **não existia**
+> (`lib/orcamento/buscar.ts:11` tem só `rascunho|enviado|aprovado|recusado`;
+> `lib/lista-material/congelar.ts:20-29` registra a lacuna por escrito e manda
+> parar). Esta seção define o estado. A parte de **reabertura** é a resposta do
+> operador à **Q-16** (2026-08-02).
 
-**Vocabulário primeiro: "congelado" ≠ "Fechado".** São dois conceitos que
-brigaram pela mesma palavra e é essa colisão que produziu o achado.
-
-- **Congelado** (deste modelo) é um fato do documento: os valores da proposta
-  pararam de ser recalculados. Não é etapa comercial.
-- **"Fechado"** é o rótulo de etapa comercial que a Design-System §2.5 reservou
-  ("arquivado/finalizado — distinto de aprovado"). É outra coisa, é da família
-  da Q-6 e está aberto como **Q-15**.
-
-Em texto novo, não usar "fechamento" como sinônimo de congelamento. O campo se
-chama `congeladoEm`.
-
-**Modelagem: coluna própria — não é valor de `status`, não é derivação.**
+**O estado é um carimbo de tempo, não um status.**
 
 ```ts
-type Orcamento = {
-  // ...inalterado...
-  status: 'rascunho' | 'enviado' | 'aprovado' | 'recusado'  // INALTERADO
-  congeladoEm: string | null   // ISO 8601; null = nunca congelado
-}
-
-estaCongelado(o: Orcamento): boolean  =  o.congeladoEm !== null
+// campo novo em Orçamento
+congeladoEm: string | null   // ISO 8601; null = nunca congelado / reaberto
 ```
 
-As três alternativas consideradas e a razão de cada descarte:
+`estáCongelado(orc) === orc.congeladoEm !== null`. É a **única** forma de
+responder a pergunta.
 
-| Alternativa | Por que não |
-|---|---|
-| **Valor `'fechado'` no enum `status`** | `status` é o eixo **comercial** e seus valores são mutuamente exclusivos. Congelar acontece **junto** com um estado comercial: congela-se a proposta *e então* se envia. Gravar `'fechado'` apagaria `'enviado'`/`'aprovado'` — perde-se um dos dois fatos. Isso não é modelar, é destruir dado |
-| **Derivar de `lista_material`** (existe linha ⇒ congelado) | São **dois atos distintos e independentes** (tabela abaixo). Um orçamento pode ter lista de material congelada sem nunca ter gerado proposta, e vice-versa. A derivação responderia "congelado" no primeiro caso, onde o valor da proposta não está congelado coisa nenhuma |
-| **Booleano `congelado`** | Joga fora de graça o dado que a UI quer exibir ("congelada em 01/08, 14:22") e obriga uma segunda coluna de data para recuperá-lo. O timestamp **já é** o booleano (`is not null`) |
+**Três eixos ortogonais, nunca colapsados** — mesmo princípio da Seção 7.2
+(etapa de esteira):
 
-**Dois congelamentos, não um** — a distinção que faltava nos documentos:
+| Eixo | Campo | Pergunta que responde | Quem escreve |
+|---|---|---|---|
+| Comercial | `status` | O cliente aceitou? | ação comercial |
+| Operacional | `etapaEsteira` (7.2) | Em que ponto do processo está? | esteira |
+| **Financeiro** | **`congeladoEm`** | **Os valores exibidos ainda podem mudar?** | congelar / reabrir |
 
-| Ato | O que congela | Onde persiste | Histórico | Marca `congeladoEm`? |
-|---|---|---|---|---|
-| **Congelar lista de material** (aba Corte & Material, `congelarListaMaterial`) | pré-pedido de compra: insumos, itens manuais, resumo do plano de corte | linha nova em `lista_material` (insert-only, sem UPDATE) | **sim** — uma linha por congelamento | **não** |
-| **Gerar proposta** (aba Proposta, `handleGerarProposta`) | valor comercial por linha | `linha_proposta.valorRateado` de **todas** as linhas + `Orcamento.congeladoEm` | **não** — o último vence (**A-20**) | **sim** |
+Congelar **não** muda `status` (uma proposta congelada é justamente a que se
+envia) e mudar `status` **não** congela. Congelar a **proposta** também não é o
+mesmo ato que congelar a **lista de material** (`lista_material`, INSERT-only,
+histórico próprio) — são dois congelamentos distintos, com dois artefatos
+distintos.
 
-`estaCongelado` responde **só sobre a proposta**. É este o predicado que RF-22 e
-o aviso de retroatividade do kerf (RF-34 · 8.2) pediam e não tinham.
+#### Duas leituras, escolhidas pelo campo
 
-**Regra de leitura (é o aceite do RF-22):**
+| Leitura | Quando | De onde vem o valor exibido |
+|---|---|---|
+| **R1 — ao vivo** | `congeladoEm === null` | recalcula tudo (rateio da 5.2, plano de corte da 8.3) a cada render |
+| **R2 — congelada** | `congeladoEm !== null` | `linhaProposta.valorRateado` persistido + `lista_material.snapshot` mais recente. **Nada é recalculado** |
 
-- **R1 — `congeladoEm === null`**: a tela mostra o rateio calculado **ao vivo**.
-  É estimativa de trabalho e muda quando o orçamento muda. Correto assim.
-- **R2 — `congeladoEm !== null`**: toda superfície que exibe valor de proposta
-  (aba Proposta, PDF, dashboard) lê `valorRateado` **persistido**. Recalcular na
-  renderização é bug, e é exatamente o teste que o RF-22 exige que **falhe** se
-  alguém voltar a fazê-lo.
+Este é o defeito que o marceneiro relatou (backlog 0.7/1.4/2.2): hoje
+`PropostaLab.tsx:77` recalcula a cada render e `:141` deriva o valor exibido do
+snapshot em memória, não da linha persistida — ou seja, a aplicação está
+permanentemente em R1.
 
-**Invariantes (viram teste):**
+#### Invariantes (viram teste)
 
-- **I1 — congelar é ato atômico e total.** Um congelamento grava o
-  `valorRateado` de **todas** as linhas do orçamento **e** o `congeladoEm`, no
-  mesmo ato. Não existe congelamento parcial. Congelar um orçamento **sem
-  nenhuma linha de proposta** não é ato válido: não há o que congelar,
-  `congeladoEm` permanece `null`.
-- **I2 — ortogonal ao `status`.** Nenhuma transição de `status` escreve
-  `congeladoEm`, e congelar não muda `status`. Enviar não congela; congelar não
-  envia. (A UI pode encadear os dois atos num botão; continuam sendo dois. Se o
-  operador quiser proibir *enviar sem congelar*, é regra de produto aditiva e
-  não muda esta modelagem.)
-- **I3 — recongelar é permitido, e é o único jeito de o valor congelado mudar.**
-  "Gerar proposta" de novo sobrescreve `congeladoEm` e **todos** os
-  `valorRateado`. É o "regenerar" que a 5.4 já autoriza ("proposta se regenera,
-  nunca se edita por subtração de linha"). Sem histórico: só o último
-  congelamento existe (**A-20**).
-- **I4 — descongelar não existe.** Nenhuma ação escreve `congeladoEm = null`. Um
-  orçamento congelado que volta a ser editado **continua congelado**, com o
-  valor antigo, até ser recongelado. Um "reabrir" explícito é **Q-16**.
-- **I5 — documento congelado é imutável, sempre.** Nenhum recálculo de motor,
-  mudança de perfil (kerf, alturas, preços do catálogo) ou correção de bug
-  retroage sobre `lista_material.snapshot` (linha imutável, sem política de
-  UPDATE) nem sobre `valorRateado` já congelado. Retroatividade só alcança o que
-  é calculado ao vivo.
+- **I1 — fonte única.** `congeladoEm` é o único predicado de congelamento.
+  Proibido inferir congelamento de `status`, de `etapaEsteira`, da existência de
+  linha em `lista_material` ou da presença de `valorRateado`.
+- **I2 — congelar é atômico com o rateio.** `congeladoEm !== null` ⇔ **toda**
+  `linhaProposta` do orçamento tem `valorRateado !== null`. Um congelamento que
+  falhe no meio não deixa o orçamento congelado. (CHECK do banco não alcança
+  duas tabelas — a garantia é da Server Action, em transação.)
+- **I3 — recongelar é permitido e sobrescreve sem histórico.**
+  `linhaProposta` **não versiona**: o `valorRateado` anterior é perdido. A
+  assimetria é deliberada e declarada: `lista_material` é INSERT-only e **guarda**
+  histórico; `linha_proposta` não.
+- **I4 — congelado não retroage.** Mudança de kerf (8.2), de preço de catálogo
+  ou de algoritmo de corte (8.3) **não** altera valor de orçamento congelado.
+  Só orçamento em R1 sente a mudança. É o aceite do RF-22 e do RF-34.
+- **I5 — paridade no instante do congelamento.** Σ `valorRateado` das linhas ==
+  preço final, exato, com a última linha absorvendo o resíduo (5.2).
+- **I6 — reabrir zera o carimbo e preserva os valores.** `Reabrir` faz
+  `congeladoEm ← null`, o que devolve a leitura R1. `valorRateado` das linhas
+  **NÃO é apagado nem zerado** — permanece exatamente como estava até que um
+  novo congelamento o sobrescreva (I3). Reabrir também move a etapa de esteira
+  `fechado → aguardando_aprovacao` (7.2, T2); nas demais etapas não mexe na
+  etapa.
+- **I6a — reabrir é ação de `admin`.** *(Q-18, respondida pelo operador em
+  2026-08-03: **só o papel `admin`/dono**.)* A ação `Reabrir` só executa se o
+  usuário autenticado que a chama tiver `perfil.papel === 'admin'` na
+  organização dona do orçamento. A checagem é **de aplicação**, dentro da
+  própria Server Action / RPC, **antes** de qualquer escrita — mesmo padrão e
+  mesma justificativa da exclusão de organização (7.3): `perfil.papel` não é
+  usado por nenhuma política de RLS, então a autorização não é do banco, é da
+  porta de entrada. Não-admin é **rejeitado explicitamente** com o erro
+  **E-C3**; nada é escrito (`congeladoEm`, `valorRateado` e `etapaEsteira`
+  permanecem intactos) e a ação **não** degrada para no-op silencioso.
 
-> **Nota factual, para ninguém deduzir "proposta desatualizada".**
-> `orcamento.atualizado_em` existe desde a Task 11.2, mas **nada o mantém**: não
-> há trigger e nenhuma escrita da aplicação o atualiza — só
-> `lib/dashboard/orcamentos.ts:63` o **lê**, para ordenar. Portanto **não existe
-> hoje** como derivar "houve edição depois do congelamento" comparando datas.
-> Enquanto a Q-16 não for respondida, nenhuma tela deve afirmar que uma proposta
-> congelada está desatualizada: não há dado que sustente a afirmação.
+**Por que I6 preserva `valorRateado` em vez de zerar** — dois motivos, o segundo
+é o que decide:
 
-**Casos de borda:**
+1. Zerar destruiria o único registro em banco do que foi rateado por linha.
+2. `linha_proposta.valor_rateado` é a **mesma coluna** do override manual do
+   usuário (`PropostaLab.handleOverrideValor`, 5.2/Seção 6). Zerar na reabertura
+   apagaria trabalho manual que o usuário fez e que nada tem a ver com
+   congelamento. Zerar não é neutro — é destrutivo.
+
+Consequência aceita e declarada: enquanto o orçamento está reaberto (R1), o
+`valorRateado` persistido existe mas **não é lido** — é dado dormente, não
+contradição. A tela mostra o valor recalculado.
+
+#### Exemplo trabalhado — congelar (I2 e I5)
+
+```
+Entrada: 3 linhas de proposta
+         custoAtribuído: L1 = 1.200,00 · L2 = 800,00 · L3 = 400,00  (Σ = 2.400,00)
+         modo multiplicador, fator 1,91  ⇒  preço final = 2.400,00 × 1,91 = 4.584,00
+Passo 1 — L1: 4.584,00 × (1.200,00 ÷ 2.400,00) = 4.584,00 × 0,5        = 2.292,00
+Passo 2 — L2: 4.584,00 × (800,00 ÷ 2.400,00)   = 4.584,00 × 0,333333…  = 1.528,00
+Passo 3 — L3 (última, absorve o resíduo): 4.584,00 − 2.292,00 − 1.528,00 =   764,00
+Passo 4 — grava os 3 valorRateado E congeladoEm = 2026-08-02T14:10:00Z, na mesma transação
+Saída:   2.292,00 + 1.528,00 + 764,00 = 4.584,00 == preço final ✓ (I5)
+         F5, trocar de aba ou reabrir a tela em outro dia exibe 4.584,00 (R2)
+```
+
+#### Exemplo trabalhado — I4 (a mudança que não retroage)
+
+```
+Entrada: o orçamento acima, congelado por 4.584,00.
+         O operador troca o kerf de 3 mm para 4 mm em /perfil (8.2), o plano de
+         corte passa a exigir 1 chapa a mais e o custo de material sobe de
+         2.400,00 para 2.520,00
+Passo 1 — orçamento CONGELADO: nada é recalculado (R2) → continua 4.584,00
+Passo 2 — outro orçamento, NÃO congelado, com o mesmo custo:
+          2.520,00 × 1,91 = 4.813,20
+Saída:   4.584,00 (congelado)  ≠  4.813,20 (ao vivo). Os dois estão certos.
+```
+
+#### Exemplo trabalhado — I6 (reabrir e recongelar)
+
+> **Exemplo hipotético/prospectivo.** Ele parte de `etapaEsteira = fechado`, que
+> é **deliberadamente inalcançável neste lançamento** — a única porta de entrada
+> em `fechado` é o gatilho de aprovação, que só existe a partir do Lote 6 (7.2,
+> nota 2). O exemplo ilustra a mecânica completa de I6 para quando `fechado` for
+> alcançável; a aritmética vale como está. No lançamento, reabrir só ocorre em
+> orçamento cuja etapa **não** é `fechado` — aí os passos 1, 2, 4 e 5 são
+> idênticos e só o passo 3 não acontece (a etapa não muda).
+
+```
+Entrada: orçamento congelado em 2026-08-02T14:10:00Z (usuário chamador: admin — I6a)
+         linhas: 2.292,00 / 1.528,00 / 764,00 · etapaEsteira = fechado
+         kerf já mudou para 4 mm (custo atual 2.520,00)
+Passo 1 — "Reabrir": congeladoEm ← null
+Passo 2 — valorRateado das 3 linhas: INALTERADO (2.292,00 / 1.528,00 / 764,00) — I6
+Passo 3 — etapaEsteira: fechado → aguardando_aprovacao (7.2, T2)
+Passo 4 — leitura volta a R1: a tela recalcula → 2.520,00 × 1,91 = 4.813,20
+Passo 5 — "Gerar proposta" de novo:
+          L1: 4.813,20 × 0,5        = 2.406,60
+          L2: 4.813,20 × 0,333333…  = 1.604,40
+          L3: 4.813,20 − 2.406,60 − 1.604,40 = 802,20
+Saída:   soma = 4.813,20 ✓ · congeladoEm = novo instante ·
+         os valores antigos (2.292,00 / 1.528,00 / 764,00) deixam de existir em
+         linha_proposta (I3). O que o cliente recebeu está no PDF já emitido, não
+         no banco — ver A-21
+```
+
+#### Casos de borda
 
 | Situação | Comportamento |
 |---|---|
-| Orçamento sem nenhuma linha de proposta | não congela (I1); `congeladoEm` continua `null` |
-| Linha criada / dividida / mesclada **depois** do congelamento | nasce com `valorRateado = null`; o orçamento **continua congelado** e a linha nova aparece sem valor ("—", tratamento defensivo que `lib/proposta-pdf/carregar.ts:52-56` já tem). É o único sintoma disponível de "editado depois de congelar"; o que a tela deve fazer a respeito é **Q-16** |
-| Override manual **antes** de congelar | `handleOverrideValor` já persiste o `valor_rateado` rebalanceado de todas as linhas. Isso **não congela**: `congeladoEm` continua `null` e a leitura continua ao vivo (R1). **Persistir valor ≠ congelar** |
-| Orçamento congelado e item removido do ambiente | o valor congelado não muda (I5). O alerta da 5.4 ("remover um ambiente aumenta o preço dos demais") vale sobre o rateio ao vivo, isto é, sobre o **próximo** congelamento |
-| Lista de material congelada, proposta nunca gerada | `estaCongelado = false`. São dois atos; a lista congelada segue imune por conta própria (I5) |
+| Congelar sem nenhuma linha de proposta | **Erro E-C1**, não congela (I2 seria vacuamente verdadeira e o orçamento ficaria "congelado" sem nada congelado) |
+| Congelar com Σ `custoAtribuído` = 0 (todas as linhas sem item ou sem custo) | **Erro E-C2**, não congela — divisão por zero na proporção da 5.2 |
+| Uma linha com `custoAtribuído` = 0, outras não | Congela; a linha recebe `valorRateado` = 0,00. Zero é resultado legítimo |
+| Congelar orçamento **já congelado** | Permitido — recongela e sobrescreve (I3). Não é erro |
+| Reabrir orçamento **não congelado** (`congeladoEm` já null) | **No-op idempotente**, `ok: true`, não mexe em etapa nem em valor. A UI não oferece o botão, mas a ação tolera a chamada repetida. Vale **só para admin** — a checagem de papel (I6a) vem antes e não é tolerante |
+| **Não-admin** chama "Reabrir" (por qualquer caminho: UI, chamada direta da ação) | **Rejeitado**, erro **E-C3**. Nada é escrito. A checagem de papel é a **primeira** do fluxo — vem antes até da checagem de idempotência, para que um `vendedor` não descubra por resposta `ok: true` que o orçamento já estava reaberto |
+| Usuário edita itens/ambientes com o orçamento congelado | **Permitido, com aviso** (decisão do operador na Q-16: avisa, não bloqueia em silêncio). A edição entra; os valores da proposta **não mudam** enquanto R2 valer. Texto do aviso: **W-C1** |
+| Orçamento congelado com `status = aprovado`, usuário reabre | Permitido — `status` e `congeladoEm` são ortogonais (I1). Ver **A-22** |
+| Relógio | `congeladoEm` é sempre `now()` do **servidor**, nunca instante vindo do client |
 
-**Erros e avisos de domínio:**
+#### Erros e avisos de domínio
 
-| Situação | Saída |
-|---|---|
-| Congelar orçamento sem linha de proposta | erro `CONGELAR_SEM_LINHAS` — não grava nada (I1) |
-| Operador muda o kerf no perfil | aviso **antes de salvar**, com a contagem de `congeladoEm === null` da organização (8.2) |
-| Falha ao gravar uma das linhas durante o congelamento | o ato **não** conclui: `congeladoEm` não é gravado (I1). Meio-congelamento é pior que não congelar |
+| # | Situação | Mensagem |
+|---|---|---|
+| **E-C1** | Congelar sem linha de proposta | "Crie ao menos uma linha de proposta antes de gerar a proposta." |
+| **E-C2** | Congelar com base de rateio zero | "Nenhuma linha tem custo — não há como ratear o valor da proposta." |
+| **W-C1** | Editar orçamento congelado | "Esta proposta está congelada desde `<data>`. Suas alterações não mudam os valores até você reabrir o orçamento." |
+| **E-C3** | Não-admin tenta reabrir (I6a) | "Só o administrador da organização pode reabrir um orçamento congelado." — código de erro `NAO_AUTORIZADO_REABRIR`; HTTP 403 quando a ação for exposta por rota |
 
-**Exemplo trabalhado — o critério de sucesso nº 1 da Fase D ("enviada por
-R$ 4.584,77, reaberta por R$ 4.584,77"):**
-
-```
-Entrada: orçamento com 3 linhas de proposta, custo atribuído IGUAL nas três
-         (Seção 5.2); preço final ao vivo = 4.584,77; congeladoEm = null
-
-Passo 1 — rateio ao vivo:        4.584,77 ÷ 3 = 1.528,2566...
-Passo 2 — arredondamento (5.2: as N−1 primeiras arredondam, a última absorve):
-          L1 = 1.528,26   L2 = 1.528,26
-          L3 = 4.584,77 − 1.528,26 − 1.528,26 = 1.528,25
-          conferência: 1.528,26 + 1.528,26 + 1.528,25 = 4.584,77 ✓
-Passo 3 — "Gerar proposta" (ato único, I1):
-          grava valorRateado = 1.528,26 · 1.528,26 · 1.528,25
-          grava congeladoEm  = 2026-08-01T14:22:00Z
-Saída:   estaCongelado = true. Proposta e PDF passam a LER esses três números
-         (R2), nunca a recalculá-los.
-
-O marceneiro então acrescenta um 4º item, de custo atribuído igual aos demais:
-Passo 4 — preço final AO VIVO passa a 4.584,77 × 4 ÷ 3 = 6.113,0266... = 6.113,03
-Passo 5 — a aba Proposta e o PDF CONTINUAM exibindo 1.528,26 / 1.528,26 /
-          1.528,25, total 4.584,77, porque estaCongelado = true (R2).
-          O 6.113,03 só aparece na tela de trabalho, nunca na proposta.
-Passo 6 — ele congela de novo (I3):  6.113,03 ÷ 4 = 1.528,2575
-          L1..L3 = 1.528,26  (3 × 1.528,26 = 4.584,78)
-          L4     = 6.113,03 − 4.584,78 = 1.528,25
-          conferência: 4.584,78 + 1.528,25 = 6.113,03 ✓
-          congeladoEm passa a 2026-08-01T15:40:00Z (sobrescreve; sem histórico)
-```
-
-**Exemplo trabalhado — o predicado em uso: retroatividade do kerf (8.2):**
-
-```
-Entrada: o operador troca a espessura de serra no perfil de 0 para 3 mm.
-         Dois orçamentos, ambos com as MESMAS 40 peças de 550 × 400 do exemplo
-         da Seção 8.2 (chapa 2750 × 1840, sem veio):
-         A — congeladoEm = 2026-07-20T10:00:00Z, com lista de material congelada
-         B — congeladoEm = null
-
-Passo 1 — B (não congelado): o plano é recalculado ao vivo com kerf 3 →
-          16 peças por chapa → 40 ÷ 16 = 2,5 → N = 3 chapas (eram 2 com kerf 0)
-Passo 2 — A (congelado): o snapshot de lista_material continua com N = 2 chapas
-          e os valorRateado continuam os mesmos. Nenhuma escrita acontece —
-          `lista_material` não tem política de UPDATE e nada reescreve
-          valorRateado sem um novo ato de congelamento (I5)
-Saída:   aviso da UI antes de salvar o perfil, enunciável pela primeira vez:
-         "1 orçamento não congelado será recalculado"
-         — contagem de `congeladoEm === null` na organização
-Leitura: o predicado do aviso é `estaCongelado`, NÃO a existência de lista de
-         material congelada. E a imunidade de um snapshot já congelado vale por
-         si (I5), mesmo num orçamento não congelado: o que a 8.2 chamava de
-         "orçamento não congelado" é, com precisão, "o que ainda é calculado
-         ao vivo".
-```
-
-**Onde isto aterrissa no schema**: `.maestro/tmp/schema-v2.1-delta.sql` §9
-(coluna `orcamento.congelado_em timestamptz null`, RLS inalterada, sem política
-nem índice novo). Rascunho de referência — quem escreve a migration é o
-`backend-engineer`.
+> **Quem pode reabrir — Q-18, respondida em 2026-08-03: só o papel
+> `admin`/dono.** A regra vive na invariante **I6a** acima (checagem de
+> `perfil.papel === 'admin'` dentro da Server Action, antes de qualquer
+> escrita) e no erro **E-C3**. Nenhuma política de RLS muda por causa disso.
+>
+> *Nota de robustez, não é pendência:* hoje toda organização tem exatamente um
+> usuário, criado como `admin` pela trigger `handle_new_user` — na prática o
+> dono é o único que consegue reabrir. A regra foi escrita **por papel**, não
+> por "único usuário existente", então no dia em que houver convite e mais de um
+> membro (ou mais de um `admin`) ela continua valendo sem alteração. Nada a
+> modelar além disso.
 
 ### 5.5 Resumo financeiro — 6 campos (briefing 7.4)
 
@@ -1250,7 +1307,7 @@ type LinhaProposta = {
   itens: string[]             // 1..N itemIds (módulos e/ou placas)
   imagem: RenderRef           // render automático DO CONJUNTO de itens
   descricao: string           // pré-preenchida a partir dos dados dos itens
-  valorRateado: number | null // null até o 1º congelamento (5.4.1); sobrescrevível (override manual)
+  valorRateado: number        // congelado no fechamento; sobrescrevível (override manual)
 }
 ```
 
@@ -1280,12 +1337,12 @@ sobrevive a reload. A V2 persiste tudo, com tenant.
 | **Produto** | Org | Chapas, ferragens, LEDs, acessórios | **Cópia no signup** (D-15) — preço é local |
 | **Módulo / Gabarito** | Global + Org | Por categoria | **[V2.1]** base global read-only + **fork** + **criação do zero** + **promoção só do operador** (7.1) |
 | **[V2.1] Preset de elemento de parede** | Org | Só `nome` (+ largura/altura de prefill) | RLS por org. **Não é Produto**, não tem preço nem status (Seção 3.2.3) |
-| **Orçamento** | Org | Ref. ao Cliente, status (comercial), itens, **prazo de entrega**, **[Fase D] `congeladoEm`** (5.4.1 — `null` = não congelado; ortogonal ao status) | RLS por org |
+| **Orçamento** | Org | Ref. ao Cliente, status, itens, **prazo de entrega**, **[V2.1] `congeladoEm` (5.4.1)**, **[V2.1] `etapaEsteira` (7.2)** | RLS por org |
 | **Ambiente** | Orçamento | Nome, ordem | **[V2.1] N por orçamento**; `on delete cascade` do orçamento |
 | **Parede** | Ambiente | Nome livre, altura, largura, `alturasOverride`, elementos, itens posicionados | **[V2.1] N por ambiente**; `on delete cascade` do ambiente |
 | **Elemento contínuo** | Parede/Conjunto | Tampo, rodapé, tamponamento | — |
 | **Linha de Proposta** | Orçamento | Agrupamento, render, descrição, `valorRateado` congelado | — |
-| **Lista de material congelada** | Orçamento | Snapshot congelado, extraível (D-08: texto/CSV). **[Fase D]** Uma linha por congelamento (insert-only, imutável) — é o congelamento **do material**, e **não** é o que responde `estaCongelado` (5.4.1) | — |
+| **Lista de material fechada** | Orçamento | Snapshot congelado, extraível (D-08: texto/CSV) | — |
 
 > **[V2.1] O plano de corte não é entidade persistida.** Ele é **derivado**:
 > calculado a partir das peças, dos parâmetros de chapa e do kerf, de forma
@@ -1356,6 +1413,355 @@ Saída:    outras orgs veem G7' e podem forkar (fork de G7' → origemGabaritoId
 **Efeito no fork existente:** forkar um global continua sendo cópia com
 `origemGabaritoId` = id do global. Nada muda no caminho 2.
 
+### 7.2 [V2.1] Etapa de esteira do orçamento (Q-6 e Q-15 — resolvidas em 2026-08-02)
+
+> **Decisão do operador (2026-08-02)**: a esteira é **workflow real**, não campo
+> select manual. O sistema **transiciona sozinho** conforme ações do usuário.
+> Isso revogou o "campo manual" como opção. Nota histórica: o `docs/PRD.md`
+> dizia "workflow automático é projeto próprio e fica fora em qualquer cenário"
+> (Seção "Fora do escopo" e 7.4) — **texto já corrigido pelo
+> `product-strategist`** (PRD, Seção 6). Não há mais contradição entre os dois
+> documentos.
+
+#### O enum
+
+```ts
+type EtapaEsteira =
+  | "novo"                  // [proposta técnica] inicial — nasce com o orçamento
+  | "visita_agendada"       // operador
+  | "projeto_3d"            // operador
+  | "aguardando_aprovacao"  // operador
+  | "fechado"               // [proposta técnica] terminal — o ciclo acabou
+```
+
+| Etapa | Origem | Terminal? | Rótulo no card (Q-15) |
+|---|---|---|---|
+| `novo` | **proposta técnica** — o operador não citou; sem ele o campo nasceria nulo e a máquina não teria entrada | não | *nenhum de esteira* — o card mostra o status comercial ("Rascunho") |
+| `visita_agendada` | operador | não | **Em andamento** |
+| `projeto_3d` | operador | não | **Em andamento** |
+| `aguardando_aprovacao` | operador | não | **Em andamento** |
+| `fechado` | **proposta técnica** — o operador não citou; sem terminal, todo orçamento fica "Em andamento" para sempre | **sim** | **Fechado** (só a partir do Lote 6 — ver nota 2 abaixo da tabela de gatilhos) |
+
+Duas notas sobre as propostas técnicas (as duas são baratas de trocar de nome;
+nenhuma regra depende do rótulo, só da posição):
+
+- **`fechado` significa *encerrado*, não *ganho***. Ganhou ou perdeu é pergunta
+  do eixo comercial (`status = aprovado | recusado`), que já existe. Por isso
+  **não** existe um estado `perdido` na esteira: seria informação derivável, e o
+  modelo não persiste derivado (Seção 0). Bate com a Design-System §2.5, que já
+  descreve "Fechado" como *"arquivado/finalizado — distinto de aprovado"*.
+- **Não** entraram etapas de produção/instalação/medição: o operador não as
+  citou e nenhuma tela as pede. Acrescentar depois é aditivo (a máquina é por
+  posição, não por contagem).
+
+#### Onde vive, e por que não é `status`
+
+Campo novo em `Orçamento`, **ortogonal** ao `status` comercial — o mesmo
+princípio já aplicado a `congeladoEm` na 5.4.1:
+
+```ts
+etapaEsteira: EtapaEsteira   // default "novo"
+status: "rascunho" | "enviado" | "aprovado" | "recusado"   // INTOCADO
+```
+
+`status` responde *"o cliente aceitou?"*; `etapaEsteira` responde *"em que ponto
+do processo estamos?"*. Um orçamento pode estar em `projeto_3d` (esteira) e
+`rascunho` (comercial) — as duas afirmações são verdadeiras ao mesmo tempo.
+Colapsar os eixos num enum só produziria o produto cartesiano deles e tornaria
+impossível responder qualquer uma das duas perguntas.
+
+#### Transições válidas
+
+- **T1 — entre não-terminais, movimento livre (frente e trás).** De qualquer
+  etapa não-terminal o usuário pode ir a qualquer outra não-terminal. Pular é
+  normal (marcenaria que não faz 3D vai de `visita_agendada` direto para
+  `aguardando_aprovacao`) e voltar é correção de erro de digitação, que não
+  merece custo nenhum.
+- **T2 — o terminal tem porta única, nos dois sentidos.**
+  - **Entra** em `fechado` **somente** pelo gatilho de aprovação (tabela
+    abaixo). **Não** há avanço manual para `fechado`: o seletor de etapa da UI
+    oferece apenas as etapas não-terminais. Como o fluxo de aprovação está fora
+    do corte de lançamento, `fechado` é **deliberadamente inalcançável nesta
+    fase** — ver a nota logo após a tabela de gatilhos.
+  - **Sai** de `fechado` **somente** pela ação **Reabrir**, que é a mesma ação
+    da 5.4.1/I6 — reabrir descongela **e** volta a etapa para
+    `aguardando_aprovacao`. Não existe "editar a etapa" de um orçamento fechado.
+- **T3 — nenhuma transição é implícita.** Toda mudança de etapa vem de um
+  gatilho da tabela abaixo ou de uma escolha explícita do usuário. Nada muda de
+  etapa "por consequência" de recalcular, abrir tela ou salvar item.
+
+#### Gatilhos — qual ação dispara qual transição
+
+Cruzado com as ações que **existem de fato** no produto hoje:
+
+| Ação do usuário | Onde está no código | Transição | Automática? |
+|---|---|---|---|
+| Criar orçamento | `lib/orcamento/criar.ts:108` (já grava `status: "rascunho"`) | ∅ → `novo` | sim (default da coluna) |
+| **Gerar proposta** | `PropostaLab.handleGerarProposta` (`components/orcamento/PropostaLab.tsx:248`) | etapa ← `aguardando_aprovacao`, **se** a etapa atual for anterior a ela. Se já for `fechado`, **não muda** (só recongela — I3) | sim, no **mesmo ato** que congela (5.4.1) |
+| **Reabrir** | ação **nova** (Q-16) | `fechado` → `aguardando_aprovacao`; nas demais etapas não mexe | sim, junto com `congeladoEm ← null` (I6) |
+| **Aprovar orçamento** | **não existe no produto hoje** — o fluxo de aprovação está fora do corte de lançamento (`docs/PRD.md`, "Fora do escopo") | `aguardando_aprovacao` → `fechado` **e** `status ← aprovado` | sim, **quando a ação existir** |
+| Agendar visita / marcar projeto 3D | **não existe ação correspondente** no produto (o `ModuleViewer` é visualizador, não marco de processo — 4.1) | `novo`/qualquer não-terminal → `visita_agendada` / `projeto_3d` | **não — manual**, por T1 |
+
+Duas leituras honestas desta tabela, que valem como especificação:
+
+1. **Duas das cinco etapas não têm gatilho automático** porque não existe ação
+   no produto que as signifique. Elas são movidas à mão (T1). Inventar um
+   gatilho para elas seria inventar produto.
+2. **`fechado` é inalcançável nesta fase de lançamento — de propósito.** Sua
+   única porta de entrada é o gatilho de aprovação, e o fluxo de aprovação está
+   fora do corte de lançamento (decisão já tomada). `fechado` passa a ser
+   alcançável **quando o fluxo de aprovação for construído** (Lote 6,
+   pós-lançamento) e fornecer o gatilho real. Isto é **esperado e correto**, não
+   defeito do modelo: a alternativa — expor `fechado` no seletor manual — criaria
+   um beco sem saída, porque sair de `fechado` depende da ação **Reabrir**, que
+   é restrita ao papel `admin` (**I6a**, 5.4.1 — Q-18 respondida em 2026-08-03).
+   Consequências práticas no
+   lançamento: o badge **"Fechado"** (Q-15) fica especificado mas nunca renderiza;
+   a transição de saída T2 e o erro **E-E1** ficam especificados mas não
+   exercitados. Nenhum dos três é removido — todos ganham dono quando o Lote 6
+   chegar.
+
+#### Q-15 — os badges "Em andamento" e "Fechado" (resolvida)
+
+> **Decisão do operador (2026-08-02)**: *não criar um segundo campo de status*.
+> Os dois badges que a Design-System §2.5 reservou são **rótulos visuais de
+> etapas da esteira**, não valores novos do enum `status`.
+
+A regra é determinística e total — um badge por card, sem ambiguidade:
+
+```
+rotuloDoCard(status, etapaEsteira):
+  se etapaEsteira === "fechado"                → "Fechado"
+  se etapaEsteira ∈ {visita_agendada,
+                     projeto_3d,
+                     aguardando_aprovacao}     → "Em andamento"
+  senão (etapaEsteira === "novo")              → rótulo do status comercial
+                                                 ("Rascunho" | "Enviado" |
+                                                  "Aprovado" | "Recusado")
+```
+
+Com isso os 5 badges da Design-System §2.5 passam a ter origem: **Rascunho,
+Enviado, Aprovado** vêm de `status`; **Em andamento** e **Fechado** vêm de
+`etapaEsteira`. (O badge de **Recusado**, que hoje não tem token de cor, é
+lacuna do `product-designer` — observação 1 da reauditoria —, não de domínio.)
+A escolha visual de exibir **um** badge com esta precedência é confirmável pelo
+`product-designer`; o que este documento fixa é a **origem** de cada rótulo.
+
+#### Exemplo trabalhado — o ciclo completo
+
+> Os passos 4 e 5 **só ocorrem a partir do Lote 6** (pós-lançamento), quando o
+> fluxo de aprovação existir: é ele que fornece a única entrada em `fechado`. No
+> lançamento o ciclo termina no passo 3.
+
+```
+Entrada: marceneiro cria orçamento para o cliente "Ana" em 02/08
+Passo 1 — criar            → etapaEsteira = novo          · status = rascunho   · badge "Rascunho"
+Passo 2 — marca visita     → etapaEsteira = visita_agendada (manual, T1)        · badge "Em andamento"
+Passo 3 — pula o 3D e clica "Gerar proposta"
+                           → etapaEsteira = aguardando_aprovacao (gatilho)
+                             congeladoEm  = 2026-08-02T14:10:00Z (5.4.1)
+                             status       = rascunho (INALTERADO — ver A-20)    · badge "Em andamento"
+Passo 4 — cliente aprova; marceneiro marca aprovado
+                           → etapaEsteira = fechado · status = aprovado         · badge "Fechado"
+Passo 5 — cliente pede mais um armário; marceneiro clica "Reabrir"
+                           → etapaEsteira = aguardando_aprovacao (T2)
+                             congeladoEm  = null (I6)                           · badge "Em andamento"
+Saída:   4 etapas percorridas, 2 delas por gatilho automático (passos 3 e 5),
+         `status` mexido uma única vez, por ação comercial explícita (passo 4)
+```
+
+#### Casos de borda
+
+| Situação | Comportamento |
+|---|---|
+| Orçamentos criados **antes** desta coluna existir | Recebem `novo` no backfill da migration (`default` + `not null`). É a leitura correta: nunca entraram na esteira |
+| Usuário tenta sair de `fechado` mudando a etapa na UI | **Bloqueado** (T2). A única saída é **Reabrir**, que também descongela. Erro **E-E1** |
+| Usuário tenta mover para uma etapa que não existe no enum | Rejeitado no banco (`check`) e na Server Action. Erro **E-E2** |
+| "Gerar proposta" num orçamento já em `fechado` | Recongela (I3) e **mantém** `fechado`. Gerar proposta nunca retrocede etapa |
+| Reabrir um orçamento que não está em `fechado` | A etapa não muda; só o descongelamento acontece (I6). Não é erro |
+| Excluir o orçamento | A etapa some junto — não há histórico de esteira (**A-23**) |
+
+#### Erros de domínio
+
+| # | Situação | Mensagem |
+|---|---|---|
+| **E-E1** | Tentativa de sair de `fechado` sem reabrir | "Este orçamento está fechado. Para voltar a editá-lo, use Reabrir." |
+| **E-E2** | Etapa fora do enum | "Etapa de esteira inválida." |
+
+### 7.3 [V2.1] Excluir conta = excluir a organização (Q-13 — decidida em 2026-08-02)
+
+> **Decisão do operador (2026-08-02)**: excluir conta apaga a **organização
+> inteira**, não só o usuário. Escolha entre as três da Q-13 original
+> (cascata · anonimização · retenção por prazo): **cascata**. Não existe coluna
+> de exclusão lógica, não existe rotina de expurgo por prazo, não existe
+> anonimização. É destruição imediata e irreversível.
+
+> **Complemento do operador (2026-08-03 — Q-17)**: **quem** pode disparar é
+> **só o papel `admin`/dono**. Especificado abaixo, em "Quem pode disparar".
+> O cascade já estava completo e não muda por causa disso.
+
+#### Ponto de partida real (verificado no schema)
+
+| Fato de hoje | Consequência |
+|---|---|
+| `perfil.id references auth.users(id) on delete cascade` | Apagar o usuário do Auth apaga o `perfil`… e **só** |
+| `organizacao` **não tem** política de `delete` para `authenticated` (só `select`/`update` — `20260724181915_fundacao_multitenant.sql:88-103`) | A org **não pode** ser apagada por DML de app hoje. Isso é acerto e **permanece assim**: a única porta é a Server Action / RPC, onde a checagem de papel cabe (ver "Quem pode disparar") |
+| `perfil.papel` existe (`admin`/`vendedor`/`projetista`), mas **nenhuma política de RLS nem regra de produto o usa** | A autorização por papel **não** é do banco. Tem que ser checada **na aplicação**, dentro da própria ação |
+| Todas as tabelas de tenant têm `organizacao_id ... on delete cascade` | Apagar a linha de `organizacao` **é** o mecanismo de cascata. Não é preciso inventar nada |
+
+Ou seja: hoje "excluir conta" pelo caminho óbvio (apagar o usuário do Auth)
+deixaria a organização **órfã com todos os dados** — exatamente o oposto da
+decisão. O ato correto é apagar a linha de `organizacao`.
+
+#### Cascade documentado — o que morre quando `organizacao` é apagada
+
+| Tabela | FK | Efeito |
+|---|---|---|
+| `perfil` | `organizacao_id` cascade | apagado (todos os usuários da org) |
+| `cliente` | `organizacao_id` cascade | apagado |
+| `produto` | `organizacao_id` cascade | apagado (catálogo é cópia por org — D-15) |
+| `gabarito` | `organizacao_id` cascade, **nullable** | apagados **só os da org**. Os globais (`organizacao_id is null`) **sobrevivem** — corretíssimo, são de todo mundo |
+| `orcamento` | `organizacao_id` cascade | apagado → e com ele, por FK própria: |
+| ↳ `ambiente` | `orcamento_id` cascade | apagado |
+| ↳ `parede` | `ambiente_id` cascade | apagado (com `elementos`/`itens` no jsonb) |
+| ↳ `linha_proposta` | `orcamento_id` cascade | apagado (inclui `valor_rateado` congelado) |
+| ↳ `lista_material` | `orcamento_id` cascade | apagado (inclui todo o histórico de snapshots) |
+| ↳ `elemento_continuo` | `orcamento_id` cascade | apagado |
+| `elemento_parede_preset` | `organizacao_id` cascade (tabela nova, Q-5 — delta §5) | apagado |
+| **Toda tabela futura com `organizacao_id`** | **obrigatoriamente** `on delete cascade` | regra permanente: sem isso, a exclusão quebra ou deixa resíduo |
+
+#### Quatro armadilhas técnicas (nenhuma é opinião — todas saem do schema atual)
+
+1. **`orcamento.cliente_id references cliente (id) on delete restrict`
+   (`20260727090300_orcamento.sql:19`) aborta a cascata.** `RESTRICT` é
+   verificado **imediatamente**, e não espera o fim do comando — mesmo que a
+   linha de `orcamento` também vá ser apagada pela mesma cascata, a ordem entre
+   os dois ramos não é garantida e o `DELETE` da organização pode falhar com
+   violação de FK. Correções possíveis, nesta ordem de preferência:
+   **(a)** trocar por `on delete no action` (verificação diferida para o fim do
+   comando, e o comportamento de proteção do dia a dia continua igual); ou
+   **(b)** a rotina apagar `orcamento` antes de `cliente`, explicitamente. Sem
+   uma das duas, a exclusão de conta **falha em produção com dado real** e passa
+   em teste com org vazia.
+2. **Apagar `organizacao` não apaga `auth.users`.** A cascata é do pai para os
+   filhos: `perfil` morre, o login **não**. O usuário continua conseguindo
+   autenticar, fica sem `perfil`, `org_do_usuario()` devolve `null` e toda RLS
+   nega — aplicação inutilizável, e nenhum vazamento, mas o dado pessoal
+   (e-mail) **permanece no Auth**, o que contraria a decisão de exclusão. A
+   rotina precisa: **(i)** ler os `perfil.id` da org **antes** de apagar (depois
+   eles não existem mais), **(ii)** apagar a `organizacao`, **(iii)** apagar
+   cada usuário do Auth (Admin API / `service_role`). A ordem importa.
+3. **Storage não tem FK.** Logo da organização (buckets das Tasks 4.8–4.9) e
+   **foto de perfil pessoal** dos usuários (Task 4.11) **não** são apagados por
+   cascade nenhum. Precisam de expurgo
+   por prefixo na mesma rotina, senão sobra arquivo órfão — e, com ele, dado que
+   deveria ter sido eliminado.
+4. **`gabarito.origem_gabarito_id ... on delete set null`**: um gabarito global
+   promovido a partir de um gabarito desta org perde a linhagem (vira `null`) e,
+   com ela, a deduplicação da regra 6 da 7.1 deixa de escondê-lo. Efeito
+   correto — a org não existe mais para quem esconder — mas registrado para não
+   parecer bug depois.
+
+#### Quem pode disparar (Q-17 — respondida em 2026-08-03)
+
+**Só o papel `admin`/dono.** Um `vendedor` ou um `projetista` **não** pode
+apagar a organização.
+
+**Onde a checagem vive: na aplicação, dentro da própria Server Action / RPC —
+não no banco.** Dois fatos, já verificados no schema, obrigam isso:
+
+1. `perfil.papel` existe mas **nenhuma política de RLS o consulta**. Não há
+   autorização por papel no banco para reaproveitar.
+2. Não existe política de `delete` em `organizacao` para `authenticated`, **de
+   propósito** — e essa política continua não existindo. Logo a **única** porta
+   para a exclusão é a Server Action / RPC `SECURITY DEFINER`. Ter uma porta só
+   é o que torna a checagem de aplicação suficiente: não há caminho paralelo por
+   PostgREST para contorná-la.
+
+**Como a checagem acontece** — sequência obrigatória, e a ordem faz parte da
+especificação:
+
+```
+1. resolve o usuário autenticado (auth.uid()) — nunca um id vindo do client
+2. lê perfil.papel desse usuário, na organização alvo
+3. se papel !== 'admin'  → ABORTA com E-D1. Nada é apagado. Nenhum passo do
+                           cascade, nenhuma chamada ao Auth, nenhum Storage
+4. só então: confirmação explícita já dada → executa o cascade (passos 1–5 do
+   exemplo trabalhado abaixo)
+```
+
+A checagem é a **primeira** operação da ação, antes da leitura dos perfis
+(armadilha 2) e antes de qualquer `delete`. Rejeição é **explícita** — nunca
+falha silenciosa, nunca sucesso aparente:
+
+| Situação | Comportamento |
+|---|---|
+| `papel === 'admin'` | prossegue |
+| `papel` é `vendedor` ou `projetista` | **E-D1**, código `NAO_AUTORIZADO_EXCLUIR_ORG`, HTTP 403 se exposta por rota |
+| sem sessão (`auth.uid()` nulo) ou sem `perfil` na org alvo | mesma rejeição **E-D1** — ausência de papel não é `admin` |
+
+| # | Situação | Mensagem |
+|---|---|---|
+| **E-D1** | Não-admin tenta excluir a organização | "Só o administrador da organização pode excluir a conta." |
+
+> *Nota de robustez, não é pendência:* hoje toda organização tem exatamente um
+> usuário, criado como `admin` pela trigger `handle_new_user` — na prática só o
+> dono existe para disparar. A regra foi escrita **por papel**, não por "único
+> usuário existente hoje", então quando houver convite e uma org com vários
+> membros — inclusive vários `admin` — ela já vale sem alteração. Nada a
+> modelar além disso.
+
+#### Regras da ação
+
+1. **Confirmação explícita obrigatória.** Não é ação de um clique. O desenho do
+   diálogo é do `product-designer` (reaproveitar o padrão de confirmação
+   destrutiva que já existe); o domínio só exige que a confirmação exista, seja
+   explícita e diga o que será apagado.
+2. **Irreversível e sem undo.** Nenhum soft-delete, nenhuma lixeira, nenhum
+   prazo de retenção — foi a escolha do operador entre as três alternativas.
+3. **Não é DML de app.** A exclusão **não** ganha política de `delete` em
+   `organizacao` para `authenticated`. Criar essa política contradiria a Q-17
+   ("qualquer membro apaga o tenant com uma chamada PostgREST", sem passar pela
+   checagem de papel). O caminho é uma Server Action / RPC `SECURITY DEFINER`
+   com a condição `perfil.papel === 'admin'` **dentro** dela — ver "Quem pode
+   disparar".
+4. **Revisão de segurança é pré-requisito de implementação**, não follow-up:
+   é a única operação destrutiva multi-tabela do produto e a única que toca
+   `auth.users` e Storage. Recomendação registrada: `security-auditor` revisa a
+   task antes do merge.
+
+#### Exemplo trabalhado — cascata
+
+```
+Entrada: org "Marcenaria Silva" com 1 admin, 12 clientes, 34 orçamentos
+         (com ambientes, paredes, linhas de proposta e listas de material),
+         180 produtos de catálogo, 9 gabaritos próprios e 1 gabarito promovido
+         a global (G7' , organizacao_id = null, origem = G7)
+         quem chama: ana@silva.com, perfil.papel = admin
+Passo 0 — checa o papel do chamador: admin ✓ (se não fosse: E-D1, aborta aqui)
+Passo 1 — lê os perfis da org: [ana@silva.com]                     (1 usuário)
+Passo 2 — delete from organizacao where id = silva
+          → cascata apaga: 1 perfil · 12 clientes · 180 produtos · 9 gabaritos ·
+            34 orçamentos → e por eles: ambientes, paredes, linhas de proposta,
+            listas de material, elementos contínuos e presets de elemento
+Passo 3 — G7' (global) SOBREVIVE, com origem_gabarito_id ← null (armadilha 4)
+Passo 4 — apaga ana@silva.com de auth.users (armadilha 2)
+Passo 5 — apaga os objetos de Storage sob o prefixo da org (armadilha 3)
+Saída:   0 linha remanescente com organizacao_id = silva, em nenhuma tabela ·
+         0 login remanescente · 1 gabarito global preservado e sem linhagem
+```
+
+#### Casos de borda
+
+| Situação | Comportamento |
+|---|---|
+| Org com **mais de um** usuário | O cascade apaga **todos** os perfis e todos os logins. É a consequência direta da decisão — e é por isso que só `admin` dispara (Q-17) |
+| **Não-admin** clica "excluir conta" | **Rejeitado** com **E-D1**, antes de qualquer escrita. Nada é apagado, nem o próprio acesso dele |
+| Usuário que quer sair **sem** apagar a org (só a própria conta) | **Não modelado, e continua fora de escopo** — a Q-17 respondeu quem exclui a org, não criou uma segunda ação. "Sair da organização" só faz sentido quando existir convite/gestão de membros; até lá não há usuário não-admin para sair |
+| Org com orçamento congelado / proposta já enviada ao cliente | Apagada junto. Não há retenção (decisão do operador). O PDF que o cliente recebeu é registro externo |
+| Falha no meio (org apagada, Auth não) | Estado inconsistente **tolerável e detectável**: usuário sem perfil, RLS nega tudo. A rotina deve ser idempotente e poder ser reexecutada para limpar o Auth |
+| Último gabarito global promovido pela org | Sobrevive (regra: global é de todos), com linhagem nula |
+
 ---
 
 ## 8. Veio de chapa (briefing 7.3) — restrição no bin-packing
@@ -1388,16 +1794,10 @@ de UX — a representação visual precisa mostrar a direção do veio).
 
 - **Bin-packing aceita rotação apenas quando `!temVeio`.** Com veio, a peça é
   posicionada respeitando o `sentidoVeio` — a rotação deixa de ser livre.
-- **A restrição já está implementada e em produção** — entregue na **Task 12.5**
-  (Fase B, concluída). Verificação de código de 2026-08-01:
-  `lib/engine/box/cutting.ts:55` (`const inverte = p.temVeio && p.sentidoVeio
-  === "largura"`), `:90` (`p.temVeio ? cabeSemGirar(p) : ...`) e `:98`
-  (`!p.temVeio && !cabeSemGirar(p)`) respeitam `temVeio`/`sentidoVeio`. Não há
-  trabalho pendente aqui e **não há aviso a dar ao operador**: a correção do
-  aproveitamento otimista para chapas com veio já aconteceu, há duas fases — é
-  fato passado, não risco futuro. (O texto anterior desta linha dizia que o
-  motor "hoje rotaciona sem restrição"; era um resíduo da Fase A, corrigido na
-  reauditoria de 2026-08-01, achado 9.)
+- Verificação de código confirmada: `lib/engine/box/cutting.ts:75-77` **hoje
+  rotaciona sem restrição** (`{...p, w: p.h, h: p.w}`). Consequência a avisar
+  ao operador: o aproveitamento atual está otimista para chapas com veio e
+  **vai piorar (ficar correto)** após a restrição. Não é regressão.
 
 > **[V2.1] A restrição de veio não muda nesta rodada.** A melhoria de algoritmo
 > das Seções 8.1–8.5 **respeita exatamente a mesma regra**: rotação livre
@@ -1492,13 +1892,9 @@ físico).
   reproduz exatamente o comportamento de hoje (útil para comparar com os testes
   existentes).
 - **Retroatividade**: mesma disciplina das alturas de faixa (Seção 3.2.1) —
-  mudar o kerf no perfil muda **todo plano calculado ao vivo**, isto é, o de
-  todo orçamento com `congeladoEm === null` (**Seção 5.4.1**; "não congelado"
-  deixou de ser figura de linguagem e passou a ser predicado consultável). O que
-  já está congelado é imune: a lista de material congelada e os `valorRateado`
-  congelados não são reescritos por recálculo nenhum (5.4.1, invariante I5). A
-  UI precisa dizer isso **antes** de salvar o perfil, com a contagem de
-  orçamentos não congelados da organização.
+  mudar o kerf no perfil muda o plano de todo orçamento **não congelado**. A
+  lista de material congelada é imune (Seção 5.4). A UI precisa dizer isso antes
+  de salvar o perfil.
 - **Override por orçamento: não no primeiro corte.** Se o marceneiro terceirizar
   o corte numa seccionadora de terceiro com outro disco, o override é a extensão
   natural, e o padrão já existe no doc (precificação, montagem, alturas). Não
@@ -1862,6 +2258,12 @@ o limite "1 parede por ambiente" do primeiro corte (era limite de UI).
 | Bin-packing melhorado **100% TypeScript em Web Worker** (guilhotina com retângulos livres + busca por permutação) — resolve 3.1 e 3.3 | decisão do operador (31/07) | Seções 8.3–8.6 |
 | **OR-Tools / worker Python / fila / entidade de job de plano de corte — DESCARTADOS** | decisão do operador (31/07) | removido: **não há Seção 12**; as quatro perguntas abertas por aquela direção deixam de existir (nota ao pé de 11.3) |
 | `ModuleViewer` (3D estático) consome só dado existente de `BoxModule` | decisão do operador (31/07) | Seção 4.1 |
+| **Estado congelado do orçamento** (`congeladoEm`) — fecha o achado bloqueante 1 da reauditoria | reauditoria 01/08 | **Seção 5.4.1** |
+| **Q-16** reabertura: avisa em vez de bloquear; existe "Reabrir"; `congeladoEm` volta a `null` e `valorRateado` é preservado | decisão do operador (02/08) | **Seção 5.4.1 (I6)** |
+| **Q-6** esteira é **workflow real** com transições automáticas — enum, transições e gatilhos | decisão do operador (02/08) | **Seção 7.2** |
+| **Q-15** badges "Em andamento"/"Fechado" são **etapas da esteira**, não status novo | decisão do operador (02/08) | **Seção 7.2** (mapeamento badge → etapa) |
+| **Q-13** excluir conta apaga a **organização inteira** (cascata; sem anonimização nem retenção) | decisão do operador (02/08) | **Seção 7.3** |
+| **Q-14** `ModuleViewer` com **textura real** dos ~380 padrões; `especificacao.texturaUrl` no Produto tipo `chapa` | decisão do operador (02/08) | **Seção 4.1.1** |
 
 ### 11.2 O que NÃO é lacuna de modelo (não mexer aqui)
 
@@ -1871,7 +2273,7 @@ correção é task de implementação, não mudança de spec:
 
 | Item do backlog | Onde o modelo já resolve |
 |---|---|
-| 0.7 / 1.4 / 2.2 — congelamento da proposta | Seção 5.4 (`valorRateado` persistido no ato de congelamento, nunca recalculado ao renderizar) + **[Fase D] Seção 5.4.1**, que define o estado em si (`congeladoEm`, predicado, regra de leitura). Até 2026-08-01 esta linha era falsa por omissão: o modelo mandava ler "o congelado" sem dizer o que era estar congelado |
+| 0.7 / 1.4 / 2.2 — congelamento da proposta | Seção 5.4 **+ 5.4.1**. A 5.4 sozinha **não bastava**: dizia "persistido no fechamento" sem definir o estado que responde "está congelado?". A lacuna foi reconhecida na reauditoria de 01/08 e fechada pela **5.4.1** (`congeladoEm`, leituras R1/R2, invariantes I1–I6). Hoje é defeito de execução; antes da 5.4.1 era lacuna de modelo |
 | 1.5 — paridade financeiro ↔ proposta | Seção 5.2 (rateia-se o preço final; soma fecha por construção) |
 | 1.6 — resíduo de arredondamento | Seção 5.2 (última linha absorve o resíduo) |
 | 1.7 — chapa de 6 mm não contada | Seção 5.2 ("segregado por material", sem limiar de aproveitamento em lugar nenhum) |
@@ -1881,14 +2283,21 @@ correção é task de implementação, não mudança de spec:
 
 ### 11.3 Pendências deliberadamente NÃO modeladas
 
-| # | Assunto | Situação |
+**Vivas** (bloqueiam implementação): **nenhuma.** As duas últimas — Q-17 e Q-18
+— foram respondidas pelo operador em 2026-08-03 e estão na tabela abaixo.
+
+**Resolvidas** (não reabrir):
+
+| # | Assunto | Resolução |
 |---|---|---|
-| **Q-6** | Status de esteira (visita / projeto 3D / aguardando aprovação): campo manual ou workflow real | **PLACEHOLDER — não modelado.** Decisão do operador ainda não tomada. Não escrever tipo, enum nem coluna antes disso. |
-| **Q-7** | Corte mínimo de lançamento | Escopo, não domínio — cabe ao backlog-planner |
-| **Q-13** | **Excluir conta apaga o `usuario` ou a `organizacao` inteira?** E quando o excluído é o **único usuário da org**, o que acontece com `organizacao`, `orcamento`, `produto` e `gabarito`: **cascata** (apaga tudo), **anonimização** (a linha permanece, o dado pessoal sai) ou **retenção por prazo** antes do expurgo? | **PENDÊNCIA DO OPERADOR — não modelada.** Nenhuma regra de `ON DELETE` para conta, nenhuma coluna de exclusão lógica/anonimização e nenhuma rotina de expurgo nascem daqui antes da resposta. É operação **irreversível sobre dado de cliente final**, com implicação de **LGPD** (direito à eliminação × necessidade de guarda do orçamento já emitido) — não se decide por dedução. Bloqueia **só** a parte destrutiva do RF-31 (`docs/Backlog.md` Task 4.15); o resto da área de segurança da conta não depende dela |
-| **Q-14** | **Textura de material no `ModuleViewer`**: o produto lança só com **cor sólida**, ou o catálogo passa a mapear padrão de MDF → imagem de textura (`especificacao.texturaUrl` no Produto tipo `chapa`)? | **Do operador — é custo de produto e conteúdo, não decisão técnica.** A modelagem é trivial e está descrita em 4.1; o que não é trivial é curar, converter para WebP, hospedar e manter ~380 texturas de padrões reais (`docs/STATUS.md` Seção 5). **Recomendação registrada: lançar com cor sólida.** Enquanto não houver resposta, a prop `textureUrl` do `ModuleViewer` fica **sem origem no domínio** |
-| **Q-15** | **[Fase D] Os badges "Em andamento" e "Fechado" (Design-System §2.5) são valores novos de `orcamento.status`?** A Design-System fixou 5 badges; o domínio e o banco têm 4 valores comerciais, e "recusado" ficou sem token. "Fechado" está descrito lá como *"arquivado/finalizado — distinto de aprovado"*, ou seja, **etapa comercial** — e não o congelamento da 5.4.1, que não é status. Duas leituras possíveis: **(a)** são etapas de esteira e caem dentro da **Q-6**, nada nasce antes da resposta dela; **(b)** são dois valores comerciais novos do enum, e "recusado" ganha token | **DO OPERADOR — não modelado.** Nenhum valor novo no enum `status`, nenhum token novo antes da resposta. **Não bloqueia a 5.4.1**: congelado nunca foi status, e `congeladoEm` não depende desta resposta |
-| **Q-16** | **[Fase D] Depois de congelado, o que ainda pode ser feito com o orçamento — e existe "reabrir"?** Três comportamentos possíveis, com efeito comercial diferente: **(a)** a edição é **bloqueada** até uma ação explícita de "reabrir" (que exigiria descongelar — hoje proibido, 5.4.1 invariante I4); **(b)** a edição é livre e a tela avisa *"há mudanças depois do congelamento, regenere a proposta"* — exige um detector, e `orcamento.atualizado_em` **não é mantido** hoje (nota factual em 5.4.1), então isso é trabalho novo, não dado existente; **(c)** a edição é livre e silenciosa, e a proposta segue exibindo o valor congelado até um novo "Gerar proposta". Pesa na decisão que o cliente final já recebeu um PDF com o valor congelado | **DO OPERADOR — não modelada.** Nenhuma ação de descongelar, nenhum bloqueio de escrita e nenhum aviso de "desatualizado" nascem por dedução. **Não bloqueia** a coluna, o predicado, o ato de congelar nem o aceite do RF-22 — bloqueia só o comportamento **pós**-congelamento |
+| **Q-17** | **Quem pode disparar a exclusão da organização inteira?** | **Respondida em 2026-08-03: só o papel `admin`/dono.** Um `vendedor` ou `projetista` não exclui nada. A regra passa a viver em **7.3 → "Quem pode disparar"**: checagem **de aplicação**, dentro da própria Server Action / RPC (`perfil.papel === 'admin'` para o `auth.uid()` chamador), como **primeira** operação, antes de qualquer `delete`, da leitura dos perfis e da limpeza de Auth/Storage. Rejeição explícita: erro **E-D1** / `NAO_AUTORIZADO_EXCLUIR_ORG` / 403. **Não** nasce política de `delete` em `organizacao` para `authenticated` — a porta única continua sendo a Server Action, e é o que torna a checagem de aplicação suficiente. Cascade, armadilhas e casos de borda seguem como estavam em **7.3** |
+| **Q-18** | **Quem pode reabrir um orçamento congelado?** | **Respondida em 2026-08-03: só o papel `admin`/dono** — mesma resposta e mesmo padrão da Q-17. A regra passa a viver em **5.4.1, invariante I6a**: checagem de `perfil.papel === 'admin'` dentro da Server Action, antes de qualquer escrita e antes até do caminho idempotente; rejeição explícita com **E-C3** / `NAO_AUTORIZADO_REABRIR` / 403. O resto de **I6** (efeito em `congeladoEm`, `valorRateado` e `etapaEsteira`) permanece inalterado |
+| **Q-7** | Corte mínimo de lançamento | **Fechada pelo operador — D-30** (`docs/PRD.md`). Era escopo, não domínio; deixou de ser pendência viva. Nada neste documento depende dela |
+| **Q-6** | Status de esteira: campo manual ou workflow real? | **Workflow real**, com transições automáticas. Enum de 5 etapas, transições T1–T3 e gatilhos por ação real do produto — **Seção 7.2**. Duas etapas (`novo`, `fechado`) são **proposta técnica** marcada como tal |
+| **Q-13** | Excluir conta apaga o usuário ou a organização? Cascata, anonimização ou retenção? | **A organização inteira, por cascata.** Sem exclusão lógica, sem anonimização, sem prazo de retenção. Confirmação explícita obrigatória. Cascade, armadilhas de FK/Auth/Storage e casos de borda em **Seção 7.3**. **Quem pode disparar → Q-17, respondida: só `admin`** |
+| **Q-14** | `ModuleViewer` com cor sólida ou textura real? | **Textura real.** `especificacao.texturaUrl` no `Produto` tipo `chapa` (campo, não tabela — justificativa em **4.1.1**). A recomendação de lançar com cor sólida foi rejeitada. As ~380 imagens são **pré-requisito de conteúdo** da task |
+| **Q-15** | Os badges "Em andamento" e "Fechado" da Design-System §2.5 são status novos? | **Não — são rótulos de etapas da esteira** (Q-6). Nenhum campo de status novo. `fechado` → "Fechado"; qualquer etapa intermediária → "Em andamento"; `novo` → o card mostra o status comercial. Função de mapeamento em **7.2** |
+| **Q-16** | O que acontece ao editar um orçamento depois de congelado? | **Avisa** (W-C1) em vez de bloquear em silêncio, e **existe "Reabrir"**: `congeladoEm ← null`, valores voltam a ser recalculáveis (R1), `valorRateado` **preservado** (não zerado — a coluna é a mesma do override manual), etapa volta de `fechado` para `aguardando_aprovacao`. Invariante **I6** e exemplo trabalhado em **5.4.1**. **Quem pode reabrir → Q-18, respondida: só `admin`** (I6a) |
 
 > **Extintas em 2026-07-31 — não são pendências, não reabrir.** As quatro
 > perguntas que a direção OR-Tools/assíncrona havia aberto (onde roda o worker
@@ -1916,7 +2325,10 @@ correção é task de implementação, não mudança de spec:
 | **A-17** | A busca é limitada por **nº fixo de iterações**, nunca por relógio, para garantir determinismo (Seção 8.3) | Se alguém trocar por limite de tempo, o mesmo orçamento passa a produzir dois preços em duas aberturas da tela. É a assunção mais cara de violar desta rodada |
 | **A-18** | `MetaBuscaCorte` (iterações, tempo, chapas antes/depois) é **efêmero**, não persistido (Seção 8.4) | Se o operador quiser histórico de otimização por orçamento, aí sim nasce persistência — e com ela a obrigação de mantê-la coerente. Hoje não há demanda |
 | **A-19** | O `ModuleViewer` não exige campo novo: `color` sai de `corParaHex(material.cor)`, derivação já existente (Seção 4.1) | A heurística por substring erra na maioria dos ~380 padrões reais. Se o operador quiser cor fiel antes de decidir a Q-14, o campo opcional `corHex?` no Produto tipo `chapa` resolve sem tocar em `MaterialRef` |
-| **A-20** | **[Fase D] A proposta congelada não tem histórico** (5.4.1, I3): recongelar sobrescreve `valorRateado` e `congeladoEm`, e só o último congelamento existe. A lista de material, essa sim, guarda uma linha por congelamento | Se o operador precisar reimprimir **exatamente** o PDF enviado mês passado, a proposta passa a precisar da mesma disciplina insert-only da `lista_material` (uma linha por congelamento, leitura por id). É aditivo e barato agora; caro depois de meses de proposta enviada sobrescrevendo o valor anterior |
+| **A-20** | **"Gerar proposta" move a etapa de esteira, mas NÃO mexe no `status` comercial** (7.2). Gerar o PDF ≠ enviar ao cliente, e inventar a transição `rascunho → enviado` seria decidir produto | Um orçamento pode aparecer como `aguardando_aprovacao` (esteira) e `rascunho` (comercial) ao mesmo tempo. Se o operador quiser que gerar proposta também marque `enviado`, é **uma linha a mais no mesmo gatilho**, sem efeito em nenhuma outra regra |
+| **A-21** | **Não há versionamento por linha de proposta.** Reabrir + recongelar sobrescreve `valorRateado` sem histórico (I3/I6); o registro do que o cliente recebeu é o **PDF já emitido**, externo ao banco | Se o operador quiser auditoria "recebeu 4.584,00, foi reaberto e virou 4.813,20", nasce uma tabela de versão de proposta (o análogo do que `lista_material` já faz por INSERT-only). É aditivo e não invalida nada da 5.4.1 |
+| **A-22** | **Reabrir não olha o `status` comercial** — reabrir um orçamento `aprovado` é permitido (ortogonalidade, I1) | Se reabrir orçamento aprovado tiver que ser proibido, é um guard a mais na mesma ação. Nenhum exemplo trabalhado da 5.4.1 depende disso |
+| **A-23** | **A etapa de esteira não tem histórico** — guarda-se a etapa atual, não a trilha de transições nem quando cada uma ocorreu (7.2) | Se o operador quiser "quanto tempo ficou em aguardando aprovação", vira tabela de eventos. Hoje não há tela que peça isso |
 
 ### 11.5 Cobertura: dado de tela → origem
 
@@ -1934,19 +2346,18 @@ Todo dado novo exigido pelo backlog tem origem definida:
 | Modelo do tampo antes da espessura (3.10) | `ConfigTampo.modelo` (Seção 3.4.1) |
 | Fita discriminada por cor (3.5) | `MaterialRef` da peça + regra de fita por espessura (Seção 2.1) — dado já existe, falta agregação por cor na saída |
 | Rolos de fita a comprar (3.6) | `Produto` categoria `fita`, campo de tamanho de rolo no catálogo — **nunca hardcoded** |
-| Efeito de "excluir conta" (4.15) | **sem origem — Q-13 em aberto** (11.3): o que é apagado, anonimizado ou retido não está decidido, então não há regra de deleção a modelar |
+| Efeito de "excluir conta" (4.15) | `organizacao` apagada em cascata — **Seção 7.3** (Q-13 respondida). *Quem pode disparar*: só `admin`, checado na Server Action (Q-17, **7.3**) |
 | Valor final e custo no dashboard (5.8/5.9) | `Orçamento` → resumo financeiro de 6 campos (Seção 5.5) |
-| Status de esteira (5.10) | **sem origem — Q-6 em aberto** (11.3) |
+| Status de esteira (5.10) | `Orçamento.etapaEsteira` — **Seção 7.2** (Q-6 respondida) |
+| Badges "Em andamento" / "Fechado" do card (DS §2.5) | derivados de `etapaEsteira` por `rotuloDoCard()` — **Seção 7.2** (Q-15 resolvida). Não são valores de `status` |
+| Badges "Rascunho" / "Enviado" / "Aprovado" do card | `Orçamento.status` (inalterado). "Recusado" existe no domínio e **não tem token de cor** — lacuna do `product-designer`, não de domínio |
+| "Proposta congelada em `<data>`" / aviso de edição pós-congelamento | `Orçamento.congeladoEm` — **Seção 5.4.1** (I1, aviso W-C1) |
+| Valor exibido na proposta e na lista de material | `linhaProposta.valorRateado` + `lista_material.snapshot` quando congelado (R2); recalculado quando não (R1) — **Seção 5.4.1** |
+| Botão "Reabrir" | ação sobre `congeladoEm` + `etapaEsteira` — **5.4.1 (I6)** e **7.2 (T2)**. *Quem pode*: só `admin` (Q-18, **I6a**) — a UI só oferece o botão a admin, e a ação rejeita o resto (E-C3) |
 | Plano de corte exibido (chapas, peças, aproveitamento) | `planoDeCorte()` — derivado das peças + parâmetros de chapa + kerf (Seções 8.2–8.3). **Não é dado persistido** |
 | Campo "espessura de serra" em `/perfil` | `Organização/Perfil.espessuraSerraPadraoMm` (Seções 7 e 8.2) |
 | "Economizou N chapas" / estado "calculando…" | `MetaBuscaCorte` — efêmero, do retorno do motor (Seção 8.4) |
 | Nº de chapas no custo de material | `N(M)` — mesma origem de sempre (Seção 5.2), agora sensível ao kerf |
 | `ModuleViewer`: largura, altura, profundidade | `BoxModule.largura` · `.altura` · `.profundidade` (Seção 4.1) — mesma geometria do canvas 2D |
 | `ModuleViewer`: cor sólida (`color`) | derivado de `BoxModule.material.cor` via `corParaHex()` (Seção 4.1) |
-| `ModuleViewer`: textura de madeira (`textureUrl`) | **sem origem — Q-14 em aberto** (11.3) |
-| **[Fase D]** Valor exibido na aba Proposta, no PDF e no dashboard (RF-22) | `LinhaProposta.valorRateado` persistido quando `estaCongelado`; rateio ao vivo quando não (Seção **5.4.1**, regras R1/R2) |
-| **[Fase D]** "Proposta congelada em \<data\>" / estado congelado na tela | `Orcamento.congeladoEm` (5.4.1) — `null` = não congelado |
-| **[Fase D]** "N orçamentos não congelados serão recalculados" (aviso do kerf, Task 4.16) | contagem de `congeladoEm === null` na organização (5.4.1 + 8.2) |
-| **[Fase D]** "Última lista de material congelada em \<data\>" | `lista_material.criado_em` da linha mais recente (`buscarUltimaListaMaterial`) — **outro** congelamento, não o do orçamento (5.4.1) |
-| **[Fase D]** Badges "Em andamento" / "Fechado" do Design-System §2.5 | **sem origem — Q-15 em aberto** (11.3). Não confundir com `congeladoEm`: congelado não é status |
-| **[Fase D]** Aviso "editado depois de congelar" / ação "reabrir" | **sem origem — Q-16 em aberto** (11.3). `orcamento.atualizado_em` existe mas **não é mantido** por nada (nota em 5.4.1), então não serve de detector hoje |
+| `ModuleViewer`: textura de madeira (`textureUrl`) | `Produto` tipo `chapa` → `especificacao.texturaUrl` — **Seção 4.1.1** (Q-14 respondida). Imagens são pré-requisito de conteúdo do operador |

@@ -23,6 +23,26 @@
 > (RF-34, novo), modelada em `docs/Modelo-de-Dominio.md` Seções 8.1–8.6. Na
 > mesma revisão entrou o **`ModuleViewer`** (RF-38, D-33).
 >
+> **Revisão de 2026-08-02 — cinco perguntas respondidas pelo operador.**
+> **Q-6, Q-13, Q-14, Q-15 e Q-16** foram respondidas e já estão modeladas em
+> `docs/Modelo-de-Dominio.md` (Seções 7.2, 7.3, 4.1.1 e 5.4.1). Elas saem de
+> "pendentes" e passam a **resolvidas** na Seção 7.4. Duas consequências neste
+> documento: (a) a frase "workflow automático é projeto próprio e fica fora em
+> qualquer cenário" está **revogada** — a esteira é workflow automático real e
+> entra no corte de lançamento (Seção 6 e RF-33); (b) o `ModuleViewer` deixa de
+> lançar com cor sólida e passa a lançar com **textura real** (RF-38). Em
+> aberto, e **novas**: **Q-17** e **Q-18** (Seção 7.4), as duas sobre
+> **autorização por papel**.
+>
+> **Revisão de 2026-08-03 — Q-17 e Q-18 respondidas; não sobra pergunta viva.**
+> Resposta do operador, **a mesma para as duas**: **só o papel `admin`/dono**.
+> Quem exclui a organização inteira (Q-17) e quem reabre um orçamento congelado
+> (Q-18) precisam ser `admin`. As duas já estão modeladas em
+> `docs/Modelo-de-Dominio.md` — Seção 7.3 ("Quem pode disparar", erro
+> `NAO_AUTORIZADO_EXCLUIR_ORG`/403) e Seção 5.4.1 (invariante **I6a**, erro
+> `NAO_AUTORIZADO_REABRIR`/403) — e passam a **resolvidas** na Seção 7.4.
+> **Nenhuma pergunta viva bloqueia o início da execução da Fase D.**
+>
 > **Ordem de leitura para quem chega agora:** Seções 1–5 (o produto),
 > Seção 6 (o corte de lançamento vigente), Seção 10 (o que esta rodada
 > acrescenta), Seção 7.4 (o que ainda não foi decidido).
@@ -187,9 +207,24 @@ Legenda: **[E]** já existe (preservar) · **[P]** parcial · **[N]** novo
   rodando em **Web Worker do navegador**. Escopo ativo e **sem bloqueio** —
   não depende de decisão pendente nenhuma.
 - **`ModuleViewer`** (RF-38): visualização 3D **estática e não-interativa** do
-  módulo em edição. Escopo ativo; lança **com cor sólida** enquanto a Q-14
-  (Seção 7.4) não for respondida — sem resposta, a prop de textura não tem
-  origem no domínio e portanto não tem o que exibir.
+  módulo em edição. Escopo ativo; lança **com textura real** de padrão de MDF
+  (Q-14 respondida em 2026-08-02 — Modelo 4.1.1). As ~380 imagens são
+  **pré-requisito de conteúdo do operador**, não trabalho do executor; sem
+  elas o campo fica vazio e a tela cai no fallback de cor sólida.
+- **Etapa de esteira** (RF-33): **workflow automático real** — enum
+  `etapaEsteira` (`novo` · `visita_agendada` · `projeto_3d` ·
+  `aguardando_aprovacao` · `fechado`), ortogonal ao `status` comercial, com
+  transições disparadas por ação do produto ("gerar proposta", "reabrir") e
+  **duas etapas sem gatilho** (`visita_agendada`, `projeto_3d`), movidas à mão
+  porque não existe ação no produto que as signifique. Badges "Em andamento" e
+  "Fechado" são **derivados** de `etapaEsteira`, não status novo (Q-15).
+  Modelo 7.2.
+- **Congelar e reabrir orçamento** (RF-22): `congeladoEm` como carimbo de
+  tempo e a ação **Reabrir**, que zera o carimbo, preserva `valorRateado` e
+  devolve a etapa de `fechado` para `aguardando_aprovacao` (Modelo 5.4.1, I6).
+  A **condição de autorização** está fechada (Q-18, 2026-08-03): **só o papel
+  `admin`/dono** reabre — checagem de aplicação dentro da própria ação, antes
+  de qualquer escrita (Modelo 5.4.1, **I6a**).
 
 **Fora do corte de lançamento:**
 
@@ -211,10 +246,20 @@ Legenda: **[E]** já existe (preservar) · **[P]** parcial · **[N]** novo
 - Rastreio de "sobra aproveitável".
 - Fluxo de aprovação de orçamento e reexibição de prazo de entrega após
   aprovação (Lote 6 do backlog pré-lançamento, despriorizado pelo operador).
-- **Status de esteira** — Q-6 em aberto (Seção 7.4), portanto **fora até
-  haver resposta**. O workflow automático com transições é projeto próprio e
-  fica fora em qualquer cenário; se o operador decidir pelo campo manual, o
-  item volta a ser candidato ao corte de lançamento, e só então.
+- **Etapas de esteira de produção/instalação/medição.** A esteira **entrou**
+  no corte de lançamento (Q-6 respondida — ver acima), mas só com as 5 etapas
+  do enum. Nenhuma etapa de chão de fábrica foi pedida, e acrescentar depois é
+  aditivo — a máquina é por posição, não por contagem (Modelo 7.2).
+- **Gestão de membros da organização** (convite, papéis operantes, remoção).
+  Hoje toda org tem exatamente um usuário, criado como `admin` pela trigger de
+  signup. `perfil.papel` existe no schema e, até 2026-08-02, **nenhuma regra do
+  produto o usava** — era justamente por isso que Q-17 e Q-18 não podiam ser
+  deduzidas. Com as duas respondidas (Seção 7.4), `perfil.papel` passa a ser
+  lido por **exatamente duas checagens de aplicação** — excluir a organização
+  (Modelo 7.3) e Reabrir (Modelo 5.4.1, I6a). Isso **não** traz convite, papéis
+  operantes nem remoção para dentro do corte: as duas regras são escritas por
+  papel e continuam valendo sem alteração no dia em que a gestão de membros
+  existir.
 
 > Nota que continua valendo: "um modo de precificação" é recorte de UI, não de
 > modelo — o domínio já é desenhado para os 4 modos, para não haver migração ao
@@ -291,23 +336,50 @@ reabertas** (nenhuma recebe número D próprio; o endereço canônico é o model
 | **Q-3** — agrupamento cross-faixa é comercial, físico, ou os dois? | Resolvida: **os dois coexistem**. `Conjunto` continua **físico** (mesma parede, mesma faixa, adjacência automática, base de tampo/rodapé/tamponamento); `LinhaProposta` é o agrupamento **comercial**, criado pelo usuário, podendo cruzar faixas **e paredes** dentro do ambiente. Nunca colapsar num botão só — Modelo 3.3 e 6 |
 | **Q-4** — qual o BOM de cada modelo de tampo? | Resolvida: tampo tem **três** modelos (`simples` · `engrossado` · `dobrado`); a escolha é **modelo antes da espessura**; espessuras válidas por modelo (simples 15/18/25 · engrossado/dobrado 30/45/60 base 15 e 36/54 base 18); **6 mm nunca**; BOM do `simples` fechado com exemplo trabalhado — Modelo 2.1 e 3.4.1 |
 | Item 5.2 — "pé direito" redundante | Resolvido: `Parede.altura` é a altura física; `peDireito` é o **limite superior de instalação do aéreo**. Não são o mesmo campo, e o rótulo de UI precisa dizer isso — Modelo 3.2.1 |
-| Item 5.3 — rolo de fita apareceu com tamanhos diferentes | Decidido como produto, **não construído ainda**: tamanho do rolo é **campo novo do catálogo** (categoria `fita`), nunca constante no código; o cálculo de rolos lê do cadastro — Modelo 11.5. O campo **não existe hoje** (`lib/produto/tipos.ts`: a especificação de `fita` é só `{ unidade: "m" }`) — criá-lo é **task própria no Backlog**, com a task de motor que lê o campo dependendo dela, no mesmo padrão do kerf. Não há decisão de produto pendente aqui; há trabalho a fazer. Cadastrar os tamanhos reais, depois do campo existir, é tarefa de dados do operador |
+| Item 5.3 — rolo de fita apareceu com tamanhos diferentes | Resolvido por construção: **tamanho do rolo é campo do catálogo**, nunca constante no código; o cálculo de rolos lê do cadastro — Modelo 11.5. Cadastrar os tamanhos reais é tarefa de dados do operador, não decisão de produto |
 | **Substituição do algoritmo de bin-packing** (adendo do operador, substitui a D-32 revogada) | Resolvida: **guilhotina com lista de retângulos livres + meta-heurística (simulated annealing ou algoritmo genético, escolha do motor-engineer)**, **100% TypeScript**, executada num **Web Worker do navegador**. **Kerf** (espessura de serra) vira parâmetro, com campo `espessuraSerraPadraoMm` no perfil da organização (default **3 mm**, editável, `0` válido). **Zero infraestrutura nova**: sem worker externo, sem fila, sem tabela, sem entidade, sem RLS nova. Fecha juntos os itens **3.1** (bug de aproveitamento) e **3.3** (troca de algoritmo) do backlog pré-lançamento — Modelo 8.1–8.6. Detalhe do requisito: **RF-34** (Seção 10.3) |
 | Item 5.4 — rotação de peças × veio da chapa | Resolvido no modelo: **bin-packing só rotaciona quando `!temVeio`** — Modelo 8, invariante V3. A restrição **não muda** com o algoritmo novo: ele não passa a girar peça com veio para ganhar aproveitamento nem restringe peça sem veio. A falha de empacotamento relatada (item 3.1) é corrigida pelo RF-34 — Modelo 8.3 e 8.6 |
 | Item 5.7 — chapa de 6 mm não contada | Regra fechada: **tudo na categoria "chapa" conta como chapa**, sem limiar de aproveitamento em lugar nenhum (Modelo 5.2). A causa (filtro no cálculo × classificação errada no catálogo) precisa ser **verificada no dado antes** de mexer no código — é critério de investigação, não decisão em aberto |
 
 ### 7.4 Decisões pendentes — não decidir por conta própria
 
-Nenhuma delas foi respondida. **Nenhuma pode ser preenchida por dedução em
-task de execução**: quem esbarrar numa delas para e devolve ao operador.
+#### Respondidas pelo operador em 2026-08-02 — fechadas, não reabrir
 
-| # | Pergunta | O que bloqueia |
-|---|---|---|
-| **Q-6** | Status de esteira (visita agendada / projeto 3D / aguardando aprovação) é **campo select manual** ou **workflow real** com transições automáticas? | Bloqueia **só** o item de dashboard (RF-33, backlog 5.10). Não bloqueia mais nada. Sem resposta, **não existe tipo, enum nem coluna** de status de esteira (Modelo 11.3). Workflow automático é projeto próprio e está fora do corte de lançamento em qualquer cenário |
-| **Q-13** | **Excluir conta** (item 4.15) apaga o **usuário** ou a **organização inteira**? E o que acontece quando o usuário excluído é o único da org — orçamentos, catálogo e gabaritos são apagados, anonimizados ou retidos por prazo? | Bloqueia **só** a parte destrutiva do RF-31. A troca de senha e a área de segurança não dependem disso. Como é operação irreversível sobre dado de cliente final (LGPD), não se implementa por dedução |
-| **Q-14** | O `ModuleViewer` lança **só com cor sólida**, ou o catálogo passa a mapear **textura real de madeira** por padrão de MDF (`textureUrl`)? | Bloqueia **só** a prop `textureUrl` do RF-38 — o visualizador com cor sólida não depende dela. Não é decisão técnica (a modelagem é trivial, Modelo 4.1), é **custo de produto e conteúdo**: curar, recortar, converter para WebP, hospedar e **manter** ~380 texturas de padrões reais quando o fornecedor troca a linha. **Recomendação técnica registrada pelo data-architect: lançar com cor sólida.** Enquanto não houver resposta, a prop existe no componente e nada no catálogo a alimenta |
-| **Q-15** | Os badges **"Em andamento"** e **"Fechado"** que a Design-System §2.5 fixa são **valores novos do status comercial do orçamento**? Hoje o domínio e o banco têm quatro (`rascunho · enviado · aprovado · recusado`), a Design-System desenhou cinco, e "recusado" ficou sem token. "Fechado" está descrito lá como *"arquivado/finalizado — distinto de aprovado"*, ou seja, **etapa comercial** — e **não** é o congelamento do RF-22, que não é status. Duas leituras: **(a)** são etapas de esteira e caem dentro da **Q-6**, e nada nasce antes da resposta dela; **(b)** são dois valores comerciais novos, e "recusado" ganha token | Bloqueia **só** os badges dos cards de orçamento (dashboard e lista). Sem resposta, **nenhum valor novo de status e nenhum token novo** nascem. **Não bloqueia o RF-22**: congelado nunca foi status (Modelo 5.4.1, invariante I2) |
-| **Q-16** | Depois de congelado, **o que ainda pode ser feito com o orçamento — e existe "reabrir"?** Três comportamentos, com efeito comercial diferente: **(a)** a edição é **bloqueada** até uma ação explícita de "reabrir" (que exigiria descongelar, hoje proibido — Modelo 5.4.1, invariante I4); **(b)** a edição é livre e a tela **avisa** *"há mudanças depois do congelamento, regenere a proposta"* — o que exige um detector que **não existe hoje** (`orcamento.atualizado_em` existe mas nada o mantém, então não dá para comparar datas); **(c)** a edição é livre e **silenciosa**, e a proposta segue exibindo o valor congelado até um novo "Gerar proposta". Pesa na decisão que o cliente final já recebeu um PDF com o valor congelado | Bloqueia **só** o comportamento **pós**-congelamento: nenhuma ação de descongelar/reabrir, nenhum bloqueio de escrita e nenhum aviso de "proposta desatualizada" nascem por dedução — enquanto não houver resposta, **nenhuma tela pode afirmar que uma proposta congelada está desatualizada**, porque não há dado que sustente a afirmação. **Não bloqueia** o campo `congeladoEm`, o predicado, o ato de congelar nem o aceite do RF-22 (10.4 item 2) |
+As cinco estão **modeladas** em `docs/Modelo-de-Dominio.md`; a coluna "Onde
+vive" é o endereço canônico e o modelo prevalece sobre a paráfrase abaixo.
+
+| # | Pergunta | Resolução | Onde vive |
+|---|---|---|---|
+| **Q-6** | Status de esteira é **campo select manual** ou **workflow real** com transições automáticas? | **Workflow real.** Enum `etapaEsteira` de 5 etapas (`novo` · `visita_agendada` · `projeto_3d` · `aguardando_aprovacao` · `fechado`), **ortogonal** ao `status` comercial — nunca colapsar os dois eixos. Transições T1–T3: movimento livre entre não-terminais; `fechado` só se sai por **Reabrir**; nenhuma transição implícita. Gatilhos automáticos amarrados a ações que **existem** no produto ("gerar proposta" → `aguardando_aprovacao`, no mesmo ato que congela; "reabrir" → volta de `fechado`). **`visita_agendada` e `projeto_3d` não têm gatilho** e são movidas à mão — não há ação no produto que as signifique, e inventar uma seria inventar produto. `novo` e `fechado` são **proposta técnica** do data-architect, marcadas como tal | Modelo 7.2 |
+| **Q-13** | **Excluir conta** (item 4.15) apaga o **usuário** ou a **organização inteira**? Cascata, anonimização ou retenção por prazo? | **A organização inteira, por cascata.** Sem exclusão lógica, sem anonimização, sem prazo de retenção — destruição imediata e irreversível, com confirmação explícita obrigatória. Apagar a linha de `organizacao` **é** o mecanismo (toda tabela de tenant já é `on delete cascade`); gabaritos globais sobrevivem. A rotina precisa, além do cascade: ler os perfis **antes**, apagar os usuários de `auth.users` **depois**, e expurgar o Storage por prefixo (não há FK ali). **`orcamento.cliente_id ... on delete restrict` aborta a cascata** e precisa virar `no action` — sem isso a exclusão passa em teste com org vazia e falha em produção. **Quem pode disparar → Q-17, respondida em 2026-08-03: só o papel `admin`/dono** (checagem de aplicação na Server Action, erro `NAO_AUTORIZADO_EXCLUIR_ORG`/403 — Modelo 7.3) | Modelo 7.3 · Q-17 respondida em 2026-08-03: **só `admin`/dono** |
+| **Q-14** | O `ModuleViewer` lança **só com cor sólida**, ou o catálogo mapeia **textura real** de madeira por padrão de MDF? | **Textura real.** A recomendação técnica do data-architect (lançar com cor sólida) foi **rejeitada** pelo operador. `texturaUrl` vira campo opcional dentro do jsonb `especificacao` do `Produto` tipo `chapa` — **campo, não tabela** (cardinalidade 1–1, sem atributos próprios). Caminho relativo dentro do bucket de texturas, **nunca URL externa**; bucket read-only, uma cópia compartilhada por todas as orgs; ausente ⇒ fallback na cor sólida já existente; nada de textura é persistido no item, e nem BOM, nem plano de corte, nem preço a enxergam. **As ~380 imagens são pré-requisito de conteúdo do operador**, não trabalho do executor — mesma natureza da nota de `docs/STATUS.md` sobre os padrões de MDF | Modelo 4.1.1 |
+| **Q-15** | Os badges "Em andamento" e "Fechado" da Design-System §2.5 são **valores novos de status**? | **Não — são rótulos derivados da esteira.** Nenhum campo de status novo nasce daqui. Um badge por card, por precedência determinística: `fechado` ⇒ "Fechado"; qualquer etapa intermediária ⇒ "Em andamento"; `novo` ⇒ o card mostra o rótulo do `status` comercial. Com isso os 5 badges reservados passam a ter origem — 3 vêm de `status`, 2 vêm de `etapaEsteira` | Modelo 7.2 (Q-15) |
+| **Q-16** | O que acontece ao editar um orçamento depois de congelado? | **Avisa em vez de bloquear em silêncio** (W-C1), e **existe a ação "Reabrir"**: `congeladoEm ← null` (a leitura volta a ser recalculada), o `valorRateado` das linhas é **preservado, nunca zerado** — é a mesma coluna do override manual do usuário, e zerá-la destruiria trabalho que nada tem a ver com congelamento —, e a etapa de esteira volta de `fechado` para `aguardando_aprovacao`. Invariante **I6**. **Quem pode reabrir → Q-18, respondida em 2026-08-03: só o papel `admin`/dono** (invariante **I6a**, erro `NAO_AUTORIZADO_REABRIR`/403) | Modelo 5.4.1 (I6 · I6a) |
+
+#### Respondidas pelo operador em 2026-08-03 — fechadas, não reabrir
+
+As duas nasceram das respostas de 2026-08-02 e eram a **mesma classe de
+pergunta**: autorização por papel. O modelo de papéis (`perfil.papel`:
+`admin`/`vendedor`/`projetista`) **existia no schema sem nenhuma política de
+RLS ou regra de produto que o usasse** — não havia como deduzir a resposta a
+partir do que estava construído, e por isso ambas foram devolvidas ao operador
+em vez de assumidas. **Resposta do operador, idêntica para as duas: só o papel
+`admin`/dono.** As duas já estão modeladas; a coluna "Onde vive" é o endereço
+canônico e o modelo prevalece sobre a paráfrase abaixo.
+
+| # | Pergunta | Resolução | Onde vive |
+|---|---|---|---|
+| **Q-17** | **Quem pode disparar a exclusão da organização inteira** (Task 4.15 / RF-31)? Qualquer usuário da org, ou só o papel `admin`/dono? | **Só o papel `admin`/dono.** `vendedor` e `projetista` não podem apagar a organização. A checagem é **de aplicação**, dentro da própria Server Action / RPC, e é a **primeira** operação do fluxo — antes da leitura dos perfis e de qualquer `delete`; rejeição explícita com `NAO_AUTORIZADO_EXCLUIR_ORG`, HTTP 403 quando exposta por rota. Continua **não existindo política de `delete` em `organizacao` para `authenticated`** — criá-la contradiria esta resposta, porque abriria um caminho paralelo por PostgREST que não passa pela checagem de papel. O que estava travado era **só a porta de entrada**; o cascade sempre esteve especificado por inteiro e **não muda**. O que a resposta evita: um `vendedor` clicando "excluir conta" e apagando o tenant inteiro, com os orçamentos e clientes de todos os colegas | Modelo 7.3, "Quem pode disparar (Q-17)" · erro **E-D1** |
+| **Q-18** | **Quem pode reabrir um orçamento congelado?** Qualquer usuário da org, ou só um papel específico? | **Só o papel `admin`/dono.** Invariante **I6a**: a ação Reabrir só executa com `perfil.papel === 'admin'` na organização dona do orçamento, checado na aplicação **antes de qualquer escrita**; não-admin é rejeitado com `NAO_AUTORIZADO_REABRIR`, HTTP 403 por rota, sem degradar para no-op silencioso (`congeladoEm`, `valorRateado` e `etapaEsteira` ficam intactos). A checagem de papel vem **antes** da de idempotência, para que um `vendedor` não descubra por resposta `ok: true` que o orçamento já estava reaberto. O mecanismo (I6) sempre esteve modelado por inteiro e **não muda**. Por que não se deduzia: Reabrir tem **efeito comercial** — o valor que o cliente recebeu deixa de ser o vigente | Modelo 5.4.1, **I6a** · erro **E-C3** |
+
+> **Nota de contexto que continua valendo:** hoje **toda organização tem
+> exatamente um usuário**, criado como `admin` no signup — não existe convite
+> nem gestão de membros (Seção 6, "fora do corte"). Na prática o dono é o único
+> que consegue disparar as duas ações. As regras foram escritas **por papel**,
+> não por "único usuário existente hoje", então valem sem alteração no dia em
+> que o convite existir — que é justamente quando as duas ambiguidades se
+> materializariam, e ambas as ações são destrutivas o bastante para não
+> nascerem com a regra errada.
 
 > **Extintas em 2026-07-31 — não são pendências, não reabrir:** ~~Q-8~~
 > (onde roda o worker Python), ~~Q-9~~ (mecanismo de fila), ~~Q-10~~ (limiar de
@@ -322,14 +394,15 @@ task de execução**: quem esbarrar numa delas para e devolve ao operador.
 > correção**, não há mais nada a esperar: os itens 3.1 e 3.3 são a mesma
 > entrega, dentro do RF-34 — `docs/Modelo-de-Dominio.md` Seção 8.6.
 
-> **Q-1, Q-2, Q-3, Q-4, Q-5 e Q-7 estão fechadas** (7.3). As cinco acima (Q-6,
-> Q-13, Q-14, Q-15 e Q-16) são as únicas perguntas vivas, e nenhuma bloqueia um
-> lote inteiro — cada uma trava **um item** (dashboard de esteira · exclusão de
-> conta · textura do visualizador · badges de status · comportamento
-> pós-congelamento). O **Lote 3 (plano de corte) deixou de ter qualquer
-> bloqueio** com o encerramento das Q-8 a Q-12. **Q-15 e Q-16 nasceram em
-> 2026-08-01**, da modelagem do estado congelado (Modelo 5.4.1): são o que
-> restou de decisão do operador depois que a parte de domínio foi fechada.
+> **Nenhuma pergunta viva bloqueia o início da execução da Fase D.** **Q-1 a
+> Q-5 e Q-7** fecharam em 2026-07-31 (7.3); **Q-6, Q-13, Q-14, Q-15 e Q-16**
+> fecharam em 2026-08-02; **Q-17 e Q-18** — as duas últimas, e as únicas que
+> ainda travavam alguma coisa — fecharam em **2026-08-03**, ambas com a mesma
+> resposta: **só `admin`/dono**. As duas condições de autorização que estavam
+> em suspenso (exclusão da organização · reabertura de orçamento) passam a ter
+> regra escrita, e o mecanismo de ambas já estava modelado por inteiro. Não
+> resta pendência bloqueando lote, task ou RF nenhum — o **Lote 3 (plano de
+> corte)**, que já era o único sem bloqueio, deixa de ser exceção.
 
 ---
 
@@ -349,16 +422,9 @@ task de execução**: quem esbarrar numa delas para e devolve ao operador.
 5. **Conteúdo dos módulos padrão (D-10).** Não é engenharia — é curadoria de
    catálogo. Custo real de conteúdo do produto; planejar quem cria e em que
    volume antes do lançamento.
-6. ~~**Veio de chapa (RF-11).**~~ **RESOLVIDO — não é mais risco ativo, é fato
-   passado.** Nota histórica, mantida com o número para não quebrar as
-   referências cruzadas. A restrição de rotação foi **entregue na Task 12.5
-   (Fase B, concluída) e está em produção**: `lib/engine/box/cutting.ts` só
-   gira peça quando `!temVeio`. A piora de aproveitamento (isto é, a correção
-   do número) **já aconteceu**, e o aviso ao operador já não tem objeto —
-   ninguém precisa ser avisado de uma mudança de duas fases atrás. Quem for
-   reescrever o motor de corte no RF-34 **preserva** essa restrição (Modelo 8,
-   invariante V3); não a introduz, e não anuncia como novidade um número que
-   não vai mudar por causa dela.
+6. **Veio de chapa (RF-11).** Ao restringir a rotação, o aproveitamento do
+   plano de corte vai piorar (ficar correto). Avisar o operador antes de o
+   número mudar, para não parecer regressão.
 
 ### Riscos acrescentados na Fase D (2026-07-31)
 
@@ -395,9 +461,16 @@ task de execução**: quem esbarrar numa delas para e devolve ao operador.
     percepção de "teste de possibilidades" em "produto". Sequenciar isso é do
     `backlog-planner`, não deste PRD.
 11. **Dados sensíveis de cliente final entram em dois lugares novos.** Logo
-    por upload (Storage) e exclusão de conta (Q-13, irreversível). Cada um
-    exige RLS/política de bucket própria e teste de isolamento por tenant, no
-    mesmo padrão já estabelecido — critério de aceitação, não follow-up.
+    por upload (Storage) e exclusão de conta (Q-13 respondida: apaga a
+    **organização inteira**, irreversível). Cada um exige RLS/política de
+    bucket própria e teste de isolamento por tenant, no mesmo padrão já
+    estabelecido — critério de aceitação, não follow-up. A exclusão é a única
+    operação destrutiva multi-tabela do produto e a única que toca
+    `auth.users` e Storage: **revisão do `security-auditor` antes do merge é
+    pré-requisito**. A **Q-17** deixou de bloquear a ação (respondida em
+    2026-08-03: só `admin`/dono), mas a checagem de papel na Server Action
+    passa a ser item obrigatório dessa revisão, junto com a ausência
+    deliberada de política de `delete` em `organizacao` (Modelo 7.3).
     (O terceiro lugar da versão anterior deste risco era o payload do
     `PlanoCorteJob`; ele **deixou de existir** — o plano de corte melhorado
     roda no navegador do próprio usuário e **não persiste nada**.)
@@ -408,9 +481,7 @@ task de execução**: quem esbarrar numa delas para e devolve ao operador.
     do mesmo móvel sobe. Subir por estar certo é o comportamento desejado;
     subir em silêncio, não. O operador precisa ver a troca **na primeira vez
     que configurar o kerf**, e a comunicação disso é requisito, não cortesia
-    — é o mesmo padrão "subir por estar certo" do veio (risco 6), com a
-    diferença de que aquele já foi entregue e este ainda não.
-    Contrapeso na mesma entrega:
+    — mesma natureza do aviso do risco 6 (veio). Contrapeso na mesma entrega:
     a meta-heurística **nunca piora** o resultado com os mesmos parâmetros
     (invariante V6), então parte do aumento é reabsorvida.
 
@@ -463,7 +534,7 @@ Três razões para a fase separada:
    tampo simples).
 3. **Reabrir a V2 apagaria a rastreabilidade.** Reescrever as Seções 1–9 para
    "atualizar" faria sumir o registro de que o congelamento estava
-   especificado desde a Fase A e mesmo assim não foi construído (risco 9).
+   especificado desde a Fase A e mesmo assim não foi construído (risco 10).
    Esse registro é o ativo mais útil desta rodada.
 
 **O que a Fase D entrega:** o produto vendável ao primeiro cliente pagante.
@@ -493,14 +564,15 @@ aceite mais duro:
 ### 10.3 Requisitos funcionais novos
 
 Legenda de bloqueio: 🔴 bloqueia lançamento · ⛔ execução bloqueada por decisão
-pendente.
+pendente — **nenhum RF está nesta condição desde 2026-08-03** (Q-17 e Q-18
+respondidas; ver 7.4).
 
 | RF | Descrição | Origem | Nota |
 |---|---|---|---|
 | RF-19 | **Ambiente e parede navegáveis na aplicação.** Cadastrar, editar, ordenar e nomear ambientes dentro do orçamento; N paredes por ambiente com nome livre; seletor de parede que expande o painel daquela parede; **indicação visual permanente de qual ambiente e qual parede estão em edição** | 0.1–0.3 · 0.6 · 2.3–2.6 | 🔴 |
 | RF-20 | **Alturas de faixa herdadas com override por parede.** Perfil da organização define o default; a parede sobrescreve **campo a campo**; a UI mostra "herdado" vs "customizado" e oferece "voltar ao herdado" (que apaga o campo, não copia o valor); salvar o perfil avisa que a mudança **propaga** para as paredes não customizadas. Rótulo de `peDireito` passa a dizer o que ele é: limite superior de instalação do aéreo | 0.4 · 5.1 · 5.2 · D-27 | |
 | RF-21 | **Posicionamento por vão até o vizinho.** O campo que o marceneiro preenche é o vão até o módulo vizinho do lado escolhido; o sistema converte para X absoluto ao salvar e reconverte para vão ao exibir, dos dois lados. Apagar um módulo do meio **não move nenhum outro** — só o vão exibido cresce. Vão negativo é erro, não aviso | 2.18 · D-28 | |
-| RF-22 | **Congelamento real da proposta.** O orçamento passa a ter um campo próprio `congeladoEm` (data/hora, `null` = nunca congelado), **ortogonal ao `status` comercial** — congelado não é um valor de status. Só a ação **"Gerar proposta"** grava esse campo, no mesmo ato em que grava o `valorRateado` de **todas** as linhas. Com `congeladoEm` preenchido (`estaCongelado()`), toda superfície que exibe valor de proposta — aba Proposta, PDF e dashboard — **lê o valor persistido**; com `congeladoEm` nulo, exibe o rateio ao vivo. Navegar entre abas, dar F5 ou reabrir dias depois exibe **exatamente** o valor congelado. Recongelar sobrescreve; **descongelar não existe**. Recalcular o plano de corte (RF-34) depois do congelamento **não retroage** sobre a lista congelada | 0.7 · 1.4 · Modelo 5.4.1 | 🔴 — ver 10.4 · comportamento **pós**-congelamento ⛔ **Q-16** |
+| RF-22 | **Congelamento real da proposta.** A proposta e a lista de material fechada são lidas de um **snapshot persistido**, nunca recalculadas na renderização. Navegar entre abas, dar F5 ou consultar o orçamento de novo dias depois exibe **exatamente** o valor congelado — só a ação de produto **Reabrir** descongela. Recalcular o plano de corte (RF-34) depois do congelamento **não retroage** sobre a lista congelada | 0.7a, 0.7b | 🔴 — ver 10.4 |
 | RF-23 | **Estado de aplicação confiável.** Salvar em qualquer aba propaga para as demais (invalidação de cache após mutação); a aba atual vive na URL e sobrevive ao F5; "atualizar render" funciona sem recarregar a página; o link "calculadora" do editor leva ao destino certo | 1.1–1.3 · 1.8 | 🔴 |
 | RF-24 | **Criar módulo do zero.** O que falta é o **ponto de entrada na UI**, a partir de `/biblioteca` e do menu lateral: um caminho "criar novo" que abre a **mesma tela de edição de módulo já existente** (`/modulo`), sem gabarito de origem, produzindo um gabarito **privado à organização**. Não é página nova nem capacidade nova de backend — a criação do zero já existe (`lib/gabarito/criar.ts`, `origem_gabarito_id: null`). Promoção org → global existe, é **cópia** e é **exclusiva do operador** — não há botão para o marceneiro | 2.1 · D-31 | 🔴 |
 | RF-25 | **Elementos de parede completos.** Tipo **pedra** (bancada/mármore de terceiros); **edição após adicionar**, tanto pela linha da lista quanto pelo clique na representação 2D; referência de medida escolhível em X (esquerda/direita) e Y (chão/teto), com **rótulos descritivos** ("Distância da parede esquerda", "Altura do chão"), nunca "X" e "Y"; **preset por organização** para elementos recorrentes — só nome, **fora do catálogo**, sem preço e sem status | 2.7–2.12 · D-29 | |
@@ -509,14 +581,14 @@ pendente.
 | RF-28 | **Tampo com três modelos.** `simples` · `engrossado` · `dobrado`, escolhidos **antes** da espessura; a lista de espessuras é filtrada pelo modelo (simples 15/18/25 · engrossado e dobrado 30/45/60 com base 15 e 36/54 com base 18); **6 mm nunca**; trocar o modelo com espessura incompatível **limpa** o campo em vez de coagir para o valor mais próximo | 3.10–3.12 | |
 | RF-29 | **Saída do plano de corte que serve para comprar.** Quantas chapas e quais (material e cor) · quantos cortes/passadas de serra · quantos metros de fita e **de qual cor** · quantos rolos comprar, a partir do tamanho de rolo do catálogo. Regra fechada: **tudo na categoria "chapa" conta como chapa**, independente de espessura ou aproveitamento — verificar no dado se o defeito das chapas de 6 mm está no cálculo ou na classificação do catálogo antes de corrigir | 1.7 · 3.1–3.8 | 🔴 (3.5) |
 | RF-30 | **Catálogo unificado.** Card único com seletor de categoria interno no lugar das abas separadas; botão genérico **"Adicionar item"**, nunca "Adicionar chapa"; campos específicos aparecem só depois de escolhida a categoria; código universal para chamada rápida no orçamento | 4.1–4.5 | |
-| RF-31 | **Identidade e conta.** Upload de logo (o campo de URL sai) que persiste e aparece em todo lugar que a exibe, com fallback da marca Orça Fácil; upload de foto de perfil; máscaras de CNPJ e telefone; área de segurança dedicada; **troca de senha com confirmação por e-mail**; e-mail **não editável** (é o identificador da conta); **exclusão de conta** | 4.6–4.15 | 🔴 (4.8/4.9/4.13/4.15) · exclusão ⛔ **Q-13** |
+| RF-31 | **Identidade e conta.** Upload de logo (o campo de URL sai) que persiste e aparece em todo lugar que a exibe, com fallback da marca Orça Fácil; upload de foto de perfil; máscaras de CNPJ e telefone; área de segurança dedicada; **troca de senha com confirmação por e-mail**; e-mail **não editável** (é o identificador da conta); **exclusão de conta** — que, decidido na Q-13, apaga a **organização inteira por cascata**, sem soft-delete, sem anonimização e sem retenção, com confirmação explícita, expurgo de `auth.users` e de Storage, e correção do `on delete restrict` de `orcamento.cliente_id` (Modelo 7.3) | 4.6–4.15 · Q-13 · Q-17 | 🔴 (4.8/4.9/4.13/4.15) — **destravado**: quem pode excluir é **só `admin`/dono** (Q-17 respondida em 2026-08-03), checado na Server Action antes de qualquer escrita, com `NAO_AUTORIZADO_EXCLUIR_ORG`/403 para o resto (Modelo 7.3) |
 | RF-32 | **Editar dados do cliente após a criação do orçamento** (nome, telefone, endereço). Hoje o cadastro é de mão única | 0.5 | |
-| RF-33 | **Dashboard que serve para gerir.** A lista de orçamentos recentes perde o prazo de entrega e ganha **valor final do projeto** e **custo** | 5.7–5.9 | Status de esteira (5.10) ⛔ **Q-6** |
+| RF-33 | **Dashboard que serve para gerir, com esteira real.** A lista de orçamentos recentes perde o prazo de entrega e ganha **valor final do projeto** e **custo**. Entra a **etapa de esteira** (Q-6 respondida): enum `etapaEsteira` de 5 valores, **ortogonal ao `status` comercial**, com **transições automáticas** disparadas por ações que já existem — "gerar proposta" leva a `aguardando_aprovacao` no mesmo ato em que congela (RF-22), "reabrir" traz de volta de `fechado`. **`visita_agendada` e `projeto_3d` não têm gatilho** e são movidas **manualmente** pelo usuário; não se inventa gatilho para elas. Nenhuma transição é implícita: nada muda de etapa por recalcular, abrir tela ou salvar item. O card exibe **um badge derivado** de `etapaEsteira` — "Fechado" no terminal, "Em andamento" nas intermediárias, e o rótulo do `status` comercial quando a etapa é `novo` (Q-15). **Nenhum campo de status novo nasce daqui** | 5.7–5.10 · Q-6 · Q-15 · Modelo 7.2 | |
 | RF-34 | **Plano de corte que aproveita a chapa de verdade.** Substituição do bin-packing por **guilhotina com lista de retângulos livres** (o espaço livre deixa de ser descartado quando a "prateleira" corrente fecha) + **meta-heurística** que avalia milhares de ordens de inserção e guarda a melhor. **Kerf** (espessura de serra, campo do perfil, default 3 mm) passa a ser respeitado entre peças adjacentes. Roda **100% em TypeScript, num Web Worker do navegador**: sem worker externo, sem fila, sem tabela, sem entidade nova, sem custo de infra. Enquanto a busca roda (1–2 s), a **passada determinística de hoje continua na tela de imediato** — nunca existe estado "sem plano de corte", e se o Web Worker não estiver disponível a mesma função roda no main thread com resultado idêntico. **Duas invariantes de produto, não de implementação:** (a) **determinismo** — mesma entrada ⇒ mesmo plano, sempre; PRNG semeado e **número fixo de iterações**, jamais limite de relógio, porque `N(M)` entra no preço (Modelo 5.2) e um plano que varia entre duas aberturas da mesma tela produz **dois preços para o mesmo orçamento**; (b) **monotonicidade** — o resultado **nunca é pior** que o do algoritmo determinístico atual com os mesmos parâmetros, porque este é o candidato inicial da busca. Fecha os itens **3.1** (bug relatado pelo marceneiro) e **3.3** (troca de algoritmo) de uma vez | Adendo do operador · Modelo 8.1–8.6 | 🔴 (3.1) |
 | RF-35 | **Shell consistente em todas as telas.** Biblioteca e editor de módulo passam para a versão nova da UI, com menu lateral presente; os textos clicáveis antigos (editor, calculadora, biblioteca, catálogo) saem das duas telas | 5.1–5.4 | |
 | RF-36 | **Vocabulário de produto na interface.** Nenhum termo de especificação interna aparece para o marceneiro — ver 10.4 | 2.5 · 5.5 · 5.6 | transversal |
 | RF-37 | **Dois agrupamentos, duas afordâncias.** Bloco físico (automático, mesma parede, mesma faixa — base de tampo/rodapé/tamponamento) e agrupamento comercial (criado pelo usuário, cruza faixas e paredes dentro do ambiente — vira uma linha de proposta) coexistem na mesma elevação com controles **visualmente distintos**. Nunca podem virar o mesmo botão | 2.28–2.30 · Q-3 | 🔴 (2.30) |
-| RF-38 | **`ModuleViewer` — visualização 3D estática do módulo em edição.** Visualizador **não-interativo** derivado da **mesma geometria do `BoxModule`** que o canvas 2D já consome: câmera ortográfica **fixa e programática** (`isometric` · `front` · `top` · `side`), **sem órbita e sem controle de usuário**. Props `width`/`height`/`depth`/`view`/`color?`/`textureUrl?`. **Nada é persistido** — não há campo de domínio novo e não pode existir um segundo caminho de derivação de geometria só para o 3D (se o 3D e o 2D divergirem, é bug de derivação, não diferença legítima). Lança com **cor sólida** derivada de `material.cor`; textura de madeira depende da Q-14. Exceção escopada à política "sem 3D" — **não** reabre o canvas técnico (D-33) | Adendo do operador · D-33 · Modelo 4.1 | textura ⛔ **Q-14** |
+| RF-38 | **`ModuleViewer` — visualização 3D estática do módulo em edição.** Visualizador **não-interativo** derivado da **mesma geometria do `BoxModule`** que o canvas 2D já consome: câmera ortográfica **fixa e programática** (`isometric` · `front` · `top` · `side`), **sem órbita e sem controle de usuário**. Props `width`/`height`/`depth`/`view`/`color?`/`textureUrl?`. **Nada é persistido** — não há campo de domínio novo e não pode existir um segundo caminho de derivação de geometria só para o 3D (se o 3D e o 2D divergirem, é bug de derivação, não diferença legítima). Lança com **textura real** de padrão de MDF (Q-14 respondida): `textureUrl` sai de `especificacao.texturaUrl` do `Produto` tipo `chapa`, caminho relativo dentro do bucket de texturas (nunca URL externa), resolvido **na renderização**; ausente ⇒ fallback na cor sólida derivada de `material.cor`, que continua sendo o **único** fallback. As **~380 imagens de textura são pré-requisito de conteúdo do operador** — curadoria, recorte, conversão e hospedagem —, **não trabalho do executor**, exatamente como os padrões de MDF já anotados em `docs/STATUS.md`; sem elas a task entrega o campo funcionando e a tela se comporta como o cenário "cor sólida". Exceção escopada à política "sem 3D" — **não** reabre o canvas técnico (D-33) | Adendo do operador · D-33 · Q-14 · Modelo 4.1 e 4.1.1 | |
 
 ### 10.4 Critérios de aceite transversais desta fase
 
@@ -538,40 +610,18 @@ Valem para **qualquer** task da Fase D, não só para o RF que os cita.
    Regra geral, para o que não estiver na tabela: **se o termo só existe porque
    alguém precisou escrever uma spec, ele não vai para a tela.**
 
-2. **Congelamento é testado, não conferido (RF-22).** O mecanismo está definido
-   em `docs/Modelo-de-Dominio.md` Seção **5.4.1**: campo `congeladoEm`
-   (data/hora, `null` = não congelado) no `Orçamento`, **ortogonal ao `status`**,
-   predicado `estaCongelado(o) = o.congeladoEm !== null`, gravado **só** pela
-   ação "Gerar proposta" junto com o `valorRateado` de todas as linhas.
-
-   **O defeito que o marceneiro relatou é do lado da leitura, não da escrita.**
-   As escritas já existem em produção (`components/orcamento/PropostaLab.tsx`
-   grava `valor_rateado` de todas as linhas no "Gerar proposta";
-   `lib/proposta-pdf/carregar.ts` já lê o campo). O que falta é o campo
-   `congeladoEm` e a **condicional de leitura**: a tela recalcula o rateio a
-   cada render e exibe o número recalculado, em vez de checar `estaCongelado()`
-   e ler o valor persistido. Quem receber esta entrega **não reimplementa a
-   escrita** — corrige a leitura. Junto convivem as duas causas de estado já
-   apontadas pelo backlog-fonte (**falta de invalidação de cache após mutação**
-   e **estado de aba fora da URL**), que explicam os demais bugs reportados
-   (F5 voltando para "ambientes", "atualizar render" inerte, salvar que não
-   propaga). Aceite mínimo:
-   - com `congeladoEm !== null`, aba Proposta, PDF e dashboard leem o
-     `valorRateado` persistido, e existe teste que **falha** se alguém voltar a
-     recalcular na renderização;
-   - com `congeladoEm === null`, o rateio ao vivo continua sendo o valor
-     exibido — é estimativa de trabalho, e mudar é o comportamento correto;
-   - congelar é ato **atômico e total**: ou grava `congeladoEm` e o
-     `valorRateado` de todas as linhas, ou não grava nada;
+2. **Congelamento é testado, não conferido (RF-22).** A causa raiz apontada
+   pelo backlog-fonte é dupla — **falta de invalidação de cache após mutação**
+   e **estado de aba fora da URL** — e os cinco bugs reportados
+   (proposta desatualizada, F5 voltando para "ambientes", "atualizar render"
+   inerte, salvar que não propaga, valor que muda ao navegar) têm essa causa
+   única. Aceite mínimo:
+   - a proposta é lida do snapshot persistido, e existe teste que **falha** se
+     alguém voltar a recalculá-la na renderização;
    - soma das linhas == preço final, verificado por teste automatizado;
-   - navegar entre abas, dar F5 e reabrir o orçamento produzem **o mesmo
-     número**, sempre.
-
-   > **O que este aceite não decide:** o que acontece com o orçamento **depois**
-   > de congelado — edição bloqueada, edição livre com aviso de "desatualizado",
-   > ou edição livre e silenciosa, e se existe "reabrir" — é a **Q-16** (7.4),
-   > em aberto. Nada disso bloqueia o campo, o predicado nem este aceite; quem
-   > esbarrar no comportamento pós-congelamento **para e devolve ao operador**.
+   - navegar entre abas, dar F5 e revisitar o orçamento produzem **o mesmo
+     número**, sempre. (A ação de produto **Reabrir** é o único caminho que
+     muda esse número — e ela é de `admin`, Q-18 / Modelo 5.4.1 I6a.)
 
    > A diferença de R$ 6,00 relatada no walkthrough (esperado 4.578,77 ×
    > exibido 4.584,77) precisa ser **reproduzida com dado real** antes de se
@@ -586,11 +636,25 @@ Valem para **qualquer** task da Fase D, não só para o RF que os cita.
    ambiente ou orçamento nunca toca em `organizacao.alturas_padrao`
    (risco 8) — hoje toca, e isso precisa cair junto com a entrega do RF-20.
 
-5. **Decisão pendente não vira palpite.** Ao esbarrar em **Q-6, Q-13, Q-14,
-   Q-15 ou Q-16** (Seção 7.4), a task **para** e devolve ao operador. Nenhuma coluna, enum,
-   limiar numérico ou pipeline de conteúdo nasce de dedução. (Q-8 a Q-12 não
-   estão nesta lista porque **deixaram de existir** — não é que foram
-   respondidas.)
+5. **Decisão pendente não vira palpite — e não sobrou nenhuma.** A lista de
+   perguntas vivas está **vazia**: **nenhuma pergunta viva bloqueia o início
+   da execução da Fase D** (Seção 7.4). Q-17 e Q-18, as duas últimas, foram
+   respondidas em **2026-08-03** com a mesma resposta — **só `admin`/dono** —
+   e saem desta lista; Q-6, Q-13, Q-14, Q-15 e Q-16 saíram porque foram
+   respondidas em 2026-08-02; Q-8 a Q-12 saíram porque **deixaram de existir**
+   — não é a mesma coisa. A regra permanece para o que vier depois: nenhuma
+   condição de papel, política de RLS, coluna, enum ou limiar numérico nasce
+   de dedução. Se uma pergunta nova aparecer no meio de uma task, a task
+   **para** e devolve ao operador.
+
+   As duas condições de autorização recém-fechadas são de aceite obrigatório
+   nas tasks que as tocam: exclusão da organização só com `perfil.papel ===
+   'admin'`, checado na Server Action antes de qualquer escrita
+   (`NAO_AUTORIZADO_EXCLUIR_ORG`/403 — Modelo 7.3), e **Reabrir** só com
+   `admin`, mesma forma de checagem (`NAO_AUTORIZADO_REABRIR`/403 — Modelo
+   5.4.1, **I6a**). Em nenhum dos dois casos nasce política de RLS nova, e a
+   ausência de política de `delete` em `organizacao` para `authenticated` é
+   deliberada e permanece.
 
 6. **Plano de corte é determinístico e nunca regride (RF-34).** Qualquer task
    que toque no motor de corte entrega, junto, as invariantes do Modelo 8.5:
@@ -611,14 +675,16 @@ Somam-se aos da Seção 5 — não os substituem.
 
 - O marceneiro monta um orçamento com **mais de um ambiente e mais de uma
   parede** sem gambiarra e sem perder de vista onde está.
-- **O valor da proposta não muda sozinho.** Enviada por R$ 4.584, reaberta por
-  R$ 4.584 — em qualquer aba, depois de qualquer F5, em qualquer dia.
+- **O valor da proposta não muda sozinho.** Enviada por R$ 4.584, consultada de
+  novo por R$ 4.584 — em qualquer aba, depois de qualquer F5, em qualquer dia.
+  (Só a ação de produto **Reabrir** — RF/Task 1.9 — descongela o orçamento e
+  devolve os valores ao recálculo; navegar de volta nunca faz isso.)
 - O marceneiro **cadastra o jeito dele de trabalhar**: cria módulo do zero,
   ajusta alturas por parede, cadastra os elementos de parede que se repetem.
 - O plano de corte responde às três perguntas de compra: **quantas chapas e
   quais · quantos cortes · quantos metros de fita e de qual cor**.
 - **O plano de corte não varia sozinho e não regride.** O mesmo orçamento
-  reaberto amanhã, em outra máquina, produz **o mesmo plano e o mesmo número
+  revisitado amanhã, em outra máquina, produz **o mesmo plano e o mesmo número
   de chapas**; e o plano novo nunca usa mais chapas que o algoritmo antigo com
   os mesmos parâmetros. O caso relatado no walkthrough — sarrafo de 7 × 150 cm
   abrindo chapa nova com 30 × 270 cm livres — deixa de acontecer.

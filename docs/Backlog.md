@@ -30,11 +30,10 @@
 
 ### Gaps de schema registrados, sem task própria ainda
 
-- ~~`elemento_continuo` não tem coluna de cor~~ — **coberto pela Task 3.10–3.11
-  (back)** do Épico V2.1 (Lote 3, ver abaixo), que soma a coluna `cor` na
-  mesma migration que cria `modelo_tampo` (mesma tabela, achado da
-  reauditoria de 2026-08-01). Ver `docs/Lessons-Learned.md` (Padrão 5,
-  2026-07-31) para o histórico do gap.
+- `elemento_continuo` não tem coluna de cor — a cor de um tampo/rodapé/
+  tamponamento/fechamento não sobrevive a reload (cai em fallback). Achado
+  durante a Task 13.3d, nunca virou migration. Ver `docs/Lessons-Learned.md`
+  (Padrão 5, 2026-07-31).
 - `organizacao`/`perfil`: política de UPDATE libera qualquer papel
   (`admin`/`vendedor`/`projetista`), sem granularidade — um vendedor pode
   editar CNPJ/endereço/padrões financeiros da empresa. Achado na Task 13.7a.
@@ -81,6 +80,35 @@
 > Impacto Visual (Completo vs. Leve) é avaliado task a task pelo Maestro —
 > sinalizado explicitamente nas tasks do Lote 5 e na Task 3.13 (front),
 > abaixo.
+>
+> **Revisão de 2026-08-02 — Q-6, Q-13, Q-14 e Q-16 respondidas pelo
+> operador.** `docs/Modelo-de-Dominio.md` Seções 7.2 (etapa de esteira), 7.3
+> (cascade de exclusão de organização), 4.1.1 (textura real do
+> `ModuleViewer`) e 5.4.1 (reabertura de orçamento congelado, invariante I6)
+> documentam as quatro respostas; `docs/PRD.md` Seção 7.4 registra as duas
+> perguntas novas que elas abriram — **Q-17** (quem pode excluir a
+> organização) e **Q-18** (quem pode reabrir um orçamento) — nenhuma das duas
+> decidida ainda. Consequência neste documento: o item **5.10** (esteira)
+> deixa de ser placeholder e ganha tasks reais (Lote 5); a Task **4.15**
+> (excluir conta) é reescrita com o escopo completo do cascade e passa a
+> bloquear por **Q-17**, não mais por Q-13 (já respondida); entra a task nova
+> **"Reabrir orçamento"** (1.9, Lote 1), bloqueada por **Q-18**; e a Task
+> **3.13** (`ModuleViewer`) deixa de lançar só com cor sólida — ganha textura
+> real e duas tasks de catálogo que a alimentam (3.13 catálogo-back/front).
+>
+> **Revisão de 2026-08-03 — Q-17 e Q-18 respondidas pelo operador, mesma
+> resposta para as duas: só o papel `admin`/dono.** `docs/Modelo-de-Dominio.md`
+> Seção 7.3, subseção "Quem pode disparar (Q-17)" (checagem `perfil.papel ===
+> 'admin'` dentro da Server Action, erro `NAO_AUTORIZADO_EXCLUIR_ORG`/403) e
+> Seção 5.4.1, invariante I6a (mesma checagem para reabrir, erro
+> `NAO_AUTORIZADO_REABRIR`/403) documentam as duas respostas. Consequência
+> neste documento: a Task **4.15** deixa de estar bloqueada e ganha a
+> checagem de papel como parte do escopo (passo 0, antes de qualquer
+> `delete`); as Tasks **1.9 (back)** e **1.9 (front)** deixam de estar
+> bloqueadas — a primeira ganha a mesma checagem antes do caminho
+> idempotente, a segunda passa a exibir o botão "Reabrir" só para `admin`.
+> Nenhuma task deste documento permanece bloqueada por decisão pendente do
+> operador.
 
 #### Lote 0 — Fundação de dados
 
@@ -100,8 +128,8 @@ especificadas em `.maestro/tmp/schema-v2.1-delta.sql` Seções 1–2.
 | 0.4 | Alturas de faixa: `alturasEfetivas(parede, organizacao)` (perfil dá default, parede sobrescreve campo a campo), estado "herdado"/"customizado" **derivado** (nunca flag persistido), "voltar ao herdado" apaga a chave. Corrige **junto** o achado colateral: `lib/ambiente/salvar.ts:66-73` hoje sobrescreve `organizacao.alturas_padrao` inteira a cada salvamento de ambiente — vira invariante de aceite que salvar parede/ambiente nunca escreve no perfil da organização. Corrige também A-08 (`Y(inferior)` e `Y(torre)` = `alturaRodape`, hoje o motor usa `0`) | 🟡 LACUNA | 0.1–0.3 | backend-engineer | Sonnet | Modelo 3.2.1 (exemplos trabalhados); PRD D-27, RF-20, risco 8 |
 | 0.5a | Server Action `atualizarCliente` (nome, telefone, endereço) — hoje o cadastro é de mão única | 🟡 LACUNA | nenhuma | backend-engineer | Sonnet | Modelo 7 ("Cliente"); PRD RF-32 |
 | 0.5b | Formulário de edição de dados do cliente na tela do orçamento | 🟡 LACUNA | 0.5a | frontend-engineer (web) | Sonnet | PRD RF-32 |
-| 0.7a | **Migration**: coluna `orcamento.congelado_em timestamptz null` (default `null`) — estado congelado da **proposta**, ortogonal ao `status` comercial (Modelo 5.4.1: coluna própria, não valor de enum, não derivação). DDL já pronto em `.maestro/tmp/schema-v2.1-delta.sql` §9 (L.269-300, "orcamento.congelado_em"). RLS **inalterada** — coluna nova numa tabela que já tem as 4 políticas por org. Expor o campo em `lib/orcamento/buscar.ts` (`OrcamentoDetalhe.congeladoEm: string \| null`, mapeado de `congelado_em`). Criar a Server Action nova `congelarOrcamento(orcamentoId)` (ex.: `lib/orcamento/congelar.ts`, `"use server"`) que grava `congelado_em = now()` quando chamada — a checagem "só chamar depois que todas as linhas gravaram" é responsabilidade do chamador (Task 0.7b), não desta Server Action | 🔴 BLOQ | nenhuma | backend-engineer | Sonnet | Modelo-de-Dominio 5.4.1 (definição, modelagem, invariantes I1–I5); `schema-v2.1-delta.sql` §9 (L.269-300); PRD RF-22, risco 9 |
-| 0.7b | **Correção do bug de leitura + fechamento do ato de congelamento**: `PropostaLab.tsx:77` recalcula `calcularEngineOrcamento(estadoInicial)` a cada render e `:141` deriva o valor exibido de `resultadoRateio.snapshot.grupos` mesmo quando o orçamento já está congelado — é este o bug relatado pelo marceneiro (o valor muda sozinho ao navegar entre abas), não a falta de escrita que a versão anterior desta task presumia (`congelarListaMaterial` e a gravação de `valor_rateado` em `handleGerarProposta`, L.248-260, **já existem**). Corrigir para respeitar Modelo 5.4.1: com `congeladoEm !== null` (`estaCongelado`), `valorAtualDaLinha` passa a ler `linha.valorRateado` **persistido** (ignora override em sessão e rateio ao vivo — R2); com `congeladoEm === null`, o comportamento atual (rateio ao vivo + override em sessão) permanece intacto (R1). Encadear `congeladoEm` como prop nova, populada em `app/(app)/orcamento/[id]/page.tsx` (já busca `orcamento` via `buscarOrcamentoPorId`, exposto pela Task 0.7a) → `PropostaTabConectada` → `PropostaLab`. Fechar também o lado da escrita que falta de verdade (I1): `handleGerarProposta` grava `valorRateado` de todas as linhas mas nunca grava `congeladoEm` — chamar `congelarOrcamento` (Task 0.7a) só depois que **todas** as gravações de linha tiverem sucesso; se qualquer uma falhar, não congela (meio-congelamento é pior que não congelar, I1) | 🔴 BLOQ | 0.7a | frontend-engineer (web) | Sonnet | Modelo-de-Dominio 5.4.1 (I1, R1, R2, casos de borda, exemplo trabalhado do critério de sucesso nº1); PRD RF-22, 10.4 item 2, risco 9 |
+| 0.7a | Congelamento real — coluna e leitura: migration `orcamento.congelado_em timestamptz null` (`schema-v2.1-delta.sql` §9), sem alteração de RLS; expõe `congeladoEm` em `lib/orcamento/buscar.ts` nos **dois** pontos que montam `OrcamentoDetalhe` (`buscarOrcamentoPorId` e `buscarItemDoOrcamento` — os dois `select()` precisam do campo); cria a Server Action `congelarOrcamento(orcamentoId)` | 🔴 BLOQ | nenhuma | backend-engineer | Sonnet | Modelo 5.4; `schema-v2.1-delta.sql` §9; PRD RF-22, risco 9 |
+| 0.7b | Congelamento real — leitura e escrita de verdade: corrige o bug de leitura em `PropostaLab.tsx:77,141` (recalcula ao vivo em vez de checar o congelamento — Modelo 5.4.1, regras R1/R2), encadeia `congeladoEm` como prop nova, e corrige `handleGerarProposta` (`PropostaLab.tsx:248-260`) que nunca gravava `congeladoEm` — passa a chamar `congelarOrcamento` só depois que todas as linhas gravarem (invariante I1) | 🔴 BLOQ | 0.7a | frontend-engineer (web) | Sonnet | Modelo 5.4, 5.4.1 (R1/R2, I1); PRD RF-22, risco 9 |
 
 *Nota: item 0.6 (nome livre de parede) está coberto pela migration da Task
 0.1–0.3 (coluna `nome`, default `"Parede 1"`, `CHECK` de não-vazio — já no
@@ -111,7 +139,11 @@ delta SQL).*
 
 *Bloqueado até o Lote 0 fechar. Bloqueia o Lote 2.* Causa raiz única
 (documento-fonte Seção 2.1): falta de invalidação de cache após mutação +
-estado de aba fora da URL.
+estado de aba fora da URL. **Exceção pontual** (mesmo padrão da exceção do
+Lote 3 com a Task 4.16): a Task 1.9 (back) — nova, resposta à Q-16 — depende
+também da Task 5.10 (back) (coluna `etapaEsteira`, Lote 5), porque a
+reabertura mexe nos dois campos (`congeladoEm` e `etapaEsteira`) na mesma
+transação (Modelo 5.4.1, I6).
 
 | Task | O que é | Tag | Depende de | Executor | Modelo | Referências |
 |---|---|---|---|---|---|---|
@@ -119,30 +151,26 @@ estado de aba fora da URL.
 | 1.5–1.6 | Teste automatizado de paridade financeiro ↔ proposta (soma das linhas == preço final) + resíduo de arredondamento absorvido pela última linha; **reproduzir com dado real** a diferença de R$ 6,00 relatada (4.578,77 esperado × 4.584,77 exibido) antes de assumir que a aritmética está certa | 🔴 BLOQ | 0.7a, 0.7b | motor-engineer | Sonnet | Modelo 5.2, 11.2; PRD 10.4 item 2 |
 | 1.7 | Investigar e corrigir bug de chapas de 6 mm com baixo aproveitamento não contadas no modo "valor por chapa" — **verificar no dado antes de mexer no cálculo** (filtro por aproveitamento mínimo × classificação errada no catálogo são hipóteses diferentes, correções diferentes) | 🟠 BUG | nenhuma | motor-engineer | Sonnet | Modelo 5.2, 11.2; PRD 10.4 |
 | 1.8 | Corrigir link "calculadora" no editor (hoje leva à raiz/dashboard) | 🟠 BUG | nenhuma | frontend-engineer (web) | Haiku | PRD RF-23 |
+| 1.9 (back) | **Reabrir orçamento (Q-16, I6, I6a)** — Server Action `reabrirOrcamento`: **primeiro** verifica `perfil.papel === 'admin'` do usuário chamador (Q-18, invariante I6a) — se não for `admin` (ou sem sessão/`perfil` na org), rejeita com `NAO_AUTORIZADO_REABRIR`/403 antes até da checagem de idempotência, nada é escrito; só então: `congeladoEm ← null`; se `etapaEsteira === "fechado"`, move para `aguardando_aprovacao` (nas demais etapas não mexe na etapa — 7.2, T2); `valorRateado` de cada `linhaProposta` **não é alterado nem zerado** (fica dormente até um novo congelamento sobrescrever, I3); reabrir um orçamento já não-congelado (`congeladoEm` já `null`), chamado por um `admin`, é no-op idempotente, `ok: true`, sem mexer em etapa | 🔴 BLOQ | 0.7a, 0.7b, 5.10 (back) | backend-engineer | Sonnet | Modelo 5.4.1 (I6, I6a, casos de borda, exemplo trabalhado), 7.2 (T2); PRD RF-22, Q-16 (resolvida), Q-18 (resolvida) |
+| 1.9 (front) | Botão "Reabrir" na tela do orçamento, visível e habilitado somente para o usuário com `perfil.papel === 'admin'` (Q-18, mesma UI especificada pelo `product-designer` em Design-System §7.13.1) quando `congeladoEm !== null`; para `vendedor`/`projetista` o botão não aparece (ou fica desabilitado, conforme o Design System); aviso explícito do efeito (descongela; os valores da proposta ficam recalculados ao vivo até novo "Gerar proposta"; nada do que já foi rateado é apagado) | 🔴 BLOQ | 1.9 (back) | frontend-engineer (web) | Sonnet | Modelo 5.4.1 (I6a); Design-System §7.13.1; PRD RF-22, Q-18 (resolvida) |
 
-*Nota: item 1.4 do backlog-fonte (leitura da Proposta a partir do snapshot
-congelado) foi **absorvido pela Task 0.7b** — mesmo defeito, mesma linha de
-código (`PropostaLab.tsx:77,141`); mantê-lo como task separada duplicaria o
-trabalho e o critério de aceite. A metade do item 1.4 que falava de "lista
-de material" não tem o mesmo defeito: por decisão de escopo já registrada
-(D-08, Task 13.4/13.7b), a aba Corte & Material sempre mostra o estado
-ATUAL em tela — "congelar" ali é só o pré-pedido de compra insert-only
-(histórico próprio em `lista_material`), não uma trava de exibição. Ver
-Modelo-de-Dominio 5.4.1, tabela "Dois congelamentos, não um".*
+*Nota: item 1.4 do backlog-fonte (leitura do snapshot congelado, nunca
+recalculado na renderização) não é mais task separada — é o mesmo defeito e
+as mesmas linhas de código (`PropostaLab.tsx:77,141`) corrigidos pela Task
+0.7b acima, no Lote 0. Sem entrega duplicada.*
 
 #### Lote 2 — Lacunas funcionais
 
 **Bloqueado até o Lote 0 e o Lote 1 fecharem** (regra do operador — cadeia
 sequencial estrita: Lote 0 → Lote 1 → Lote 2, nunca Lote 2 em paralelo com o
 Lote 1). Nenhuma task desta lista deve iniciar antes das Tasks do Lote 1
-(1.1–1.3, 1.5–1.8) estarem mescladas — o que por sua vez já pressupõe o Lote 0
-(0.1–0.3 a 0.7b) fechado.
+(1.1–1.8) estarem mescladas — o que por sua vez já pressupõe o Lote 0
+(0.1–0.7b) fechado.
 
 | Task | O que é | Tag | Depende de | Executor | Modelo | Referências |
 |---|---|---|---|---|---|---|
 | 2.1 | Ponto de entrada de "criar módulo do zero" a partir de `/biblioteca` e do menu lateral — `lib/gabarito/criar.ts` **já existe e já cria** gabarito privado à org (`origem_gabarito_id: null`); falta só a entrada de UI | 🔴 BLOQ | Lote 0, Lote 1 | frontend-engineer (web) | Sonnet | Modelo 7.1; PRD RF-24, D-31 |
-| 2.1 (dedup) | Ocultar da listagem de `/biblioteca` o módulo global cuja origem (`origem_gabarito_id`) é um gabarito promovido da própria organização — sem isso o marceneiro veria o mesmo módulo duas vezes (versão da org + versão promovida global). Dispara só depois que o operador promove um gabarito daquela organização para global — mecanismo que **não existe ainda no repositório** (`fork_gabarito()` é o caminho **inverso**: copia um gabarito global PARA a organização do usuário, não promove nada; ver Task 2.1 (promoção) abaixo, que cria o caminho que falta) | 🟡 LACUNA | Lote 0, Lote 1 | backend-engineer | Sonnet | Modelo-de-Dominio 7.1 regra 6; PRD RF-04 (emenda Fase D) |
-| 2.1 (promoção) | Mecanismo de promoção org→global (D-31/D-10, Modelo-de-Dominio 7.1 regras 3–4): rotina restrita a `service_role`/painel administrativo do operador — **nunca** uma RPC ou Server Action chamável por `authenticated` — que insere uma **linha global nova** (`organizacao_id = null`, `origem_gabarito_id` = id do gabarito de origem, mesma `definicao`) a partir de um gabarito de uma organização; a linha da organização de origem permanece intacta e editável pelo dono (cópia, nunca reparent). Segue exatamente o INSERT já especificado em `.maestro/tmp/schema-v2.1-delta.sql` §7. Sem esta task, a Task 2.1 (dedup) nunca tem um dado real para exercitar o próprio filtro | 🟡 LACUNA | Lote 0, Lote 1 | backend-engineer | Sonnet | Modelo-de-Dominio 7.1 regras 3–4 (promoção é cópia, não reparent; só o operador); `.maestro/tmp/schema-v2.1-delta.sql` §7; PRD D-31 |
+| 2.1 (dedup) | Ocultar da listagem de `/biblioteca` o módulo global cuja origem (`origem_gabarito_id`) é um gabarito promovido da própria organização — sem isso o marceneiro vê o mesmo módulo duas vezes (versão da org + versão promovida global). Dispara raramente: só depois que o operador promove um gabarito daquela organização para global (fluxo já existente, Task 11.4/`fork_gabarito()`) | 🟡 LACUNA | Lote 0, Lote 1 | backend-engineer | Sonnet | Modelo-de-Dominio 7.1 regra 6; PRD RF-04 (emenda Fase D) |
 | 2.3–2.6 | Cadastrar/editar/ordenar ambientes e paredes dentro do orçamento; seletor de parede que expande o painel daquela parede; indicação visual permanente de qual ambiente e qual parede estão em edição | 🟡 LACUNA / 🔵 UX | Lote 0 (0.1–0.3), Lote 1 | frontend-engineer (web) | Sonnet | Modelo 3.2, 11.5; PRD RF-19 |
 | 2.3–2.6 (alturas) | UI de override de altura por parede: indicador visual "herdado" vs. "customizado" por parede (derivado, nunca um campo à parte); botão "voltar ao herdado" que apaga a chave de override (nunca copia o valor numérico); no formulário de `/perfil`, aviso de propagação ao salvar as alturas padrão da organização ("mudar o default afeta as paredes não customizadas") | 🟡 LACUNA | 0.4, Lote 0, Lote 1 | frontend-engineer (web) | Sonnet | Modelo 3.2.1; PRD RF-20, D-27 |
 | 2.7 | Motor: tipo de elemento de parede "pedra" + regra de bloqueio de conjunto por tipo (porta/janela quebram o bloco físico; pedra/tomada/ponto_hidráulico não quebram) + aviso `TAMPO_SOBRE_PEDRA` | 🟡 LACUNA | Lote 0, Lote 1 | motor-engineer | Sonnet | Modelo 3.2.2 (tabela de bloqueio, exemplo trabalhado) |
@@ -167,14 +195,11 @@ está bom hoje — sem task.*
 #### Lote 3 — Precisão do motor
 
 *Independente e paralelo ao Lote 0 e aos demais lotes — **como regra geral**.
-Duas exceções pontuais, ambas declaradas nos dois sentidos (nas linhas das
-tasks envolvidas), que o "independente e paralelo" do parágrafo acima não
-anula:
-1. A Task 3.1/3.3 (motor) não pode começar antes da Task 4.16 (back) (coluna
-   `espessura_serra_padrao_mm` no perfil) estar mesclada.
-2. A Task 3.6 (motor) não pode começar antes da Task 4.1–4.3/4.5 (front,
-   Lote 4) acrescentar o campo de tamanho de rolo na especificação de `fita`
-   do catálogo — o campo não existe hoje (`lib/produto/tipos.ts:29`).*
+Exceção pontual: a Task 3.1/3.3 (motor) não pode começar antes da Task 4.16
+(back) (coluna `espessura_serra_padrao_mm` no perfil) estar mesclada, mesmo
+que o Lote 3 inteiro seja puxado para frente do Lote 0. Essa dependência já
+está declarada na linha das duas tasks, nos dois sentidos — o "independente
+e paralelo" do parágrafo acima não a anula.*
 
 | Task | O que é | Tag | Depende de | Executor | Modelo | Referências |
 |---|---|---|---|---|---|---|
@@ -184,15 +209,25 @@ anula:
 | 3.4 | Contagem de cortes / passadas de serra no resultado do plano de corte | 🟡 LACUNA | nenhuma | motor-engineer | Sonnet | PRD RF-29 |
 | 3.5 (motor) | Fita de borda discriminada por cor no resultado do plano de corte (hoje mostra "29m" sem dizer de qual) | 🔴 BLOQ | nenhuma | motor-engineer | Sonnet | Modelo 11.5; PRD RF-29 |
 | 3.5 (front) | Exibir fita discriminada por cor na lista de material / plano de corte | 🔴 BLOQ | 3.5 (motor) | frontend-engineer (web) | Sonnet | PRD RF-29 |
-| 3.6 | Cálculo de rolos de fita a comprar, a partir do tamanho de rolo cadastrado no catálogo (campo `produto.especificacao` da fita) — **hoje esse campo não existe**: `lib/produto/tipos.ts:29` só tem `{ unidade: "m" }`. Depende da Task 4.1–4.3/4.5 (front) acrescentar o campo de tamanho de rolo no formulário de catálogo antes que esta task tenha o que ler; nunca hardcode o tamanho | 🟡 LACUNA | 3.5 (motor), 4.1–4.3/4.5 (front) | motor-engineer | Sonnet | Modelo 11.4 (A-12), 11.5; PRD RF-29, 10.4, item 5.3 |
+| 3.6 | Cálculo de rolos de fita a comprar, a partir do tamanho de rolo cadastrado no catálogo (campo `produto.especificacao`, nunca hardcoded) | 🟡 LACUNA | 3.5 (motor) | motor-engineer | Sonnet | Modelo 11.4 (A-12), 11.5; PRD RF-29, 10.4 |
 | 3.7 | Quantidade sem m² na lista de material — número inteiro simples | 🔵 UX | nenhuma | motor-engineer | Sonnet | PRD RF-15 |
 | 3.8 (back) | Persistência de override de quantidade por item da lista de material (pré-congelamento; valor, categoria e descrição permanecem travados) | 🟡 LACUNA | nenhuma | backend-engineer | Sonnet | PRD RF-15 |
 | 3.8 (front) | UI de edição de quantidade na lista de material | 🟡 LACUNA | 3.8 (back) | frontend-engineer (web) | Sonnet | PRD RF-15 |
-| 3.10–3.11 (back) | Migration em `elemento_continuo`: coluna `modelo_tampo text` com `CHECK (modelo_tampo in ('simples','engrossado','dobrado'))`, DDL já pronto em `.maestro/tmp/schema-v2.1-delta.sql` §6 (linhas 167-172) — sem ela o modelo de tampo escolhido não sobrevive ao reload. Resolve **junto**, na mesma migration, o gap pré-existente da mesma tabela: coluna `cor text` (tampo/rodapé/tamponamento/fechamento perdem a cor ao reload hoje, achado da Task 13.3d, ver "Gaps de schema registrados" acima). **Pré-requisito das Tasks 3.10–3.11 (motor) e (front)** — elas não têm onde persistir o modelo escolhido sem esta coluna | 🟡 LACUNA | nenhuma | backend-engineer | Sonnet | Modelo-de-Dominio 3.4.1 ("campo explícito e persistido"); `.maestro/tmp/schema-v2.1-delta.sql` §6 (L.167-172) |
-| 3.10–3.11 (motor) | Tampo: modelo escolhido **antes** da espessura; espessuras condicionadas ao modelo (simples 15/18/25 · engrossado/dobrado 30/45/60 base 15 · 36/54 base 18); 6 mm nunca; trocar modelo com espessura incompatível **limpa** o campo | 🟠 BUG | 3.10–3.11 (back) | motor-engineer | Sonnet | Modelo 3.4.1 (tabela + 3 exemplos de rejeição) |
+| 3.10–3.11 (motor) | Tampo: modelo escolhido **antes** da espessura; espessuras condicionadas ao modelo (simples 15/18/25 · engrossado/dobrado 30/45/60 base 15 · 36/54 base 18); 6 mm nunca; trocar modelo com espessura incompatível **limpa** o campo | 🟠 BUG | nenhuma | motor-engineer | Sonnet | Modelo 3.4.1 (tabela + 3 exemplos de rejeição) |
 | 3.10–3.11 (front) | UI do tampo: seletor de modelo antes de espessura, lista de espessuras filtrada pelo modelo, campo limpo ao trocar modelo incompatível | 🟠 BUG | 3.10–3.11 (motor) | frontend-engineer (web) | Sonnet | Modelo 3.4.1; PRD RF-28 |
 | 3.12 | BOM completo dos três modelos de tampo (simples fechado nesta rodada; engrossado/dobrado já existiam) + fita de 35mm cobrindo também 25mm | 🟡 LACUNA | 3.10–3.11 (motor) | motor-engineer | Sonnet | Modelo 3.4.1 (BOM do simples com exemplo trabalhado), 2.1 |
-| 3.13 (front) | **`ModuleViewer`** — visualização 3D estática do módulo em edição. Componente novo, pasta própria de componentes. Stack `@react-three/fiber` + `@react-three/drei` + `three`, importado via `next/dynamic({ ssr: false })` com skeleton de loading (mesmo padrão de canvas técnico da Design-System §8: `bg-cinza-50 border-cinza-200`, ícone `Box` do `lucide-react` centralizado em `text-cinza-300`). Câmera **ortográfica**, prop `view: 'isometric' \| 'front' \| 'top' \| 'side'` (default `isometric` ao abrir o modo), **sem `OrbitControls`, sem rotação livre do usuário** — cena estática, troca de ângulo instantânea, sem animação. Props: `width`, `height`, `depth` (mm), `view`, `color?` (hex), `textureUrl?` (WebP). Material: com `textureUrl`, `useTexture` do drei + `texture.colorSpace = THREE.SRGBColorSpace`; sem `textureUrl`, usa `color`; sem nenhum dos dois, cor amadeirada padrão de fallback. **Lança só com cor sólida nesta rodada** — `textureUrl` fica sem alimentação até a Q-14 ser respondida pelo operador (`docs/PRD.md` §7.4), isso **não bloqueia** o fechamento da task, só deixa a prop de textura real incompleta por ora. Iluminação: `ambientLight` + 1 `directionalLight`. Geometria vem da **mesma fonte** que `BoxCanvas` já consome (`BoxModule.largura`/`.altura`/`.profundidade`), `color` derivado de `BoxModule.material.cor` via `corParaHex()` já existente — proibido segundo caminho de derivação de geometria. Posicionado como segundo modo ("3D estático") do painel de visualização do Editor de Item, ao lado de "2D técnico" (default), reaproveitando o `Tabs` underline da Design-System §7.8; controles de ângulo próprios e distintos dos botões Frontal/Traseira/Esquerda/Direita/Explodida do modo 2D | 🟡 LACUNA (RF-38) | nenhuma | frontend-engineer (web) | Sonnet | Modelo 4.1, 11.5 (props e origem de dado); Design-System §9.6 (posicionamento na tela, loading, controles); PRD RF-38, D-33, Q-14 (§7.4 — não bloqueante) |
+| 3.13 (front) | **`ModuleViewer`** — visualização 3D estática do módulo em edição. Componente novo, pasta própria de componentes. Stack `@react-three/fiber` + `@react-three/drei` + `three`, importado via `next/dynamic({ ssr: false })` com skeleton de loading (mesmo padrão de canvas técnico da Design-System §8: `bg-cinza-50 border-cinza-200`, ícone `Box` do `lucide-react` centralizado em `text-cinza-300`). Câmera **ortográfica**, prop `view: 'isometric' \| 'front' \| 'top' \| 'side'` (default `isometric` ao abrir o modo), **sem `OrbitControls`, sem rotação livre do usuário** — cena estática, troca de ângulo instantânea, sem animação. Props: `width`, `height`, `depth` (mm), `view`, `color?` (hex), `textureUrl?` (WebP). Material: com `textureUrl`, `useTexture` do drei + `texture.colorSpace = THREE.SRGBColorSpace`; sem `textureUrl`, usa `color` — derivado de `BoxModule.material.cor` via `corParaHex()` já existente, único fallback (Modelo 4.1.1 regra 1). **Lança com textura real** (Q-14 respondida em 2026-08-02 — Modelo 4.1.1): `textureUrl` já tem origem no domínio (`especificacao.texturaUrl` do `Produto` tipo `chapa`, alimentado pelas Tasks 3.13 (catálogo-back)/(catálogo-front) abaixo); sem uma textura selecionada no catálogo para aquele produto, cai no fallback de cor sólida via `corParaHex()` já existente — o mesmo caminho único de sempre, nunca um terceiro. Iluminação: `ambientLight` + 1 `directionalLight`. Geometria vem da **mesma fonte** que `BoxCanvas` já consome (`BoxModule.largura`/`.altura`/`.profundidade`), `color` derivado de `BoxModule.material.cor` via `corParaHex()` já existente — proibido segundo caminho de derivação de geometria. Posicionado como segundo modo ("3D estático") do painel de visualização do Editor de Item, ao lado de "2D técnico" (default), reaproveitando o `Tabs` underline da Design-System §7.8; controles de ângulo próprios e distintos dos botões Frontal/Traseira/Esquerda/Direita/Explodida do modo 2D | 🟡 LACUNA (RF-38) | nenhuma | frontend-engineer (web) | Sonnet | Modelo 4.1, 4.1.1, 11.5 (props e origem de dado); Design-System §9.6 (posicionamento na tela, loading, controles); PRD RF-38, D-33, Q-14 (resolvida) |
+| 3.13 (catálogo-back) | Bucket de Storage `texturas` (read-only para `authenticated`; escrita restrita ao operador/`service_role` — mesma natureza de bucket curado, único e compartilhado por todas as orgs, Modelo 4.1.1 regra 3) + campo `texturaUrl?: string` em `EspecificacaoChapa` (`lib/produto/tipos.ts`) + validação de escrita na Server Action de salvar produto: só aceita caminho relativo dentro do bucket, rejeita URL externa (evita hotlink de domínio de terceiro dentro do canvas do usuário) | 🟡 LACUNA (RF-38) | nenhuma | backend-engineer | Sonnet | Modelo 4.1.1 (regras 1–3); PRD RF-38, Q-14 (resolvida) |
+| 3.13 (catálogo-front) | Seletor de textura no formulário de cadastro/edição de produto tipo chapa: lista as texturas disponíveis no bucket (miniatura + nome), grava o caminho relativo escolhido em `texturaUrl`. É **seleção entre imagens já existentes, não upload livre pelo marceneiro** — o bucket é read-only para `authenticated` (Modelo 4.1.1 regra 3); reaproveita o padrão visual de modal/preview já usado no upload de logo (Task 4.8–4.9), mas a ação do usuário aqui é escolher, não enviar arquivo. Sem textura selecionada, o produto se comporta exatamente como hoje (cor sólida) | 🟡 LACUNA (RF-38) | 3.13 (catálogo-back) | frontend-engineer (web) | Sonnet | Modelo 4.1.1; PRD RF-38 |
+
+*Pré-requisito de conteúdo, não de código (Modelo 4.1.1, nota final; mesma
+natureza do achado já registrado em `docs/STATUS.md` Seção 5 sobre os ~380
+padrões de MDF): as ~380 imagens WebP de textura precisam ser fornecidas,
+curadas e enviadas ao bucket pelo operador. Nenhuma das duas tasks de
+catálogo acima gera essas imagens — sem elas, o campo e o seletor existem e
+ficam vazios, e o produto se comporta exatamente como o cenário "cor
+sólida". Isso não bloqueia o fechamento de nenhuma das três tasks (3.13
+front/catálogo-back/catálogo-front).*
 
 *Nota de roteamento — por que Lote 3 e não Lote 2: o `ModuleViewer` opera sobre
 o `BoxModule` do Editor de Item, a mesma geometria que o motor/canvas 2D já
@@ -205,7 +240,9 @@ regressão de performance/bundle, não ajuste mecânico de texto ou token.*
 
 *Impacto Visual (gate do `ux-auditor`, Design-System §15.4): Task 3.13
 (front) = **Completo** — componente novo que introduz uma stack de renderização
-inédita no produto e mexe numa tela já existente (Editor de Item).*
+inédita no produto e mexe numa tela já existente (Editor de Item). Task 3.13
+(catálogo-front) = **Leve** — seletor novo dentro de um formulário já
+existente do catálogo, não introduz tela nova.*
 
 *Nota: item 3.9 (manter item manual/personalizado) já está confirmado como
 essencial e funcionando — sem task.*
@@ -217,42 +254,90 @@ essencial e funcionando — sem task.*
 | Task | O que é | Tag | Depende de | Executor | Modelo | Referências |
 |---|---|---|---|---|---|---|
 | 4.4 | Migration: coluna `codigo` (único por organização) em `produto`, para chamada rápida no orçamento | 🟡 LACUNA | nenhuma | backend-engineer | Sonnet | PRD RF-03, RF-30 |
-| 4.1–4.3, 4.5 | Catálogo unificado: card único com seletor de categoria interno (elimina abas chapa/ferragem/LED/acessório/fita), botão genérico "Adicionar item", campos dinâmicos só depois da categoria escolhida, campos universais código/preço/status. Inclui o campo de **tamanho de rolo** na especificação de produtos tipo `fita` (novo campo em `produto.especificacao`, jsonb — sem migration de schema, só tipo/UI). **Pré-requisito da Task 3.6** (motor, Lote 3), que lê este campo para calcular rolos a comprar | 🔵 UX / 🟡 LACUNA | 4.4 | frontend-engineer (web) | Sonnet | PRD RF-30, RF-29, item 5.3; documento-fonte tabela de campos por categoria |
+| 4.1–4.3, 4.5 | Catálogo unificado: card único com seletor de categoria interno (elimina abas chapa/ferragem/LED/acessório/fita), botão genérico "Adicionar item", campos dinâmicos só depois da categoria escolhida, campos universais código/preço/status | 🔵 UX / 🟡 LACUNA | 4.4 | frontend-engineer (web) | Sonnet | PRD RF-30; documento-fonte tabela de campos por categoria |
 | 4.6–4.7 | Máscara de CNPJ e de telefone (10 ou 11 dígitos) no formulário de perfil | 🟡 LACUNA | nenhuma | frontend-engineer (web) | Haiku | PRD RF-31 |
-| 4.8–4.9 (back) | Upload de logo: bucket de Storage + política de RLS + coluna de referência em `organizacao` | 🔴 BLOQ | nenhuma | backend-engineer | Sonnet | PRD RF-02, RF-31, risco 11 |
+| 4.8–4.9 (back) | Upload de logo: bucket de Storage + política de RLS + coluna de referência em `organizacao` | 🔴 BLOQ | nenhuma | backend-engineer | Sonnet | PRD RF-02, RF-31, risco 12 |
 | 4.8–4.9 (front) | UI de upload de logo substituindo o campo de URL; logo persiste e aparece em todos os lugares que a exibem (perfil, PDF da proposta) | 🔴 BLOQ | 4.8–4.9 (back) | frontend-engineer (web) | Sonnet | PRD RF-17, RF-31 |
 | 4.10 | Fallback: sem logo cadastrada, exibe a marca padrão Orça Fácil | 🟡 LACUNA | 4.8–4.9 (front) | frontend-engineer (web) | Haiku | PRD RF-31 |
-| 4.11 (back) | Upload de foto de perfil pessoal: bucket de Storage + coluna de referência | 🟡 LACUNA | nenhuma | backend-engineer | Sonnet | PRD RF-31, risco 11 |
+| 4.11 (back) | Upload de foto de perfil pessoal: bucket de Storage + coluna de referência | 🟡 LACUNA | nenhuma | backend-engineer | Sonnet | PRD RF-31, risco 12 |
 | 4.11 (front) | UI de upload de foto de perfil | 🟡 LACUNA | 4.11 (back) | frontend-engineer (web) | Sonnet | PRD RF-31 |
 | 4.12–4.13 (back) | Troca de senha com confirmação por e-mail (fluxo do Supabase Auth) | 🔴 BLOQ | nenhuma | backend-engineer | Sonnet | PRD RF-31 |
 | 4.12–4.13 (front) | UI da área de segurança dedicada no perfil, com o fluxo de troca de senha; e-mail permanece não editável (identificador da conta, item 4.14 — sem task própria, é constraint desta) | 🔴 BLOQ | 4.12–4.13 (back) | frontend-engineer (web) | Sonnet | PRD RF-31 |
-| 4.15 | Excluir conta, disponível no perfil | 🔴 BLOQ · ⛔ Bloqueada (Q-13) | nenhuma | backend-engineer | Opus | PRD RF-31, Q-13 (7.4) |
+| 4.15 | **Excluir conta = excluir a organização inteira** (Q-13, Modelo 7.3), disponível no perfil. Cascade completo de 12 tabelas (`organizacao` incluída) + duas correções que o cascade exige + a checagem de autorização por papel (Q-17, Modelo 7.3 "Quem pode disparar"). **Nesta ordem**: **(0)** a Server Action verifica `perfil.papel === 'admin'` do usuário autenticado **antes** de qualquer operação destrutiva — `vendedor`/`projetista`/sem sessão são rejeitados com `NAO_AUTORIZADO_EXCLUIR_ORG`/403, nada é apagado, nenhum passo abaixo roda; **(1)** migration — `orcamento.cliente_id` sai de `on delete restrict` para `on delete no action` (RESTRICT é verificado imediatamente e abortaria a cascata mesmo dentro da mesma transação); **(2)** Server Action/RPC `SECURITY DEFINER` lê os `perfil.id` da organização **antes** de apagar (depois eles não existem mais); **(3)** `delete from organizacao where id = ...` — a cascata (`on delete cascade` já presente em toda tabela de tenant) apaga sozinha `perfil` · `cliente` · `produto` · `gabarito` (só os da org — os globais, `organizacao_id is null`, sobrevivem) · `orcamento` e, por ele, `ambiente` · `parede` · `linha_proposta` · `lista_material` · `elemento_continuo` · `elemento_parede_preset`; **(4)** expurga os objetos de Storage sob o prefixo da organização (logo, fotos de perfil — sem FK, não morrem pela cascata); **(5)** chama a Admin API do Supabase Auth (`service_role`) para apagar cada usuário lido no passo 2. **Nenhuma política de `delete` nova em `organizacao` para `authenticated`** — a única porta é a Server Action, com a checagem de papel do passo 0 dentro dela | 🔴 BLOQ | nenhuma | backend-engineer | Opus — não é CRUD padrão: cascade multi-tabela irreversível + Admin API (`service_role`) + expurgo de Storage sem FK, três superfícies fora do padrão RLS do resto do schema, com ordem de execução que precisa estar certa da primeira vez (sem undo) | Modelo 7.3 (cascade completo, "Quem pode disparar", 4 armadilhas técnicas, exemplo trabalhado, casos de borda); PRD RF-31, Q-13 (resolvida), Q-17 (resolvida) |
+
+**Critérios de aceitação da Task 4.15** (não removível ao executar):
+- [ ] Usuário com `perfil.papel` `vendedor` ou `projetista` (ou sem sessão)
+      que chama a Server Action recebe `NAO_AUTORIZADO_EXCLUIR_ORG`/403 e
+      nenhuma linha é apagada, nenhuma chamada à Admin API ou ao Storage
+      acontece
+- [ ] Migration aplica `orcamento.cliente_id ... on delete no action` (ou
+      equivalente que resolva a ordem de verificação) sem afrouxar a proteção
+      de dia a dia contra apagar cliente com orçamento vivo por engano
+- [ ] Excluir uma organização com dado real (perfis, clientes, orçamentos com
+      ambientes/paredes/linhas de proposta/listas de material, produtos,
+      gabaritos próprios e ao menos um gabarito global promovido a partir
+      dela) remove toda linha com aquele `organizacao_id`, preserva o
+      gabarito global (com `origem_gabarito_id` nulo) e remove os usuários
+      correspondentes de `auth.users`
+- [ ] Objetos de Storage sob o prefixo da organização são removidos
+- [ ] Confirmação via `Dialog` explícito (não `window.confirm`) antes de
+      disparar a exclusão — texto exato é nota para o `product-designer`
+- [ ] `security-auditor` revisou a task antes do merge — pré-requisito de
+      execução, não follow-up
 | 4.16 (back) | Migration: coluna `espessura_serra_padrao_mm numeric` em `organizacao` (default `3`, `0` é valor válido) + atualizar tipos/leitura do perfil. **Pré-requisito da Task 3.1/3.3 (motor)** — o bin-packing melhorado lê este campo como kerf | 🟡 LACUNA | nenhuma | backend-engineer | Sonnet | Modelo 8.2 (A-13, A-14); PRD RF-02, RF-34, risco 12 |
 | 4.16 (front) | Campo "Espessura de serra (kerf)" no formulário de `/perfil`, editável, com aviso de retroatividade: mudar o valor altera o plano de corte de todo orçamento **não congelado** (mesma disciplina das alturas de faixa) | 🟡 LACUNA | 4.16 (back) | frontend-engineer (web) | Sonnet | Modelo 8.2; PRD RF-02, RF-34, risco 12 |
 
-**⛔ Task 4.15 bloqueada para execução — Q-13** (`docs/PRD.md` Seção 7.4):
-o que "excluir conta" apaga de fato (usuário ou organização inteira, e o
-que acontece com orçamentos/catálogo/gabaritos quando o excluído é o único
-usuário da org) é decisão do operador — operação irreversível sobre dado
-de cliente final (LGPD), não se decide por dedução. As demais tasks deste
-Lote não são afetadas.
+**Task 4.15 desbloqueada — Q-17 respondida em 2026-08-03** (`docs/PRD.md`
+Seção 7.4, `docs/Modelo-de-Dominio.md` Seção 7.3 "Quem pode disparar"): a
+Q-13 original (o que "excluir conta" apaga de fato) já estava respondida —
+apaga a organização inteira, por cascade — e agora a Q-17 (quem pode
+disparar) também está: **só o papel `admin`/dono**. A checagem vive na
+aplicação, dentro da própria Server Action, **antes** de qualquer `delete` —
+não no banco: **não** se cria política de `delete` em `organizacao` para
+`authenticated`, a única porta continua sendo a Server Action. Revisão do
+`security-auditor` é pré-requisito de implementação, não follow-up: é a
+única operação destrutiva multi-tabela do produto e a única que toca
+`auth.users`/Storage fora do padrão RLS do resto do schema. A task está
+pronta para execução.
 
 #### Lote 5 — Limpeza visual
 
 *Independente e paralelo ao Lote 0 e aos demais lotes.* Toda task aqui é
 verificada pelo `ux-auditor` contra o checklist de 12 itens da Seção 15.4
-de `docs/Design-System.md`.
+de `docs/Design-System.md`. **Exceção pontual** (mesmo padrão da exceção do
+Lote 3 com a Task 4.16): a Task 5.10 (back) depende da Task 0.7b (Lote 0,
+congelamento real — é a `handleGerarProposta` corrigida que dispara o
+gatilho, não a migration da coluna) — ver nota abaixo da tabela. O restante
+do Lote continua independente.
 
 | Task | O que é | Tag | Depende de | Executor | Modelo | Impacto Visual | Referências |
 |---|---|---|---|---|---|---|---|
 | 5.1–5.4 | Biblioteca e Editor de Módulo migram para o shell/Design System v3 (sidebar+topbar presentes nas duas telas), remoção dos textos clicáveis herdados da versão antiga (editor, calculadora, biblioteca, catálogo) | 🔵 UX | nenhuma | frontend-engineer (web) | Sonnet | **Completo** (retrofit de duas telas inteiras) | Design-System §6, §15.4; PRD RF-35 |
 | 5.5–5.6 | Remover o card "validação tier 1 + tier 2" e varrer a UI por outros termos de especificação vazados (fora do rename "Preset"→"Módulo", já coberto pela Task 2.13) | 🔵 UX | nenhuma | frontend-engineer (web) | Haiku | **Leve** (ajuste pontual de texto) | Design-System §15.3; PRD RF-36 |
 | 5.7–5.9 | Dashboard/orçamentos recentes: remover prazo de entrega, adicionar valor final do projeto e custo | 🔵 UX / 🟡 LACUNA | nenhuma | frontend-engineer (web) | Sonnet | **Leve** (ajuste de card existente) | Modelo 11.5, 5.5; PRD RF-33 |
+| 5.10 (back) | **Etapa de esteira (Q-6, Q-15 — resolvidas)** — migration: coluna `etapa_esteira` enum (`novo` · `visita_agendada` · `projeto_3d` · `aguardando_aprovacao` · `fechado`) em `orcamento`, default `novo`, `not null`, `check` do enum (Erro E-E2 se fora dele). Server Action `atualizarEtapaEsteira(orcamentoId, novaEtapa)` aplicando as transições T1–T3 (movimento livre entre não-terminais; só sai de `fechado` pela Task 1.9/Reabrir — Erro E-E1 se tentado por aqui). Gatilhos automáticos amarrados aos dois pontos de código já identificados: `criarOrcamento` (o default da coluna já cobre `∅ → novo`, sem código extra) e `handleGerarProposta`/Task 0.7b (na **mesma transação** do congelamento: se a etapa atual for anterior a `aguardando_aprovacao`, avança; se já `fechado`, não mexe — só recongela, I3) | 🔴 BLOQ | 0.7b | backend-engineer | Sonnet | — (backend, sem UI) | Modelo 7.2 (enum, transições T1–T3, gatilhos, E-E1/E-E2); PRD RF-33, Q-6 (resolvida) |
+| 5.10 (front) | Seletor manual das etapas não-terminais (`novo`, `visita_agendada`, `projeto_3d`, `aguardando_aprovacao`) na tela do orçamento, com movimento livre entre elas (T1) — na prática, `visita_agendada`/`projeto_3d` dependem inteiramente deste seletor (não têm gatilho automático), enquanto `novo`/`aguardando_aprovacao` já são atingidas automaticamente por outras ações (criação do orçamento e "Gerar proposta", respectivamente) mas continuam selecionáveis à mão aqui, para corrigir um avanço/recuo feito por engano (T1 permite ida e volta livre); sem seletor (read-only) quando `etapaEsteira === "fechado"` — a única saída é o botão Reabrir (Task 1.9), restrito a `admin`. Badge do card de orçamento (dashboard e cabeçalho do orçamento) passa a usar `rotuloDoCard(status, etapaEsteira)` (Q-15): "Fechado" no terminal, "Em andamento" nas três intermediárias, rótulo do `status` comercial quando `novo` — substitui os badges "Em andamento"/"Fechado" que hoje não tinham origem | 🟡 LACUNA / 🔵 UX | 5.10 (back) | frontend-engineer (web) | Sonnet | **Leve** (troca de origem de um badge já existente + seletor pontual, não é tela nova) | Modelo 7.2 (Q-15, T1, `rotuloDoCard`, exemplo trabalhado); PRD RF-33, Q-15 (resolvida) |
 
-*Item 5.10 (status de esteira) — **sem task agendada.** Aguardando decisão
-do operador sobre Q-6 (campo select manual vs. workflow com transições
-automáticas — `docs/PRD.md` Seção 7.4, `docs/Modelo-de-Dominio.md` Seção
-11.3). Não escrever tipo, enum ou coluna antes disso.*
+*Nota — dependência cruzada: a Task 5.10 (back) depende da Task 0.7b (Lote 0)
+porque a transição automática para `aguardando_aprovacao` é gravada no
+**mesmo ato** que o congelamento (`handleGerarProposta` corrigido), mesma
+transação — não dá para escrever esse gatilho antes de a Task 0.7b existir
+(0.7a, a migration/Server Action, já é pré-requisito transitivo de 0.7b).*
+
+*Nota — mesma superfície de arquivo (não é dependência de dado): a Task 5.10
+(front) e a Task 5.7–5.9 tocam o mesmo componente de card do dashboard.
+Podem rodar em qualquer ordem entre si — só vale coordenar a ordem de merge
+para evitar conflito.*
+
+*Nota — por que `fechado` nunca é opção do seletor manual: a única saída de
+`fechado` é o botão "Reabrir" (Task 1.9), agora restrito ao papel `admin`
+(Q-18, resolvida — I6a), e o gatilho que normalmente levaria a `fechado`
+(aprovação do orçamento) não existe neste lançamento — é trabalho pós-MVP,
+despriorizado ("Backlog futuro" acima). Oferecer `fechado` no seletor manual
+criaria um beco sem saída: o marceneiro entraria numa etapa terminal sem ter
+passado pelo gatilho real e, se não for `admin`, sem conseguir sair dela de
+jeito nenhum. `docs/Modelo-de-Dominio.md` Seção 7.2 documenta `fechado` como
+deliberadamente inalcançável nesta fase pelas mesmas razões.*
 
 ### Backlog futuro (pós-MVP — avaliado, não agendado)
 
@@ -357,13 +442,13 @@ dentro das tasks reais da Stage 13. Detalhe completo, se precisar, no
 
 | Lote/Estágio | Foco | Dependência | Tasks | Status |
 |---|---|---|---|---|
-| Lote 0 — Fundação de dados | Ambiente/Parede como entidade real (N×N), alturas por parede, coluna `congelado_em` da proposta | Bloqueia Lote 1 e 2 | 6 | ⏱️ Planejado |
-| Lote 1 — Confiança e estado | Cache, URL de aba, paridade financeiro↔proposta (leitura do congelamento passou para 0.7b) | Depende do Lote 0; bloqueia Lote 2 | 4 | ⏱️ Planejado |
-| Lote 2 — Lacunas funcionais | Criação de módulo, promoção org→global, elementos de parede, posicionamento por vão, elevação com módulos, agrupamento comercial | Depende do Lote 0 **e** do Lote 1 fecharem, em sequência | 20 | ⏱️ Planejado |
-| Lote 3 — Precisão do motor | Bin-packing melhorado (kerf + guilhotina + meta-heurística), `ModuleViewer`, contagem de cortes, fita por cor, tampo 3 modelos (+ migration `modelo_tampo`/`cor`) | Paralelo, independente **como regra geral** — exceções: Task 3.1/3.3 (motor) depende de 4.16 (back), Lote 4; Task 3.6 (motor) depende de 4.1–4.3/4.5 (front), Lote 4 | 15 | ⏱️ Planejado (exceções: 3.1/3.3 (motor) aguarda 4.16; 3.6 (motor) aguarda 4.1–4.3/4.5) |
-| Lote 4 — Cadastros e identidade | Catálogo unificado, upload de logo/foto, segurança de conta, kerf do perfil | Paralelo, independente | 13 | ⏱️ Planejado (1 ⛔ Q-13) |
-| Lote 5 — Limpeza visual | Shell v3 em Biblioteca/Editor, vocabulário, dashboard | Paralelo, independente | 3 | ⏱️ Planejado |
-| **Total** | | | **61** | |
+| Lote 0 — Fundação de dados | Ambiente/Parede como entidade real (N×N), alturas por parede, snapshot congelado (dividido em 0.7a/0.7b) | Bloqueia Lote 1 e 2 | 6 | ⏱️ Planejado |
+| Lote 1 — Confiança e estado | Cache, URL de aba, paridade financeiro↔proposta, reabrir orçamento | Depende do Lote 0; bloqueia Lote 2 — exceção: Task 1.9 (back) também depende da Task 5.10 (back), Lote 5 (ver nota de dependência cruzada no cabeçalho do Lote 1) | 6 | ⏱️ Planejado |
+| Lote 2 — Lacunas funcionais | Criação de módulo, elementos de parede, posicionamento por vão, elevação com módulos, agrupamento comercial | Depende do Lote 0 **e** do Lote 1 fecharem, em sequência | 19 | ⏱️ Planejado |
+| Lote 3 — Precisão do motor | Bin-packing melhorado (kerf + guilhotina + meta-heurística), `ModuleViewer` + textura real (catálogo-back/front), contagem de cortes, fita por cor, tampo 3 modelos | Paralelo, independente **como regra geral** — exceção: Task 3.1/3.3 (motor) depende de 4.16 (back), Lote 4 | 16 | ⏱️ Planejado (exceção: 3.1/3.3 (motor) aguarda 4.16) |
+| Lote 4 — Cadastros e identidade | Catálogo unificado, upload de logo/foto, segurança de conta, kerf do perfil | Paralelo, independente | 13 | ⏱️ Planejado |
+| Lote 5 — Limpeza visual | Shell v3 em Biblioteca/Editor, vocabulário, dashboard, etapa de esteira | Paralelo, independente — exceção: Task 5.10 (back) depende da Task 0.7b, Lote 0 (ver nota de dependência cruzada no cabeçalho do Lote 5) | 5 | ⏱️ Planejado (exceção: 5.10 (back) aguarda 0.7b) |
+| **Total** | | | **65** | |
 
 > **Estágio OR-Tools removido em 2026-07-31.** O "Estágio OR-Tools — Plano
 > de corte assíncrono" (tasks OR.1–OR.5, 5 tasks) foi **cancelado por
@@ -371,20 +456,28 @@ dentro das tasks reais da Stage 13. Detalhe completo, se precisar, no
 > mais deste resumo nem do documento. O RF-34 continua existindo, agora como
 > as Tasks 3.1/3.3 (motor) e 3.1/3.3 (front) do Lote 3, sem bloqueio.
 
-**Distribuição por executor**: frontend-engineer 34 · backend-engineer 16 ·
+**Distribuição por executor**: frontend-engineer 37 · backend-engineer 17 ·
 motor-engineer 11 · integration-engineer 0.
 
-**Distribuição por modelo recomendado**: Sonnet 55 · Haiku 5 (1.8, 2.13,
+**Distribuição por modelo recomendado**: Sonnet 59 · Haiku 5 (1.8, 2.13,
 4.6–4.7, 4.10, 5.5–5.6 — tasks mecânicas de texto/máscara/relabel) · Opus 1
 (4.15 — exclusão de conta, irreversível e sensível a LGPD).
 
-**Bloqueadas por decisão pendente do operador**: 1 task — 4.15 (Q-13).
-Nenhuma outra task deste backlog está bloqueada: a Q-12 perdeu objeto (a
-troca de algoritmo do RF-34 já é a correção do item 3.1) e as Q-8 a Q-11
-foram extintas junto com o descarte do OR-Tools.
+**Bloqueadas por decisão pendente do operador**: nenhuma. As últimas duas
+perguntas em aberto — **Q-17** (quem pode disparar a exclusão da
+organização) e **Q-18** (quem pode reabrir um orçamento fechado) — foram
+respondidas pelo operador em 2026-08-03, ambas com a mesma resposta: só o
+papel `admin`/dono (`docs/Modelo-de-Dominio.md` Seção 7.3 "Quem pode
+disparar" e Seção 5.4.1, invariante I6a). Task 4.15 e as Tasks 1.9 (back)/
+(front) deixam de estar bloqueadas e ganham a checagem de papel correspondente
+na descrição. A Q-6, Q-13, Q-14 e Q-16 já haviam sido respondidas na rodada
+anterior (ver revisão de 2026-08-02 acima); a Q-12 perdeu objeto (a troca de
+algoritmo do RF-34 já é a correção do item 3.1); e as Q-8 a Q-11 foram
+extintas junto com o descarte do OR-Tools.
 
-**Registradas sem task agendada (placeholder, aguardando decisão)**: item
-5.10 do backlog-fonte (status de esteira — Q-6).
+**Registradas sem task agendada (placeholder, aguardando decisão)**:
+nenhuma — o item 5.10 do backlog-fonte (status de esteira) ganhou tasks
+reais (5.10 back/front, Lote 5) com a resposta de Q-6/Q-15.
 
 **Movidas para "Backlog futuro" (pós-lançamento, não agendadas)**: itens
 6.1 e 6.2 do backlog-fonte (fluxo de aprovação e reexibição de prazo de
@@ -401,13 +494,16 @@ entrega). Item 6.3 está **sem objeto** (ver nota na seção "Backlog futuro").
 > TypeScript/Web Worker), e RF-04 (emenda pontual da Fase D — regra de
 > deduplicação da biblioteca, Modelo-de-Dominio Seção 7.1 regra 6), incluído
 > por exceção mesmo estando fora da faixa RF-19–RF-38 porque só ganhou task
-> própria nesta rodada de correção. Task sem RF citado no PRD é escopo
-> inventado; RF sem task é escopo perdido — nenhum dos dois caso ocorreu
-> nesta rodada.
+> própria nesta rodada de correção — mesma situação de RF-05 e RF-16
+> (também emendados na Fase D, Seção 10.2, também fora da faixa), cujas
+> tasks entram na lista de exceções ao final da tabela. Task sem RF citado
+> no PRD é escopo inventado; RF sem task é escopo perdido — as oito
+> exceções listadas ao final resolvem os casos aparentes das duas coisas
+> nesta rodada; fora delas, nenhum dos dois caso ocorre.
 
 | RF | Descrição resumida | Tasks |
 |---|---|---|
-| RF-04 (emenda) | Biblioteca esconde o módulo global cuja origem é gabarito promovido da própria organização | 2.1 (dedup), 2.1 (promoção) |
+| RF-04 (emenda) | Biblioteca esconde o módulo global cuja origem é gabarito promovido da própria organização | 2.1 (dedup) |
 | RF-19 | Ambiente/Parede navegáveis, N×N | 0.1–0.3, 2.3–2.6 |
 | RF-20 | Alturas herdadas com override por parede | 0.4, 2.3–2.6 (alturas) |
 | RF-21 | Posicionamento por vão até o vizinho | 2.18 (motor), 2.18 (front) |
@@ -415,14 +511,14 @@ entrega). Item 6.3 está **sem objeto** (ver nota na seção "Backlog futuro").
 | RF-23 | Estado de aplicação confiável (cache, URL, render, link) | 1.1–1.3, 1.8 |
 | RF-24 | Criar módulo do zero | 2.1 |
 | RF-25 | Elementos de parede completos (pedra, edição, referência, preset) | 2.7, 2.8–2.11 (back/front), 2.12 (back/front) |
-| RF-26 | Inserção de módulo com decisão guiada (cascata, faixas, torre, rodapé) | 2.14–2.17, 2.19–2.23 |
+| RF-26 | Inserção de módulo com decisão guiada (cascata, faixas, torre, rodapé) | 2.14–2.17 |
 | RF-27 | Elevação desenha módulos + cotas | 2.24–2.26, 2.27 |
-| RF-28 | Tampo com três modelos | 3.10–3.11 (back/motor/front) |
+| RF-28 | Tampo com três modelos | 3.10–3.11 (motor/front) |
 | RF-29 | Saída do plano de corte completa (chapas, cortes, fita por cor, rolos) | 1.7, 3.2, 3.4, 3.5 (motor/front), 3.6 |
 | RF-30 | Catálogo unificado | 4.1–4.3/4.5, 4.4 |
 | RF-31 | Identidade e conta (logo, foto, máscaras, segurança, exclusão) | 4.6–4.7, 4.8–4.9 (back/front), 4.10, 4.11 (back/front), 4.12–4.13 (back/front), 4.15 |
 | RF-32 | Editar dados do cliente | 0.5a, 0.5b |
-| RF-33 | Dashboard com valor e custo (status de esteira fica de fora — Q-6) | 5.7–5.9 |
+| RF-33 | Dashboard com valor e custo, etapa de esteira (Q-6, Q-15 resolvidas) | 5.7–5.9, 5.10 (back), 5.10 (front) |
 | RF-34 | Plano de corte com bin-packing melhorado (guilhotina + retângulos livres + meta-heurística, kerf, Web Worker) — **substitui o RF-34 antigo (OR-Tools, cancelado)** | 3.1/3.3 (motor), 3.1/3.3 (front), 4.16 (back), 4.16 (front) |
 | RF-35 | Shell consistente (Biblioteca, Editor) | 5.1–5.4 |
 | RF-36 | Vocabulário de produto na interface | 2.13, 5.5–5.6 |
@@ -431,7 +527,8 @@ entrega). Item 6.3 está **sem objeto** (ver nota na seção "Backlog futuro").
 
 **Lacunas**: nenhuma — todo RF-19 a RF-38 tem ao menos uma task (mais RF-04,
 incluído por exceção — ver nota acima). Também sem task inventada fora de
-RF: mapeamento item a item, sem "respectivamente" —
+RF: mapeamento item a item, sem "respectivamente" — **oito exceções**, não
+cinco:
 
 - Item 1.5–1.6 → RF-22 (já refletido na linha RF-22 da tabela acima);
 - Item 1.7 → RF-29 (já refletido na linha RF-29 da tabela acima — deixa de
@@ -440,24 +537,17 @@ RF: mapeamento item a item, sem "respectivamente" —
   sem m² e edição de quantidade na lista de material);
 - Item 3.12 → RF-28 (já refletido na linha RF-28 da tabela acima — BOM
   completo dos três modelos de tampo);
-- Itens 2.19–2.23 → RF-05 (Fase D, emenda de RF pré-existente — editar
-  módulo na mesma tela da inserção; já refletido também na linha RF-26
-  acima, que cita a mesma task);
-- Item 2.31 → RF-16 (Fase D, emenda — cancelar/reverter divisão de linha de
-  proposta);
-- Item 2.32 → RF-16 (Fase D, emenda — subdividir dentro do ambiente mantendo
-  o vínculo).
+- Tasks 2.19–2.23 → **RF-05** (Fase D, emenda de RF pré-existente — editor
+  de item dirigido por capacidade passa a estar disponível no momento da
+  inserção do módulo; PRD Seção 10.2, tabela de emendas);
+- Tasks 2.31 e 2.32 → **RF-16** (Fase D, emenda de RF pré-existente —
+  reversão de divisão de linha e subdivisão mantendo o vínculo; PRD Seção
+  10.2, tabela de emendas — a mesma emenda também cobre a Task 2.29, já
+  refletida na linha RF-37 acima).
 
-*Correção da reauditoria de 2026-08-01: os itens 2.19–2.23, 2.31 e 2.32 já
-existiam como task (cada uma cita o RF na própria linha da tabela do lote),
-mas não apareciam nem na tabela acima nem nesta lista de exceções — a
-afirmação anterior de "nenhuma lacuna" contava só quatro das sete exceções
-reais. Os três bullets acima fecham a contagem; nenhum escopo novo foi
-criado, só a rastreabilidade corrigida.*
-
-Todos os oito são bugs e refinamentos de requisito já existente, não
-requisito novo à parte. Os itens 3.1 e 3.3 mapeiam para o RF-34 novo (Tasks
-3.1/3.3), citados no próprio ID da task para rastreabilidade com o
-documento-fonte.
+Todos os oito são bugs e refinamentos de requisito já existente (RF-05,
+RF-15, RF-16, RF-22, RF-28, RF-29), não requisito novo à parte. Os itens 3.1
+e 3.3 mapeiam para o RF-34 novo (Tasks 3.1/3.3), citados no próprio ID da
+task para rastreabilidade com o documento-fonte.
 
 Pronto para handoff ao `spec-auditor`.
