@@ -7,15 +7,19 @@
 
 ## 1. Onde estamos
 
-**Épico V2 completo.** Painel de orçamento para marceneiros: motor de caixa
+**Épico V2 completo** (Fases A–C); **Épico V2.1/Fase D em execução** (Lote 0
+iniciado 2026-08-03). Painel de orçamento para marceneiros: motor de caixa
 paramétrico (V3), persistência multi-tenant real via Supabase, todas as telas
 da experiência construídas. Fases A (Discovery), B (Motor e dados) e C
-(Experiência/telas) — todas concluídas. Não há task planejada em aberto além
-do registrado em `docs/Backlog.md` (dívida de segurança não endereçada +
-"Backlog futuro pós-MVP", nada agendado).
+(Experiência/telas) — todas concluídas. 
 
-Próximos passos dependem de uma nova conversa com o operador: novo escopo,
-item do Backlog futuro, ou operação/manutenção do que já existe.
+Fase D (Pré-Lançamento) — Lote 0 (Fundação de dados) em andamento:
+**Task 0.1–0.3 mesclada** (wiring multi-Ambiente/Parede, migration, 7
+Server Actions, remoção cascata de itens órfãos). Próximas: Task 0.4–0.7b
+(alturas de faixa, congelamento, dados de cliente).
+
+Fases A–C + Task 0.1–0.3: ver histórico em `docs/Backlog.md` ("Resumo do
+Épico V2" e "Lote 0 — Fundação de dados").
 
 ## 2. Como se orientar (leia nesta ordem)
 
@@ -73,7 +77,7 @@ propostas). Prisma foi removido por completo.
 - `/dev/preview/*` — harnesses com dados mock, sem sessão, 404 em produção;
   usados pra auditoria visual sem precisar logar.
 
-**Testes**: 290 passando (`npm run test`). `npm run lint`/`npm run typecheck`
+**Testes**: 306 passando (`npm run test`). `npm run lint`/`npm run typecheck`
 limpos.
 
 ## 4. Decisões que não devem ser reabertas sem motivo novo

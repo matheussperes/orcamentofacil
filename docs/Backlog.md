@@ -122,9 +122,11 @@ singleton "1 ambiente, 1 parede". A única mudança de **schema** real é a
 adição de colunas cosméticas (`nome`, `ordem`, `alturas_override`) já
 especificadas em `.maestro/tmp/schema-v2.1-delta.sql` Seções 1–2.
 
+**Histórico de execução:**
+- **Task 0.1–0.3** ✅ (2026-08-03) — Migration `20260801100000_ambiente_parede_ordem_nome_alturas.sql` + 7 Server Actions (`criarAmbiente`, `renomearAmbiente`, `reordenarAmbientes`, `excluirAmbiente`, `criarParede`, `atualizarParede`, `excluirParede`) + remoção cascata de itens órfãos. Aprovado code-auditor, security-auditor (2 tentativas), qa-engineer (2 tentativas). 306 testes passando ao final.
+
 | Task | O que é | Tag | Depende de | Executor | Modelo | Referências |
 |---|---|---|---|---|---|---|
-| 0.1–0.3 | Substituir o singleton de Ambiente/Parede por estado real de N ambientes × N paredes: migration de `ordem`/`nome`/`alturas_override`, refatorar `lib/ambiente/estado.ts`/`salvar.ts`/`mapear.ts`, e implementar os Server Actions `criarAmbiente`/`renomearAmbiente`/`reordenarAmbientes`/`excluirAmbiente`/`criarParede`/`atualizarParede`/`excluirParede`. Exclusão cascateia e remove do jsonb `orcamento.itens` os `itemIds` que ficariam órfãos (sem FK que garanta isso — ponto de atenção explícito do Data Architect) | 🔴 BLOQ | nenhuma | backend-engineer | Sonnet | Modelo 3.2; `schema-v2.1-delta.sql` §1–2, §8; PRD RF-19, risco 7 |
 | 0.4 | Alturas de faixa: `alturasEfetivas(parede, organizacao)` (perfil dá default, parede sobrescreve campo a campo), estado "herdado"/"customizado" **derivado** (nunca flag persistido), "voltar ao herdado" apaga a chave. Corrige **junto** o achado colateral: `lib/ambiente/salvar.ts:66-73` hoje sobrescreve `organizacao.alturas_padrao` inteira a cada salvamento de ambiente — vira invariante de aceite que salvar parede/ambiente nunca escreve no perfil da organização. Corrige também A-08 (`Y(inferior)` e `Y(torre)` = `alturaRodape`, hoje o motor usa `0`) | 🟡 LACUNA | 0.1–0.3 | backend-engineer | Sonnet | Modelo 3.2.1 (exemplos trabalhados); PRD D-27, RF-20, risco 8 |
 | 0.5a | Server Action `atualizarCliente` (nome, telefone, endereço) — hoje o cadastro é de mão única | 🟡 LACUNA | nenhuma | backend-engineer | Sonnet | Modelo 7 ("Cliente"); PRD RF-32 |
 | 0.5b | Formulário de edição de dados do cliente na tela do orçamento | 🟡 LACUNA | 0.5a | frontend-engineer (web) | Sonnet | PRD RF-32 |
@@ -442,7 +444,7 @@ dentro das tasks reais da Stage 13. Detalhe completo, se precisar, no
 
 | Lote/Estágio | Foco | Dependência | Tasks | Status |
 |---|---|---|---|---|
-| Lote 0 — Fundação de dados | Ambiente/Parede como entidade real (N×N), alturas por parede, snapshot congelado (dividido em 0.7a/0.7b) | Bloqueia Lote 1 e 2 | 6 | ⏱️ Planejado |
+| Lote 0 — Fundação de dados | Ambiente/Parede como entidade real (N×N), alturas por parede, snapshot congelado (dividido em 0.7a/0.7b) | Bloqueia Lote 1 e 2 | 5 | 1 de 6 ✅ (0.1–0.3 mesclado) |
 | Lote 1 — Confiança e estado | Cache, URL de aba, paridade financeiro↔proposta, reabrir orçamento | Depende do Lote 0; bloqueia Lote 2 — exceção: Task 1.9 (back) também depende da Task 5.10 (back), Lote 5 (ver nota de dependência cruzada no cabeçalho do Lote 1) | 6 | ⏱️ Planejado |
 | Lote 2 — Lacunas funcionais | Criação de módulo, elementos de parede, posicionamento por vão, elevação com módulos, agrupamento comercial | Depende do Lote 0 **e** do Lote 1 fecharem, em sequência | 19 | ⏱️ Planejado |
 | Lote 3 — Precisão do motor | Bin-packing melhorado (kerf + guilhotina + meta-heurística), `ModuleViewer` + textura real (catálogo-back/front), contagem de cortes, fita por cor, tampo 3 modelos | Paralelo, independente **como regra geral** — exceção: Task 3.1/3.3 (motor) depende de 4.16 (back), Lote 4 | 16 | ⏱️ Planejado (exceção: 3.1/3.3 (motor) aguarda 4.16) |
