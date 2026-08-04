@@ -20,6 +20,10 @@ export interface OrcamentoDetalhe {
   /** `orcamento.frete` (Task 11.2, numeric nullable) — Task 13.4: exibido
    * (só leitura) na aba Corte & Material; editar é escopo da Task 13.5. */
   frete: number | null;
+  /** `orcamento.congelado_em` (Task 0.7a, Modelo 5.4.1) — instante do último
+   * congelamento da proposta; `null` = nunca congelado. Ortogonal a
+   * `status`. Gravado por `lib/orcamento/congelar.ts`. */
+  congeladoEm: string | null;
 }
 
 type ClienteAninhado = { nome: string | null } | { nome: string | null }[] | null;
@@ -45,7 +49,7 @@ export async function buscarOrcamentoPorId(id: string): Promise<OrcamentoDetalhe
 
   const { data, error } = await supabase
     .from("orcamento")
-    .select("id, status, prazo_entrega, frete, cliente(nome)")
+    .select("id, status, prazo_entrega, frete, congelado_em, cliente(nome)")
     .eq("id", id)
     .maybeSingle();
 
@@ -58,6 +62,7 @@ export async function buscarOrcamentoPorId(id: string): Promise<OrcamentoDetalhe
     status: data.status as StatusOrcamento,
     prazoEntrega: (data.prazo_entrega as string | null) ?? null,
     frete: (data.frete as number | null) ?? null,
+    congeladoEm: (data.congelado_em as string | null) ?? null,
     clienteNome: nomeDoCliente(data.cliente as ClienteAninhado),
   };
 }
@@ -92,7 +97,7 @@ export async function buscarItemDoOrcamento(
 
   const { data, error } = await supabase
     .from("orcamento")
-    .select("id, status, prazo_entrega, frete, cliente(nome), itens")
+    .select("id, status, prazo_entrega, frete, congelado_em, cliente(nome), itens")
     .eq("id", orcamentoId)
     .maybeSingle();
 
@@ -112,6 +117,7 @@ export async function buscarItemDoOrcamento(
       status: data.status as StatusOrcamento,
       prazoEntrega: (data.prazo_entrega as string | null) ?? null,
       frete: (data.frete as number | null) ?? null,
+      congeladoEm: (data.congelado_em as string | null) ?? null,
       clienteNome: nomeDoCliente(data.cliente as ClienteAninhado),
     },
     item,
