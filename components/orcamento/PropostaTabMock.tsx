@@ -71,17 +71,24 @@ export function PropostaTabMock() {
     return imagemUrl;
   }
 
+  async function onCongelarOrcamento(_orcamentoId: string) {
+    await new Promise((resolve) => setTimeout(resolve, 150));
+    return { ok: true };
+  }
+
   return (
     <PropostaLab
       orcamentoId="preview-orcamento"
       estadoInicial={estadoMockPreenchido()}
       configuracaoInicial={CONFIGURACAO_MOCK}
       linhasIniciais={[]}
+      congeladoEm={null}
       onCriarLinha={onCriarLinha}
       onAtualizarLinha={onAtualizarLinha}
       onExcluirLinha={onExcluirLinha}
       onRegenerarImagem={onRegenerarImagem}
       onResolverUrlImagem={onResolverUrlImagem}
+      onCongelarOrcamento={onCongelarOrcamento}
     />
   );
 }

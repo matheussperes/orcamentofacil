@@ -3,6 +3,7 @@
 import { PropostaLab } from "./PropostaLab";
 import { criarLinhaProposta, atualizarLinhaProposta, excluirLinhaProposta } from "@/lib/linha-proposta/acoes";
 import { obterUrlAssinadaImagemLinha, uploadImagemLinhaProposta } from "@/lib/linha-proposta/storage";
+import { congelarOrcamento } from "@/lib/orcamento/congelar";
 import type { LinhaProposta } from "@/lib/linha-proposta/tipos";
 import type { EstadoAmbiente } from "@/lib/ambiente/estado";
 import type { ConfiguracaoPrecificacaoCarregada } from "@/lib/precificacao/carregarConfiguracao";
@@ -23,6 +24,7 @@ export interface PropostaTabConectadaProps {
   estadoInicial: EstadoAmbiente;
   configuracaoInicial: ConfiguracaoPrecificacaoCarregada;
   linhasIniciais: LinhaProposta[];
+  congeladoEm: string | null;
 }
 
 export function PropostaTabConectada({
@@ -31,6 +33,7 @@ export function PropostaTabConectada({
   estadoInicial,
   configuracaoInicial,
   linhasIniciais,
+  congeladoEm,
 }: PropostaTabConectadaProps) {
   async function onCriarLinha(titulo: string, itens: string[], descricao: string) {
     return criarLinhaProposta(orcamentoId, titulo, itens, descricao);
@@ -58,11 +61,13 @@ export function PropostaTabConectada({
       estadoInicial={estadoInicial}
       configuracaoInicial={configuracaoInicial}
       linhasIniciais={linhasIniciais}
+      congeladoEm={congeladoEm}
       onCriarLinha={onCriarLinha}
       onAtualizarLinha={atualizarLinhaProposta}
       onExcluirLinha={excluirLinhaProposta}
       onRegenerarImagem={onRegenerarImagem}
       onResolverUrlImagem={obterUrlAssinadaImagemLinha}
+      onCongelarOrcamento={congelarOrcamento}
     />
   );
 }

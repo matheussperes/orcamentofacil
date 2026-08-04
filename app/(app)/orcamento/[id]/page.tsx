@@ -90,6 +90,7 @@ export default async function OrcamentoPage({ params }: { params: { id: string }
           estadoInicial={estadoAmbiente}
           configuracaoInicial={configuracaoPrecificacao}
           linhasIniciais={linhasProposta.linhas}
+          congeladoEm={orcamento.congeladoEm}
         />
       }
     />
