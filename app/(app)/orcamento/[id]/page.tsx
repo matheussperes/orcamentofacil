@@ -64,6 +64,9 @@ export default async function OrcamentoPage({ params }: { params: { id: string }
   return (
     <OrcamentoAbas
       clienteNome={orcamento.clienteNome}
+      clienteId={orcamento.clienteId}
+      clienteTelefone={orcamento.clienteTelefone}
+      clienteEndereco={orcamento.clienteEndereco}
       idCurto={idCurto}
       abaAmbientes={
         <AmbientesTabConectada orcamentoId={orcamento.id} estadoInicial={estadoAmbiente} />

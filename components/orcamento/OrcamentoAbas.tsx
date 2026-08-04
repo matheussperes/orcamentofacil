@@ -5,6 +5,7 @@ import { FileText, LayoutGrid, Scissors, Wallet } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AbaAtivaProvider } from "./AbaAtivaContext";
 import { usePageHeader } from "@/components/shell/PageHeaderContext";
+import { EditarClienteDialog } from "./EditarClienteDialog";
 
 // Task 13.3c (contrato .maestro/tmp/13.3c-contract.md) — shell de
 // `/orcamento/[id]`: 4 abas (Design-System Seção 7.8, estilo underline).
@@ -51,6 +52,11 @@ import { usePageHeader } from "@/components/shell/PageHeaderContext";
 // Task 13.3c.
 export interface OrcamentoAbasProps {
   clienteNome: string;
+  /** Task 0.5b — necessários pra pré-popular/chamar `atualizarCliente` a
+   * partir do diálogo de edição (`EditarClienteDialog`). */
+  clienteId: string;
+  clienteTelefone: string | null;
+  clienteEndereco: string | null;
   /** Id curto (8 primeiros caracteres do uuid, maiúsculo) — usado só como
    * fallback de exibição; hoje `clienteNome` sempre existe (coluna
    * `cliente.nome` é NOT NULL), mas mantemos o fallback pela mesma razão
@@ -75,19 +81,32 @@ export interface OrcamentoAbasProps {
 
 export function OrcamentoAbas({
   clienteNome,
+  clienteId,
+  clienteTelefone,
+  clienteEndereco,
   idCurto,
   abaAmbientes,
   abaCorteMaterial,
   abaFinanceiro,
   abaProposta,
 }: OrcamentoAbasProps) {
+  // Task 0.5b: dados do cliente vivem em estado local para que
+  // `EditarClienteDialog` possa atualizar a exibição (breadcrumb + affordance
+  // de edição) sem F5 — mesmo espírito de `onSucesso` em
+  // `components/catalogo/TabelaChapas.tsx`.
+  const [cliente, setCliente] = useState({
+    nome: clienteNome,
+    telefone: clienteTelefone,
+    endereco: clienteEndereco,
+  });
+
   // Sobrescreve a Topbar com o breadcrumb "Orçamentos / <nome do cliente>"
   // (Design-System Seção 6) enquanto esta página estiver montada — ver
   // `components/shell/PageHeaderContext.tsx`.
   usePageHeader({
     breadcrumb: [
       { rotulo: "Orçamentos" },
-      { rotulo: clienteNome || `Orçamento #${idCurto}` },
+      { rotulo: cliente.nome || `Orçamento #${idCurto}` },
     ],
   });
 
@@ -95,6 +114,20 @@ export function OrcamentoAbas({
 
   return (
     <AbaAtivaProvider value={setAbaAtiva}>
+      <div className="mb-md flex items-center gap-1">
+        <p className="text-corpo text-cinza-500">
+          Cliente: <span className="font-medium text-cinza-900">{cliente.nome}</span>
+        </p>
+        {clienteId && (
+          <EditarClienteDialog
+            clienteId={clienteId}
+            nome={cliente.nome}
+            telefone={cliente.telefone}
+            endereco={cliente.endereco}
+            onSalvo={setCliente}
+          />
+        )}
+      </div>
       <Tabs value={abaAtiva} onValueChange={setAbaAtiva}>
         <TabsList>
           <TabsTrigger value="ambientes">

@@ -17,6 +17,13 @@ export interface OrcamentoDetalhe {
   /** `orcamento` não tem coluna de título — mesma regra da 13.3b (Dashboard):
    * o rótulo é o nome do cliente. */
   clienteNome: string;
+  /** Task 0.5b — id de `cliente`, necessário pra chamar `atualizarCliente`
+   * (Task 0.5a) a partir do diálogo de edição em `/orcamento/[id]`. */
+  clienteId: string;
+  /** Task 0.5b — `cliente.telefone`/`cliente.endereco` (nullable), pré-
+   * popula o diálogo de edição. Ausentes até então porque nada consumia. */
+  clienteTelefone: string | null;
+  clienteEndereco: string | null;
   /** `orcamento.frete` (Task 11.2, numeric nullable) — Task 13.4: exibido
    * (só leitura) na aba Corte & Material; editar é escopo da Task 13.5. */
   frete: number | null;
@@ -26,12 +33,26 @@ export interface OrcamentoDetalhe {
   congeladoEm: string | null;
 }
 
-type ClienteAninhado = { nome: string | null } | { nome: string | null }[] | null;
+interface ClienteRow {
+  id: string;
+  nome: string | null;
+  telefone: string | null;
+  endereco: string | null;
+}
+
+type ClienteAninhado = ClienteRow | ClienteRow[] | null;
+
+/** Task 0.5b — mesma normalização de `nomeDoCliente` (Supabase devolve o
+ * relacionamento ora como objeto, ora como array de 1, dependendo da
+ * versão/tipagem do client), estendida para os campos novos que o diálogo
+ * de edição precisa. */
+function clienteDoAninhado(cliente: ClienteAninhado): ClienteRow | null {
+  if (!cliente) return null;
+  return Array.isArray(cliente) ? (cliente[0] ?? null) : cliente;
+}
 
 function nomeDoCliente(cliente: ClienteAninhado): string {
-  if (!cliente) return "Cliente sem nome";
-  const c = Array.isArray(cliente) ? cliente[0] : cliente;
-  const nome = c?.nome?.trim();
+  const nome = clienteDoAninhado(cliente)?.nome?.trim();
   return nome && nome.length > 0 ? nome : "Cliente sem nome";
 }
 
@@ -49,13 +70,15 @@ export async function buscarOrcamentoPorId(id: string): Promise<OrcamentoDetalhe
 
   const { data, error } = await supabase
     .from("orcamento")
-    .select("id, status, prazo_entrega, frete, congelado_em, cliente(nome)")
+    .select("id, status, prazo_entrega, frete, congelado_em, cliente(id, nome, telefone, endereco)")
     .eq("id", id)
     .maybeSingle();
 
   if (error || !data) {
     return null;
   }
+
+  const cliente = clienteDoAninhado(data.cliente as ClienteAninhado);
 
   return {
     id: data.id as string,
@@ -64,6 +87,9 @@ export async function buscarOrcamentoPorId(id: string): Promise<OrcamentoDetalhe
     frete: (data.frete as number | null) ?? null,
     congeladoEm: (data.congelado_em as string | null) ?? null,
     clienteNome: nomeDoCliente(data.cliente as ClienteAninhado),
+    clienteId: cliente?.id ?? "",
+    clienteTelefone: cliente?.telefone ?? null,
+    clienteEndereco: cliente?.endereco ?? null,
   };
 }
 
@@ -97,7 +123,9 @@ export async function buscarItemDoOrcamento(
 
   const { data, error } = await supabase
     .from("orcamento")
-    .select("id, status, prazo_entrega, frete, congelado_em, cliente(nome), itens")
+    .select(
+      "id, status, prazo_entrega, frete, congelado_em, cliente(id, nome, telefone, endereco), itens"
+    )
     .eq("id", orcamentoId)
     .maybeSingle();
 
@@ -111,6 +139,8 @@ export async function buscarItemDoOrcamento(
     return null;
   }
 
+  const cliente = clienteDoAninhado(data.cliente as ClienteAninhado);
+
   return {
     orcamento: {
       id: data.id as string,
@@ -119,6 +149,9 @@ export async function buscarItemDoOrcamento(
       frete: (data.frete as number | null) ?? null,
       congeladoEm: (data.congelado_em as string | null) ?? null,
       clienteNome: nomeDoCliente(data.cliente as ClienteAninhado),
+      clienteId: cliente?.id ?? "",
+      clienteTelefone: cliente?.telefone ?? null,
+      clienteEndereco: cliente?.endereco ?? null,
     },
     item,
   };

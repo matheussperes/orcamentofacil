@@ -38,6 +38,9 @@ export default function DevPreviewOrcamentoPage() {
     <Shell user={{ nome: "Usuário de teste", organizacao: "Organização de teste" }}>
       <OrcamentoAbas
         clienteNome="Marcenaria Boa Vista"
+        clienteId="preview-cliente-1"
+        clienteTelefone="(11) 99999-9999"
+        clienteEndereco="Rua das Flores, 123"
         idCurto="PREVIEW1"
         abaAmbientes={<AmbientesTabMock />}
         abaCorteMaterial={<CorteMaterialTabMock />}
