@@ -148,7 +148,6 @@ transação (Modelo 5.4.1, I6).
 
 | Task | O que é | Tag | Depende de | Executor | Modelo | Referências |
 |---|---|---|---|---|---|---|
-| 1.1–1.3 | Invalidação de cache após mutação (salvar em qualquer aba propaga para as demais), aba persistida na URL (F5 mantém a aba), botão "atualizar render" funcional sem F5 | 🔴 BLOQ / 🟠 BUG | nenhuma (sequenciamento de Lote, não dependência técnica) | frontend-engineer (web) | Sonnet | PRD RF-23; Modelo 11.2 ("fora do domínio: estado de aplicação") |
 | 1.5–1.6 | Teste automatizado de paridade financeiro ↔ proposta (soma das linhas == preço final) + resíduo de arredondamento absorvido pela última linha; **reproduzir com dado real** a diferença de R$ 6,00 relatada (4.578,77 esperado × 4.584,77 exibido) antes de assumir que a aritmética está certa | 🔴 BLOQ | 0.7a, 0.7b | motor-engineer | Sonnet | Modelo 5.2, 11.2; PRD 10.4 item 2 |
 | 1.7 | Investigar e corrigir bug de chapas de 6 mm com baixo aproveitamento não contadas no modo "valor por chapa" — **verificar no dado antes de mexer no cálculo** (filtro por aproveitamento mínimo × classificação errada no catálogo são hipóteses diferentes, correções diferentes) | 🟠 BUG | nenhuma | motor-engineer | Sonnet | Modelo 5.2, 11.2; PRD 10.4 |
 | 1.8 | Corrigir link "calculadora" no editor (hoje leva à raiz/dashboard) | 🟠 BUG | nenhuma | frontend-engineer (web) | Haiku | PRD RF-23 |
@@ -159,6 +158,9 @@ transação (Modelo 5.4.1, I6).
 recalculado na renderização) não é mais task separada — é o mesmo defeito e
 as mesmas linhas de código (`PropostaLab.tsx:77,141`) corrigidos pela Task
 0.7b acima, no Lote 0. Sem entrega duplicada.*
+
+**Histórico de execução:**
+- **Task 1.1–1.3** ✅ (2026-08-04) — Invalidação de cache após mutação (salvar em qualquer aba propaga para as demais), aba persistida na URL (F5 mantém a aba), botão "atualizar render" funcional sem F5. Aprovado code-auditor, qa-engineer (verificação comportamental real: aba sobrevive a F5, estado preservado entre abas via `forceMount`, cadeia `router.refresh()` confirmada). Sem gate security-auditor, sem impacto visual.
 
 #### Lote 2 — Lacunas funcionais
 
