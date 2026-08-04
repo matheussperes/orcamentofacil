@@ -159,7 +159,7 @@ as mesmas linhas de código (`PropostaLab.tsx:77,141`) corrigidos pela Task
 0.7b acima, no Lote 0. Sem entrega duplicada.*
 
 **Histórico de execução:**
-- **Task 1.1–1.3** ✅ (2026-08-04) — Invalidação de cache após mutação (salvar em qualquer aba propaga para as demais), aba persistida na URL (F5 mantém a aba), botão "atualizar render" funcional sem F5. Aprovado code-auditor, qa-engineer (verificação comportamental real: aba sobrevive a F5, estado preservado entre abas via `forceMount`, cadeia `router.refresh()` confirmada). Sem gate security-auditor, sem impacto visual.
+- **Task 1.1–1.3** ✅ (2026-08-04) — Invalidação de cache após mutação (salvar em qualquer aba propaga para as demais), aba persistida na URL (F5 mantém a aba), botão "atualizar render" funcional sem F5. `code-auditor` indisponível (2x sem veredito por estouro técnico) — revisão assumida pelo Maestro (lint/typecheck/test rodados pessoalmente, diff relido linha a linha). `qa-engineer` aprovou normalmente com veredito próprio (verificação comportamental real: aba sobrevive a F5, estado preservado entre abas via `forceMount`, cadeia `router.refresh()` confirmada). Sem gate security-auditor, sem impacto visual.
 - **Task 1.8** ✅ (2026-08-04) — Corrigir link "calculadora" no editor: investigação conclui que `/` (Dashboard) é o destino mais adequado do link "← calculadora" em `/modulo`, superior ao candidato `/biblioteca`. Link já apontava para o destino correto — sem mudança de código necessária. Investigação factual verificada via leitura de código antes do merge. Texto "calculadora" resíduo de V1, escopo das Tasks 5.1–5.4 (Lote 5, renomeação). Sem impacto visual.
 
 #### Lote 2 — Lacunas funcionais
