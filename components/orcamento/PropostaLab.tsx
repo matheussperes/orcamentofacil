@@ -15,6 +15,8 @@ import type { ConfiguracaoPrecificacaoCarregada } from "@/lib/precificacao/carre
 import { idDoItem, nomeDoItem, type ModuloOrcamento } from "@/lib/orcamento";
 import type { ItemDoConjunto } from "@/app/components/BoxCanvas";
 import { gerarDescricaoLinha } from "@/lib/linha-proposta/descricao";
+import { valorAtualDaLinha as calcularValorAtualDaLinha } from "@/lib/linha-proposta/valorAtual";
+import { gerarProposta } from "@/lib/linha-proposta/gerarProposta";
 import type {
   LinhaProposta,
   PatchLinhaProposta,
@@ -44,6 +46,9 @@ export interface PropostaLabProps {
   estadoInicial: EstadoAmbiente;
   configuracaoInicial: ConfiguracaoPrecificacaoCarregada;
   linhasIniciais: LinhaProposta[];
+  // Task 0.7b (Modelo-de-Dominio.md 5.4.1) — única fonte de verdade de
+  // congelamento (I1); `null` = nunca congelado / reaberto (R1, ao vivo).
+  congeladoEm: string | null;
   onCriarLinha: (titulo: string, itens: string[], descricao: string) => Promise<ResultadoLinhaProposta>;
   onAtualizarLinha: (id: string, patch: PatchLinhaProposta) => Promise<ResultadoOperacaoLinhaProposta>;
   onExcluirLinha: (id: string) => Promise<ResultadoOperacaoLinhaProposta>;
@@ -52,6 +57,7 @@ export interface PropostaLabProps {
     blob: Blob
   ) => Promise<{ ok: true; imagemUrl: string } | { ok: false; erro: string }>;
   onResolverUrlImagem: (imagemUrl: string) => Promise<string | null>;
+  onCongelarOrcamento: (orcamentoId: string) => Promise<ResultadoOperacaoLinhaProposta>;
 }
 
 export function PropostaLab({
@@ -59,11 +65,13 @@ export function PropostaLab({
   estadoInicial,
   configuracaoInicial,
   linhasIniciais,
+  congeladoEm,
   onCriarLinha,
   onAtualizarLinha,
   onExcluirLinha,
   onRegenerarImagem,
   onResolverUrlImagem,
+  onCongelarOrcamento,
 }: PropostaLabProps) {
   const irParaAba = useIrParaAba();
   const router = useRouter();
@@ -135,10 +143,11 @@ export function PropostaLab({
     }
   }, [resultadoEngine, grupos, configuracaoInicial.config, precos]);
 
-  function valorAtualDaLinha(linhaId: string): number {
-    if (valoresOverride && valoresOverride[linhaId] !== undefined) return valoresOverride[linhaId];
-    if (!resultadoRateio.ok) return 0;
-    return resultadoRateio.snapshot.grupos.find((g) => g.id === linhaId)?.valorRateado ?? 0;
+  function valorAtualDaLinha(linha: LinhaProposta): number {
+    const valorAoVivo = resultadoRateio.ok
+      ? resultadoRateio.snapshot.grupos.find((g) => g.id === linha.id)?.valorRateado ?? 0
+      : 0;
+    return calcularValorAtualDaLinha({ linha, congeladoEm, valoresOverride, valorAoVivo });
   }
 
   async function handleSalvarTextos(linhaId: string, patch: { titulo?: string; descricao?: string }) {
@@ -152,7 +161,7 @@ export function PropostaLab({
   function handleOverrideValor(linhaId: string, novoValor: number) {
     if (!resultadoRateio.ok) return;
     const precoFinal = resultadoRateio.snapshot.resumo.precoFinal;
-    const atuais = linhas.map((l) => ({ id: l.id, valorRateado: valorAtualDaLinha(l.id) }));
+    const atuais = linhas.map((l) => ({ id: l.id, valorRateado: valorAtualDaLinha(l) }));
     const rebalanceadas = rebalancearLinhas(atuais, linhaId, novoValor, precoFinal);
     setValoresOverride(Object.fromEntries(rebalanceadas.map((l) => [l.id, l.valorRateado])));
     // Persistência incremental (contrato: "já são persistidos incrementalmente
@@ -248,20 +257,20 @@ export function PropostaLab({
   async function handleGerarProposta() {
     setGerandoProposta(true);
     setErroGeral(null);
-    // "Congela" os `valorRateado` atuais (contrato) — persiste o valor
-    // exibido AGORA (computado ao vivo ou já rebalanceado por override) na
-    // coluna `linha_proposta.valor_rateado`, que até aqui só era escrita em
-    // overrides manuais (ver `handleOverrideValor`). É este o ato de
-    // "congelamento" (mesma leitura do comentário original da migration,
-    // 20260727090600_linha_proposta.sql: "congelado no fechamento") — a
-    // imutabilidade/versão para impressão em si é escopo da Task 13.6b.
-    const resultados = await Promise.all(
-      linhas.map((l) => onAtualizarLinha(l.id, { valorRateado: valorAtualDaLinha(l.id) }))
-    );
+    // Persiste o `valorRateado` atual de cada linha e SÓ DEPOIS congela o
+    // orçamento (`congeladoEm`) — ordem atômica exigida pelo Modelo 5.4.1
+    // (invariante I1/I2): falha em qualquer uma das duas etapas não deixa o
+    // orçamento congelado nem navega. Orquestração pura em
+    // `lib/linha-proposta/gerarProposta.ts` (testável sem infra de render).
+    const resultado = await gerarProposta({
+      orcamentoId,
+      linhas: linhas.map((l) => ({ id: l.id, valorRateado: valorAtualDaLinha(l) })),
+      onAtualizarLinha,
+      onCongelarOrcamento,
+    });
     setGerandoProposta(false);
-    const falhou = resultados.find((r) => !r.ok);
-    if (falhou) {
-      setErroGeral(falhou.erro ?? "Não foi possível congelar os valores da proposta. Tente novamente.");
+    if (!resultado.ok) {
+      setErroGeral(resultado.erro ?? "Não foi possível congelar a proposta. Tente novamente.");
       return;
     }
     // Task 13.6b (fora de escopo desta task) constrói `/proposta/[id]/pdf` de
@@ -327,7 +336,7 @@ export function PropostaLab({
                 alturas={estadoInicial.alturas}
                 itensDoConjunto={itensDoConjuntoDaLinha(linha)}
                 itensDisponiveis={itensDisponiveisDaLinha(linha)}
-                valorAtual={valorAtualDaLinha(linha.id)}
+                valorAtual={valorAtualDaLinha(linha)}
                 mostrarSelecaoMesclar={linhas.length > 1}
                 selecionadaParaMesclar={selecionadasParaMesclar.has(linha.id)}
                 onToggleSelecaoMesclar={() => toggleSelecaoMesclar(linha.id)}
