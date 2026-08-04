@@ -127,15 +127,14 @@ especificadas em `.maestro/tmp/schema-v2.1-delta.sql` Seções 1–2.
 - **Task 0.5a** ✅ (2026-08-03) — Server Action `atualizarCliente` (nome, telefone, endereço). Aprovado code-auditor, security-auditor (2 tentativas), qa-engineer. Sem impacto visual.
 - **Task 0.7a** ✅ (2026-08-03) — Congelamento real: migration `orcamento.congelado_em timestamptz null`, exposição de `congeladoEm` em `lib/orcamento/buscar.ts` (dois pontos em `OrcamentoDetalhe`), Server Action `congelarOrcamento(orcamentoId)`. Migration já aplicada em Supabase real. Aprovado code-auditor, security-auditor, qa-engineer (6/6 critérios). Sem impacto visual.
 - **Task 0.4** ✅ (2026-08-03) — Alturas de faixa: `alturasEfetivas(parede, organizacao)` (perfil dá default, parede sobrescreve campo a campo), estado "herdado"/"customizado" derivado, `derivarY("inferior"|"torre")` corrigido para `alturaRodape` em vez de `0`. Corrige achado colateral: `lib/ambiente/salvar.ts` para nunca escrever `organizacao.alturas_padrao` em salvamento de parede/ambiente. Aprovado code-auditor, qa-engineer (2 tentativas), sem gate security (lógica pura). Sem impacto visual.
-
-| Task | O que é | Tag | Depende de | Executor | Modelo | Referências |
-|---|---|---|---|---|---|---|
-| 0.5b | Formulário de edição de dados do cliente na tela do orçamento | 🟡 LACUNA | ✅ 0.5a (satisfeito) | frontend-engineer (web) | Sonnet | PRD RF-32 |
-| 0.7b | Congelamento real — leitura e escrita de verdade: corrige o bug de leitura em `PropostaLab.tsx:77,141` (recalcula ao vivo em vez de checar o congelamento — Modelo 5.4.1, regras R1/R2), encadeia `congeladoEm` como prop nova, e corrige `handleGerarProposta` (`PropostaLab.tsx:248-260`) que nunca gravava `congeladoEm` — passa a chamar `congelarOrcamento` só depois que todas as linhas gravarem (invariante I1) | 🔴 BLOQ | ✅ 0.7a (satisfeito) | frontend-engineer (web) | Sonnet | Modelo 5.4, 5.4.1 (R1/R2, I1); PRD RF-22, risco 9 |
+- **Task 0.7b** ✅ (2026-08-04) — Congelamento real — leitura e escrita de verdade: corrige o bug de leitura em `PropostaLab.tsx:77,141` (recalcula ao vivo em vez de checar o congelamento), encadeia `congeladoEm` como prop nova, corrige `handleGerarProposta` que nunca gravava `congeladoEm` (passa a chamar `congelarOrcamento` só depois que todas as linhas gravarem). Aprovado qa-engineer (337 testes). Sem impacto visual.
+- **Task 0.5b** ✅ (2026-08-04) — Formulário de edição de dados do cliente na tela do orçamento. Aprovado code-auditor, security-auditor, qa-engineer (5/5 critérios, 332 testes), ux-auditor (12/12 itens checklist Design-System §15.4, Impacto Visual Leve; nota não bloqueante sobre ambiguidade visual hover/focus do botão). Sem impacto visual bloqueante.
 
 *Nota: item 0.6 (nome livre de parede) está coberto pela migration da Task
 0.1–0.3 (coluna `nome`, default `"Parede 1"`, `CHECK` de não-vazio — já no
 delta SQL).*
+
+**Lote 0 — 6/6 tasks concluídas** ✅ (2026-08-04)
 
 #### Lote 1 — Confiança e estado
 

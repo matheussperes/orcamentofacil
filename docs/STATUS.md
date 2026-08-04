@@ -1,6 +1,6 @@
 # Status Atual
 
-> Atualizado em 2026-08-03. Este arquivo é o ponto de partida de qualquer
+> Atualizado em 2026-08-04. Este arquivo é o ponto de partida de qualquer
 > sessão nova. Histórico task-a-task (auditorias, tentativas, decisões)
 > não vive mais aqui — está no `git log` e nos commits de merge de cada
 > branch `feature/<task-id>`. Este arquivo mantém só o essencial.
@@ -13,14 +13,10 @@ paramétrico (V3), persistência multi-tenant real via Supabase, todas as telas
 da experiência construídas. Fases A (Discovery), B (Motor e dados) e C
 (Experiência/telas) — todas concluídas. 
 
-Fase D (Pré-Lançamento) — Lote 0 (Fundação de dados) em andamento:
-**Tasks 0.1–0.3, 0.4, 0.5a, 0.7a mescladas** (wiring multi-Ambiente/Parede, migration, Server Actions, alturas de faixa, dados de cliente, congelamento real).
+Fase D (Pré-Lançamento) — Lote 0 (Fundação de dados) ✅ fechado:
+**Tasks 0.1–0.3, 0.4, 0.5a, 0.7a, 0.7b, 0.5b mescladas** (wiring multi-Ambiente/Parede, migration, Server Actions, alturas de faixa, dados de cliente, congelamento real, formulário de cliente — Lote 0 completo 6/6).
 
-**0.5b e 0.7b — código já implementado, gate interrompido por limite de gasto (2026-08-03), NÃO reimplementar:**
-- **0.5b** (`git worktree` em `orcamentofacil-0.5b`, branch `feature/0.5b-form-cliente`): `EditarClienteDialog.tsx` + extensão de `lib/orcamento/buscar.ts` completos, code-auditor já confirmado (lint/typecheck/332 testes limpos). `security-auditor` caiu no meio da leitura, sem veredito — rodar de novo do zero (não é retry, é tentativa 1). Depois: `ux-auditor` ao vivo (Impacto Visual: Leve) antes do merge.
-- **0.7b** (`git worktree` em `orcamentofacil-0.7b`, branch `feature/0.7b-congelamento-front`): `lib/linha-proposta/valorAtual.ts`/`gerarProposta.ts` + `PropostaLab.tsx` completos, code-auditor já confirmado (lint/typecheck/337 testes limpos). `qa-engineer` caiu no meio da leitura, sem veredito — rodar de novo do zero. Sem security-auditor (só consome Server Action já auditada), sem impacto visual — aprovando, vai direto pro merge e fecha o Lote 0 (6/6).
-
-Detalhe completo de cada uma em `.maestro/state/0.5b.json` e `.maestro/state/0.7b.json`.
+**Próximo passo**: executar Lote 1 ou Lote 2 (sequência: Lote 0 → Lote 1 → Lote 2 obrigatória), ou iniciar Lotes 3/4/5 em paralelo (independentes). Decisão do operador.
 
 Fases A–C + Task 0.1–0.3: ver histórico em `docs/Backlog.md` ("Resumo do
 Épico V2" e "Lote 0 — Fundação de dados").
