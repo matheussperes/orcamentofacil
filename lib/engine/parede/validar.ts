@@ -9,32 +9,35 @@ import type { AlturasFaixas, ElementoParede, Faixa, ItemPosicionado, Parede } fr
 
 export type ResolvedorItens = Map<string, ModuloOrcamento>;
 
-// Y é DERIVADO da faixa (D-20, briefing 6.5) — nunca digitado. Fórmula
-// adotada (decisão de design, doc não fecha a fórmula exata):
-//   inferior → 0 (chão)
+// Y é DERIVADO da faixa (D-20, briefing 6.5) — nunca digitado. Tabela de Y
+// (borda inferior do módulo) por faixa, Modelo de Domínio Seção 3.2.1/A-08:
+//   inferior → alturaRodape (o módulo começa acima do rodapé, não no chão)
+//   torre    → alturaRodape (mesma borda inferior de "inferior" — ocupa dali
+//              até o pé-direito; ver Tier 1 "altura ≤ altura da parede")
 //   bancada  → alturaBancada (início configurado da faixa)
 //   aereo    → alturaInstalacaoAereo (início configurado da faixa)
-//   torre    → 0 (chão) — ocupa do chão até o pé-direito, é o próprio item
-//              quem carrega essa altura total (ver Tier 1 "altura ≤ altura
-//              da parede"); não há um "início" distinto de "inferior".
-// `alturaRodape` não participa desta fórmula: o rodapé é o elemento
-// contínuo derivado do bloco (Modelo de Domínio, Seção 3.4), uma peça
-// aplicada DEPOIS do posicionamento, não um deslocamento do Y dos itens da
-// faixa "inferior". Mantido em `AlturasFaixas` porque é um dos 4 valores do
-// perfil da organização exigidos pela spec (Modelo de Domínio 3.1, briefing
-// 6.5) — reservado para a derivação de `ElementoContinuo` "rodape", fora do
-// escopo desta task.
+// `alturas` aqui já deve ser o resultado de `alturasEfetivas` (perfil +
+// override da parede) — este função não sabe de override, só aplica a
+// tabela sobre o que recebe.
 export function derivarY(faixa: Faixa, alturas: AlturasFaixas): number {
   switch (faixa) {
     case "inferior":
-      return 0;
+      return alturas.alturaRodape;
     case "bancada":
       return alturas.alturaBancada;
     case "aereo":
       return alturas.alturaInstalacaoAereo;
     case "torre":
-      return 0;
+      return alturas.alturaRodape;
   }
+}
+
+// Regra de resolução — a única fonte de Y (Modelo de Domínio Seção 3.2.1,
+// Q-1): override é campo a campo, chave ausente/`null` = herdado do perfil
+// da organização. "Herdado" vs. "customizado" é sempre derivado daqui, nunca
+// um flag persistido.
+export function alturasEfetivas(parede: Parede, alturasPadrao: AlturasFaixas): AlturasFaixas {
+  return { ...alturasPadrao, ...parede.alturasOverride };
 }
 
 function resolveModulo(
@@ -124,7 +127,7 @@ export function validarParedeTier1(parede: Parede, itens: ResolvedorItens): Engi
 // imediatamente acima (ex. do briefing: altura da bancada + altura de um
 // item "bancada" não pode ultrapassar a altura de instalação do aéreo).
 // Decisão de design (spec não fecha a checagem exata): ordem vertical
-// bottom→top é inferior/torre (0) < bancada (alturaBancada) <
+// bottom→top é inferior/torre (alturaRodape) < bancada (alturaBancada) <
 // aereo (alturaInstalacaoAereo) < teto (peDireito). "torre" já ocupa do chão
 // ao pé-direito por natureza (Tier 1 barra item mais alto que a parede), mas
 // também é checada contra o pé-direito aqui por consistência.
@@ -137,10 +140,11 @@ const TETO_DA_FAIXA: Record<Faixa, keyof AlturasFaixas> = {
 
 function validarFaixasNaoColidem(
   parede: Parede,
-  alturas: AlturasFaixas,
+  alturasPadrao: AlturasFaixas,
   itens: ResolvedorItens
 ): EngineWarning[] {
   const warnings: EngineWarning[] = [];
+  const alturas = alturasEfetivas(parede, alturasPadrao);
 
   for (const item of parede.itens) {
     const modulo = resolveModulo(itens, item.itemId);
@@ -148,7 +152,11 @@ function validarFaixasNaoColidem(
 
     const y = derivarY(item.faixa, alturas);
     const altura = alturaDoItem(modulo);
-    const teto = alturas[TETO_DA_FAIXA[item.faixa]];
+    const chaveTeto = TETO_DA_FAIXA[item.faixa];
+    // peDireito é o LIMITE SUPERIOR DE INSTALAÇÃO do aéreo, não a altura
+    // física da parede (Modelo de Domínio 3.2.1) — limite efetivo é o menor
+    // dos dois.
+    const teto = chaveTeto === "peDireito" ? Math.min(alturas.peDireito, parede.altura) : alturas[chaveTeto];
 
     if (y + altura > teto) {
       warnings.push({
@@ -181,10 +189,11 @@ export function retangulosSobrepoem(
 
 function validarItensNaoSobrepoemElementos(
   parede: Parede,
-  alturas: AlturasFaixas,
+  alturasPadrao: AlturasFaixas,
   itens: ResolvedorItens
 ): EngineWarning[] {
   const warnings: EngineWarning[] = [];
+  const alturas = alturasEfetivas(parede, alturasPadrao);
 
   for (const item of parede.itens) {
     const modulo = resolveModulo(itens, item.itemId);
@@ -220,13 +229,16 @@ function validarItensNaoSobrepoemElementos(
   return warnings;
 }
 
+// `alturasPadrao` é o perfil da organização (organizacao.alturas_padrao) —
+// o override da própria `parede` (`parede.alturasOverride`) é aplicado aqui
+// dentro via `alturasEfetivas`, nunca precisa ser pré-mesclado pelo chamador.
 export function validarParedeTier2(
   parede: Parede,
-  alturas: AlturasFaixas,
+  alturasPadrao: AlturasFaixas,
   itens: ResolvedorItens
 ): EngineWarning[] {
   return [
-    ...validarFaixasNaoColidem(parede, alturas, itens),
-    ...validarItensNaoSobrepoemElementos(parede, alturas, itens),
+    ...validarFaixasNaoColidem(parede, alturasPadrao, itens),
+    ...validarItensNaoSobrepoemElementos(parede, alturasPadrao, itens),
   ];
 }

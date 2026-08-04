@@ -34,9 +34,10 @@ export interface EstadoAmbiente {
   modulos: ModuloOrcamento[];
   /** As 4 alturas do perfil da organização. ATENÇÃO: é dado de nível ORG
    * (`organizacao.alturas_padrao`), não por orçamento — ver
-   * `lib/ambiente/carregar.ts`/`lib/ambiente/salvar.ts`. Salvar aqui
-   * sobrescreve o perfil de alturas de TODA a marcenaria, não só deste
-   * orçamento (decisão do Maestro, contrato 13.3d). */
+   * `lib/ambiente/carregar.ts`. [V2.1/Task 0.4] Campo SOMENTE LEITURA aqui:
+   * `lib/ambiente/salvar.ts` nunca escreve em `organizacao.alturas_padrao`
+   * (perfil só muda em `/perfil`) — usado só para calcular Y/validação do
+   * motor (`alturasEfetivas`, que mescla com `parede.alturasOverride`). */
   alturas: AlturasFaixas;
   /** Mapeia pra N linhas de `elemento_continuo` (sincronizadas por
    * delete+insert do conjunto inteiro a cada salvamento — ver
