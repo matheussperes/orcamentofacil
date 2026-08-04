@@ -1,11 +1,13 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { Suspense, useState, type ReactNode } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { FileText, LayoutGrid, Scissors, Wallet } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AbaAtivaProvider } from "./AbaAtivaContext";
 import { usePageHeader } from "@/components/shell/PageHeaderContext";
 import { EditarClienteDialog } from "./EditarClienteDialog";
+import { normalizarAba } from "@/lib/orcamento/abaAtiva";
 
 // Task 13.3c (contrato .maestro/tmp/13.3c-contract.md) — shell de
 // `/orcamento/[id]`: 4 abas (Design-System Seção 7.8, estilo underline).
@@ -79,7 +81,19 @@ export interface OrcamentoAbasProps {
   abaProposta: ReactNode;
 }
 
-export function OrcamentoAbas({
+// `useSearchParams` exige um limite de Suspense ao redor de quem o chama
+// (senão o Next tenta prerenderizar a página inteira como estática e falha)
+// — mesmo padrão de `app/login/page.tsx`: o componente que de fato usa hooks
+// de navegação fica isolado, o export fica só como wrapper do `Suspense`.
+export function OrcamentoAbas(props: OrcamentoAbasProps) {
+  return (
+    <Suspense fallback={null}>
+      <OrcamentoAbasInterno {...props} />
+    </Suspense>
+  );
+}
+
+function OrcamentoAbasInterno({
   clienteNome,
   clienteId,
   clienteTelefone,
@@ -110,7 +124,21 @@ export function OrcamentoAbas({
     ],
   });
 
-  const [abaAtiva, setAbaAtiva] = useState("ambientes");
+  // Task 1.1–1.3: aba ativa vive na URL (`?aba=...`), não em `useState` —
+  // um F5 mantém a aba porque o Server Component nem precisa saber disso, é
+  // o próprio client que lê o parâmetro de busca no mount. `router.replace`
+  // (não `push`) e `{ scroll: false }` porque trocar de aba não é navegação
+  // "de página" — não deve empilhar histórico nem rolar a viewport.
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const abaAtiva = normalizarAba(searchParams.get("aba"));
+
+  function setAbaAtiva(aba: string) {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("aba", aba);
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+  }
 
   return (
     <AbaAtivaProvider value={setAbaAtiva}>
