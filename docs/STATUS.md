@@ -1,6 +1,6 @@
 # Status Atual
 
-> Atualizado em 2026-07-31. Este arquivo é o ponto de partida de qualquer
+> Atualizado em 2026-08-03. Este arquivo é o ponto de partida de qualquer
 > sessão nova. Histórico task-a-task (auditorias, tentativas, decisões)
 > não vive mais aqui — está no `git log` e nos commits de merge de cada
 > branch `feature/<task-id>`. Este arquivo mantém só o essencial.
@@ -14,9 +14,7 @@ da experiência construídas. Fases A (Discovery), B (Motor e dados) e C
 (Experiência/telas) — todas concluídas. 
 
 Fase D (Pré-Lançamento) — Lote 0 (Fundação de dados) em andamento:
-**Task 0.1–0.3 mesclada** (wiring multi-Ambiente/Parede, migration, 7
-Server Actions, remoção cascata de itens órfãos). Próximas: Task 0.4–0.7b
-(alturas de faixa, congelamento, dados de cliente).
+**Tasks 0.1–0.3, 0.4, 0.5a, 0.7a mescladas** (wiring multi-Ambiente/Parede, migration, Server Actions, alturas de faixa, dados de cliente, congelamento real). Próximas: 0.5b, 0.7b (formulário de cliente, aplicação de congelamento).
 
 Fases A–C + Task 0.1–0.3: ver histórico em `docs/Backlog.md` ("Resumo do
 Épico V2" e "Lote 0 — Fundação de dados").
@@ -77,7 +75,7 @@ propostas). Prisma foi removido por completo.
 - `/dev/preview/*` — harnesses com dados mock, sem sessão, 404 em produção;
   usados pra auditoria visual sem precisar logar.
 
-**Testes**: 306 passando (`npm run test`). `npm run lint`/`npm run typecheck`
+**Testes**: 329 passando (`npm run test`). `npm run lint`/`npm run typecheck`
 limpos.
 
 ## 4. Decisões que não devem ser reabertas sem motivo novo
