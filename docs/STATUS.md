@@ -14,7 +14,13 @@ da experiência construídas. Fases A (Discovery), B (Motor e dados) e C
 (Experiência/telas) — todas concluídas. 
 
 Fase D (Pré-Lançamento) — Lote 0 (Fundação de dados) em andamento:
-**Tasks 0.1–0.3, 0.4, 0.5a, 0.7a mescladas** (wiring multi-Ambiente/Parede, migration, Server Actions, alturas de faixa, dados de cliente, congelamento real). Próximas: 0.5b, 0.7b (formulário de cliente, aplicação de congelamento).
+**Tasks 0.1–0.3, 0.4, 0.5a, 0.7a mescladas** (wiring multi-Ambiente/Parede, migration, Server Actions, alturas de faixa, dados de cliente, congelamento real).
+
+**0.5b e 0.7b — código já implementado, gate interrompido por limite de gasto (2026-08-03), NÃO reimplementar:**
+- **0.5b** (`git worktree` em `orcamentofacil-0.5b`, branch `feature/0.5b-form-cliente`): `EditarClienteDialog.tsx` + extensão de `lib/orcamento/buscar.ts` completos, code-auditor já confirmado (lint/typecheck/332 testes limpos). `security-auditor` caiu no meio da leitura, sem veredito — rodar de novo do zero (não é retry, é tentativa 1). Depois: `ux-auditor` ao vivo (Impacto Visual: Leve) antes do merge.
+- **0.7b** (`git worktree` em `orcamentofacil-0.7b`, branch `feature/0.7b-congelamento-front`): `lib/linha-proposta/valorAtual.ts`/`gerarProposta.ts` + `PropostaLab.tsx` completos, code-auditor já confirmado (lint/typecheck/337 testes limpos). `qa-engineer` caiu no meio da leitura, sem veredito — rodar de novo do zero. Sem security-auditor (só consome Server Action já auditada), sem impacto visual — aprovando, vai direto pro merge e fecha o Lote 0 (6/6).
+
+Detalhe completo de cada uma em `.maestro/state/0.5b.json` e `.maestro/state/0.7b.json`.
 
 Fases A–C + Task 0.1–0.3: ver histórico em `docs/Backlog.md` ("Resumo do
 Épico V2" e "Lote 0 — Fundação de dados").
@@ -133,8 +139,18 @@ limpos.
   + `javascript_tool` (`getComputedStyle`, `getBoundingClientRect`,
   `elementFromPoint`) como evidência.
 - Se um executor for interrompido no meio (limite de gasto, parar sem
-  terminar), o Maestro retoma via `SendMessage` ou redelega — nunca
-  implementa o código diretamente.
+  terminar) **na mesma sessão**, o Maestro retoma via `SendMessage` ou
+  redelega — nunca implementa o código diretamente.
+- **Início de sessão nova**: `SendMessage` não atravessa sessões (o ID do
+  agente não sobrevive ao fechamento). Antes de redelegar qualquer task,
+  rode `git worktree list` — se existir um worktree `orcamentofacil-<task>`
+  com trabalho pendente, o código **já está pronto no disco**; leia
+  `.maestro/state/<task>.json` para saber exatamente qual gate rodar a
+  seguir, e acione só esse gate (nunca um executor novo) até essa checagem
+  confirmar que não há worktree órfão.
+- Tasks paralelas (dentro do mesmo Lote) usam `git worktree` dedicado por
+  task — nunca duas branches na mesma pasta de trabalho ao mesmo tempo
+  (causou perda de contexto por checkout cruzado em 2026-08-03).
 - Retrospectiva (`improvement-agent`) roda ao final de cada Pipeline Stage
   fechado — lições em `docs/Lessons-Learned.md`, propostas de mudança de
   framework em `.maestro/proposals/` (aguardam decisão humana).

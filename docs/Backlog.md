@@ -444,7 +444,7 @@ dentro das tasks reais da Stage 13. Detalhe completo, se precisar, no
 
 | Lote/Estágio | Foco | Dependência | Tasks | Status |
 |---|---|---|---|---|
-| Lote 0 — Fundação de dados | Ambiente/Parede como entidade real (N×N), alturas por parede, snapshot congelado (dividido em 0.7a/0.7b) | Bloqueia Lote 1 e 2 | 5 | 3 de 6 ✅ (0.1–0.3, 0.5a, 0.7a mesclados) |
+| Lote 0 — Fundação de dados | Ambiente/Parede como entidade real (N×N), alturas por parede, snapshot congelado (dividido em 0.7a/0.7b) | Bloqueia Lote 1 e 2 | 5 | 4 de 6 ✅ (0.1–0.3, 0.4, 0.5a, 0.7a mesclados) — 0.5b/0.7b com código pronto em worktree, gate interrompido por limite de gasto (ver `docs/STATUS.md` §1) |
 | Lote 1 — Confiança e estado | Cache, URL de aba, paridade financeiro↔proposta, reabrir orçamento | Depende do Lote 0; bloqueia Lote 2 — exceção: Task 1.9 (back) também depende da Task 5.10 (back), Lote 5 (ver nota de dependência cruzada no cabeçalho do Lote 1) | 6 | ⏱️ Planejado |
 | Lote 2 — Lacunas funcionais | Criação de módulo, elementos de parede, posicionamento por vão, elevação com módulos, agrupamento comercial | Depende do Lote 0 **e** do Lote 1 fecharem, em sequência | 19 | ⏱️ Planejado |
 | Lote 3 — Precisão do motor | Bin-packing melhorado (kerf + guilhotina + meta-heurística), `ModuleViewer` + textura real (catálogo-back/front), contagem de cortes, fita por cor, tampo 3 modelos | Paralelo, independente **como regra geral** — exceção: Task 3.1/3.3 (motor) depende de 4.16 (back), Lote 4 | 16 | ⏱️ Planejado (exceção: 3.1/3.3 (motor) aguarda 4.16) |
