@@ -13,6 +13,7 @@ import {
   calcularPrecoMoveis,
   calcularResumoFinanceiro,
   ratearPrecificacao,
+  rebalancearLinhas,
 } from "./index";
 import type { GrupoItens } from "./types";
 
@@ -210,6 +211,79 @@ describe("arredondamento — soma das linhas == total exato", () => {
     expect(somaMoveis).toBe(snap.precoMoveis);
     expect(somaFrete).toBe(snap.freteTotal);
     expect(somaMont).toBe(snap.montagemTotal);
+  });
+});
+
+// =====================================================================
+// TESTE 2b — Paridade Financeiro ↔ Proposta (Task 1.5–1.6).
+//
+// Bug relatado: total exibido em Financeiro (grupo único cobrindo o
+// orçamento inteiro, `FinanceiroLab.tsx`) divergiu em R$ 6,00 da soma das
+// linhas em Proposta (um `GrupoItens` por Linha de Proposta,
+// `PropostaLab.tsx`). Investigação (contrato 1.5–1.6): `ratearPrecificacao`
+// já garante `Σ valorRateado === precoFinal` MATEMATICAMENTE, para
+// QUALQUER partição de grupos, desde que engine/config sejam os MESMOS dos
+// dois lados — `precoFinal` não depende da partição (só de
+// custoMaterial/totalChapasInteiro do engine inteiro), e `distribuir`
+// sempre fecha exato. A causa raiz real não era aritmética: era
+// `FinanceiroTabConectada.tsx` não chamar `router.refresh()` depois de
+// `salvarConfiguracaoPrecificacao` (diferente de `AmbientesTabConectada`,
+// já corrigido pela Task 1.1–1.3) — a aba Proposta ficava com uma
+// `ConfiguracaoPrecificacao` desatualizada (frete/modo) até um F5. Corrigido
+// em `FinanceiroTabConectada.tsx` (mesmo padrão de `AmbientesTabConectada`).
+// Este teste prova a garantia que sustenta a correção: com a MESMA config, a
+// paridade é exata mesmo com múltiplos ambientes e um override manual.
+// =====================================================================
+describe("paridade financeiro ↔ proposta (Task 1.5–1.6)", () => {
+  it("Σ valorRateado das Linhas de Proposta === resumo.precoFinal do Financeiro, mesma config, múltiplos ambientes", () => {
+    // 3 "ambientes" (cozinha / quarto / banheiro), cada um sua própria
+    // Linha de Proposta — mesmo espírito do D-17 ("linha = ambiente").
+    const mods = [
+      modulo("cozinha", [peca(BRANCO, 18, 8.2)], {
+        fitaM: 12,
+        ferragens: [{ item: "dobradica_35", quantidade: 6 }, { item: "corredica_par", quantidade: 2 }],
+      }),
+      modulo("quarto", [peca(BRANCO, 18, 5.6)], { fitaM: 9, ferragens: [{ item: "dobradica_35", quantidade: 4 }] }),
+      modulo("banheiro", [peca(BRANCO, 18, 2.1)], { fitaM: 3, ferragens: [{ item: "dobradica_35", quantidade: 2 }] }),
+    ];
+    const eng = engine(mods, [grupoMdf(BRANCO, 18, 15.9, 6)], {
+      fitaTotalM: 24,
+      ferragens: [{ item: "dobradica_35", quantidade: 12 }, { item: "corredica_par", quantidade: 2 }],
+    });
+    const config = {
+      precificacao: { modo: "multiplicador" as const, fator: 2.2 },
+      montagem: { modo: "percentual_material" as const, percentual: 0.12 },
+      freteTotal: 189.9,
+    };
+
+    // Aba Financeiro: grupo único cobrindo o orçamento inteiro.
+    const grupoUnico: GrupoItens[] = [
+      { id: "orcamento-inteiro", itemIds: ["cozinha", "quarto", "banheiro"] },
+    ];
+    const snapFinanceiro = ratearPrecificacao(eng, grupoUnico, config, PRECOS);
+
+    // Aba Proposta: uma Linha de Proposta por ambiente.
+    const gruposProposta = gruposIndividuais(["cozinha", "quarto", "banheiro"]);
+    const snapProposta = ratearPrecificacao(eng, gruposProposta, config, PRECOS);
+
+    // Mesma config + mesmo engine ⇒ mesmo precoFinal, qualquer que seja a
+    // partição em grupos.
+    expect(snapProposta.resumo.precoFinal).toBe(snapFinanceiro.resumo.precoFinal);
+
+    const somaLinhas = round2(snapProposta.grupos.reduce((s, g) => s + g.valorRateado, 0));
+    expect(somaLinhas).toBe(snapFinanceiro.resumo.precoFinal);
+
+    // Com ao menos um override manual de linha (rebalanceamento), a soma
+    // continua batendo o precoFinal do Financeiro.
+    const linhasAtuais = snapProposta.grupos.map((g) => ({ id: g.id, valorRateado: g.valorRateado }));
+    const rebalanceadas = rebalancearLinhas(
+      linhasAtuais,
+      "quarto",
+      linhasAtuais.find((l) => l.id === "quarto")!.valorRateado + 50,
+      snapFinanceiro.resumo.precoFinal
+    );
+    const somaAposOverride = round2(rebalanceadas.reduce((s, l) => s + l.valorRateado, 0));
+    expect(somaAposOverride).toBe(snapFinanceiro.resumo.precoFinal);
   });
 });
 
