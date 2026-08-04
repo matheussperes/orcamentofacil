@@ -18,11 +18,22 @@ import { linhaDeElementoContinuo, linhaDeParede } from "./mapear";
 //
 // Ordem das escritas (não há transação client-side possível via
 // supabase-js/PostgREST — cada `.update()`/`.insert()` é uma request HTTP
-// própria): itens do orçamento → alturas da organização → ambiente → parede
-// → elementos contínuos. Se uma falhar no meio, as anteriores já foram
-// persistidas (parcialmente salvo) — o Alert de erro deixa isso visível pro
-// usuário tentar salvar de novo (idempotente: repetir não duplica nada,
-// exceto elemento_continuo, que já é delete+insert do zero por natureza).
+// própria): itens do orçamento → ambiente → parede → elementos contínuos.
+// Se uma falhar no meio, as anteriores já foram persistidas (parcialmente
+// salvo) — o Alert de erro deixa isso visível pro usuário tentar salvar de
+// novo (idempotente: repetir não duplica nada, exceto elemento_continuo, que
+// já é delete+insert do zero por natureza).
+//
+// [V2.1] Invariante de escrita (Task 0.4, Modelo de Domínio 3.2.1): esta
+// função NUNCA escreve em `organizacao.alturas_padrao` — perfil só muda em
+// `/perfil` (`lib/perfil/`). O campo `estado.alturas` (perfil da
+// organização) segue existindo em `EstadoAmbiente` — é lido em
+// `carregar.ts` e usado por `calcularEngineOrcamento`/a validação do motor
+// (`alturasEfetivas`, lib/engine/parede/validar.ts, mescla com
+// `parede.alturasOverride`) — mas esta função de SALVAR não tem mais
+// nenhum uso para ele: não escreve, só repassa `estado.parede` (que carrega
+// seu próprio override, se algum dia vier preenchido pela UI) via
+// `linhaDeParede`.
 export async function salvarEstadoAmbiente(
   orcamentoId: string,
   estado: EstadoAmbiente
@@ -60,19 +71,7 @@ export async function salvarEstadoAmbiente(
     return { ok: false, erro: "Não foi possível salvar os módulos do orçamento." };
   }
 
-  // 2. organizacao.alturas_padrao = alturas (NÍVEL ORG — ver nota em
-  // lib/ambiente/estado.ts: sobrescreve o perfil de alturas de toda a
-  // marcenaria, não só deste orçamento).
-  const { error: erroAlturas } = await supabase
-    .from("organizacao")
-    .update({ alturas_padrao: estado.alturas })
-    .eq("id", organizacaoId);
-  if (erroAlturas) {
-    console.error("[ambiente] falha ao salvar alturas_padrao:", erroAlturas.message);
-    return { ok: false, erro: "Não foi possível salvar as alturas do perfil." };
-  }
-
-  // 3. ambiente (1 linha) — upsert manual por orcamento_id (primeiro save
+  // 2. ambiente (1 linha) — upsert manual por orcamento_id (primeiro save
   // cria a linha "Ambiente 1"; saves seguintes reaproveitam o mesmo id).
   const { data: ambienteExistente, error: erroBuscarAmbiente } = await supabase
     .from("ambiente")
@@ -102,7 +101,7 @@ export async function salvarEstadoAmbiente(
     ambienteId = novoAmbiente.id as string;
   }
 
-  // 4. parede (1 linha) — upsert manual por ambiente_id, mesmo espírito.
+  // 3. parede (1 linha) — upsert manual por ambiente_id, mesmo espírito.
   const { data: paredeExistente, error: erroBuscarParede } = await supabase
     .from("parede")
     .select("id")
@@ -130,7 +129,7 @@ export async function salvarEstadoAmbiente(
     return { ok: false, erro: "Não foi possível salvar a parede." };
   }
 
-  // 5. elemento_continuo — sincroniza por delete + insert do conjunto inteiro
+  // 4. elemento_continuo — sincroniza por delete + insert do conjunto inteiro
   // (decisão do contrato, "aceitável, documente"): mais simples que diffar
   // linha a linha, e o `id` de cada `ElementoContinuo` em memória é sintético
   // de UI (`novoElementoId()`, sem significado fora da sessão do browser) —

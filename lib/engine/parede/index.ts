@@ -1,5 +1,6 @@
 export * from "./types";
 export {
+  alturasEfetivas,
   derivarY,
   intervalosSobrepoem,
   retangulosSobrepoem,

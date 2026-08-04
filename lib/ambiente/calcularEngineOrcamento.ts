@@ -26,6 +26,9 @@ export type ResultadoEngineOrcamento = { ok: true; engine: EngineOutput } | { ok
 export function calcularEngineOrcamento(estadoInicial: EstadoAmbiente): ResultadoEngineOrcamento {
   try {
     const resolvedor: ResolvedorItens = new Map(estadoInicial.modulos.map((m) => [idDoItem(m), m]));
+    // `estadoInicial.alturas` é o perfil bruto, sem passar por `alturasEfetivas`
+    // — no-op hoje porque nenhuma UI escreve `parede.alturasOverride` (Task
+    // 0.4/Lote 0). Passa a importar quando o Lote 2 ligar essa UI.
     const conjuntosAutomaticos = detectarConjuntos(estadoInicial.parede, estadoInicial.alturas, resolvedor);
     const conjuntosFinais = aplicarOverrides(
       conjuntosAutomaticos,

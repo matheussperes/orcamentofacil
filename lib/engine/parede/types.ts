@@ -27,6 +27,10 @@ export interface Parede {
   id: string;
   altura: number;
   largura: number;
+  /** Override CAMPO A CAMPO das 4 alturas de faixa (Modelo-de-Dominio Seção
+   * 3.2.1, Q-1). Chave ausente/`null` = herdado do perfil da organização —
+   * nunca uma cópia integral. Ver `alturasEfetivas` em `validar.ts`. */
+  alturasOverride?: Partial<AlturasFaixas>;
   elementos: ElementoParede[];
   itens: ItemPosicionado[];
 }
