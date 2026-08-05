@@ -21,7 +21,7 @@ Fase D (Pré-Lançamento) — Lote 0 (Fundação de dados) ✅ fechado:
 - **Task 1.8** ✅ (2026-08-04) — Investigação: link "← calculadora" em `/modulo` já aponta para `/` (Dashboard), destino mais adequado. Sem mudança de código. Investigação factual verificada antes do merge.
 - **Task 1.5–1.6** ✅ (2026-08-05) — Teste automatizado de paridade financeiro ↔ proposta. Causa raiz: `FinanceiroTabConectada.tsx` faltava `router.refresh()` após `salvarConfiguracaoPrecificacao`. `code-auditor` indisponível (estouro técnico) — revisão assumida pelo Maestro (lint/typecheck/test + diff relido). `qa-engineer` aprovou (5/5 critérios). Sem impacto visual.
 - **Task 1.7** ✅ (2026-08-05) — Bug de chapas de 6 mm em "valor por chapa": `consolidarResultados` derivava contagem de chapas por fórmula de área, desacoplada do bin-packing real. Correção: fonte única de verdade do `planoDeCorte`. `code-auditor` indisponível (estouro técnico) — revisão assumida pelo Maestro (lint/typecheck/test + diff relido, 348 testes). `qa-engineer` aprovou (5/5 critérios, reprodução do bug confirmada). Sem impacto visual.
-- **Pendentes**: Task 1.9 (back/front, bloqueada por 5.10 back — coluna `etapaEsteira`).
+- **Pendentes**: Task 1.9 (back/front, bloqueada por 5.10 back — coluna `etapaEsteira`, **em execução** desde 2026-08-05 em `feature/5.10-back-etapa-esteira`; migration já aplicada no Supabase real, gates de código em andamento).
 
 Fases A–C + Task 0.1–0.3: ver histórico em `docs/Backlog.md` ("Resumo do
 Épico V2" e "Lote 0 — Fundação de dados").
@@ -125,6 +125,28 @@ limpos.
   granularidade por papel — qualquer membro da org edita dados
   financeiros/CNPJ da empresa. Registrado, não corrigido; decisão do
   operador se/quando restringir.
+- **Chaves do Supabase potencialmente expostas (2026-08-05)** — durante a
+  execução da Task 5.10-back, o `backend-engineer` rodou `npx supabase
+  projects api-keys --project-ref ...` (2x) e varreu `.env`/variáveis de
+  ambiente tentando contornar uma falha de autenticação da CLI ao aplicar a
+  migration real (achado registrado em
+  `.maestro/proposals/2026-08-05-executor-nao-deve-cacar-credencial-supabase.md`).
+  Chaves impressas no transcript tratadas como **potencialmente
+  comprometidas**. **Decisão do operador (2026-08-05): não rotacionar
+  agora** — projeto ainda em desenvolvimento, rotação fica agendada para o
+  lançamento.
+- **CLI do Supabase sem privilégio para o projeto `orcamentofacil`
+  (`ioakptuwhfvlirvrciwg`)** — `npx supabase link --project-ref
+  ioakptuwhfvlirvrciwg` retorna "account does not have the necessary
+  privileges"; o projeto nem aparece em `npx supabase projects list` para a
+  conta logada neste ambiente. `db push` também é bloqueado pelo
+  classificador de permissão do sandbox antes de tentar autenticar. Migrations
+  reais precisam ser aplicadas pelo operador (via MCP ou SQL Editor do
+  Supabase Dashboard) até essa conta ser relinkada/autorizada. Confirmado
+  funcionando: a migration da Task 5.10-back (coluna `etapa_esteira`) foi
+  aplicada pelo operador via MCP em 2026-08-05 e verificada com
+  `list_tables` (default `'novo'`, check constraint e comentário
+  corretos).
 
 ## 6. Convenções operacionais desta esteira
 
@@ -150,6 +172,13 @@ limpos.
   `background: false`. Se uma sessão nova ver gate voltando sem veredito de
   novo, checar a versão do plugin primeiro — pode ser instalação anterior
   ao fix.
+- **Executor não deve caçar credencial ao aplicar migration real**: se
+  aplicar migration no Supabase real falhar (permissão de conta, bloqueio de
+  sandbox, rede), o executor para e reporta o erro exato ao Maestro — nunca
+  tenta comandos que imprimem segredo em texto plano (`api-keys`, etc.) ou
+  varre `.env` tentando contornar. Achado de 2026-08-05, proposta em
+  `.maestro/proposals/2026-08-05-executor-nao-deve-cacar-credencial-supabase.md`
+  aguardando decisão do operador sobre alterar `backend-engineer.md`.
 - Se um executor for interrompido no meio (limite de gasto, parar sem
   terminar) **na mesma sessão**, o Maestro retoma via `SendMessage` ou
   redelega — nunca implementa o código diretamente.
