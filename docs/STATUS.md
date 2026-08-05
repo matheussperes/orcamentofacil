@@ -1,6 +1,6 @@
 # Status Atual
 
-> Atualizado em 2026-08-04 (Task 1.8 fechada). Este arquivo é o ponto de partida de qualquer
+> Atualizado em 2026-08-05 (Task 1.5-1.6 fechada). Este arquivo é o ponto de partida de qualquer
 > sessão nova. Histórico task-a-task (auditorias, tentativas, decisões)
 > não vive mais aqui — está no `git log` e nos commits de merge de cada
 > branch `feature/<task-id>`. Este arquivo mantém só o essencial.
@@ -16,10 +16,11 @@ da experiência construídas. Fases A (Discovery), B (Motor e dados) e C
 Fase D (Pré-Lançamento) — Lote 0 (Fundação de dados) ✅ fechado:
 **Tasks 0.1–0.3, 0.4, 0.5a, 0.7a, 0.7b, 0.5b mescladas** (wiring multi-Ambiente/Parede, migration, Server Actions, alturas de faixa, dados de cliente, congelamento real, formulário de cliente — Lote 0 completo 6/6).
 
-**Lote 1 (Confiança e estado) em andamento** — 2/5 fatias concluídas:
+**Lote 1 (Confiança e estado) em andamento** — 3/5 fatias concluídas:
 - **Task 1.1–1.3** ✅ (2026-08-04) — Invalidação de cache após mutação + aba persistida na URL + "atualizar render" sem F5. `code-auditor` indisponível (2x sem veredito, estouro técnico) — revisão assumida pelo Maestro. `qa-engineer` aprovou com veredito próprio (verificação real: aba sobrevive a F5, `forceMount` e `router.refresh()` validados). Sem impacto visual.
 - **Task 1.8** ✅ (2026-08-04) — Investigação: link "← calculadora" em `/modulo` já aponta para `/` (Dashboard), destino mais adequado. Sem mudança de código. Investigação factual verificada antes do merge.
-- **Pendentes**: Tasks 1.5–1.6, 1.7, 1.9 (back/front). Task 1.9 bloqueada por 5.10 (back, Lote 5) — coluna `etapaEsteira`.
+- **Task 1.5–1.6** ✅ (2026-08-05) — Teste automatizado de paridade financeiro ↔ proposta. Causa raiz: `FinanceiroTabConectada.tsx` faltava `router.refresh()` após `salvarConfiguracaoPrecificacao`. `code-auditor` indisponível (estouro técnico) — revisão assumida pelo Maestro (lint/typecheck/test + diff relido). `qa-engineer` aprovou (5/5 critérios). Sem impacto visual.
+- **Pendentes**: Tasks 1.7 (em execução), 1.9 (back/front, bloqueada por 5.10 back — coluna `etapaEsteira`).
 
 Fases A–C + Task 0.1–0.3: ver histórico em `docs/Backlog.md` ("Resumo do
 Épico V2" e "Lote 0 — Fundação de dados").
