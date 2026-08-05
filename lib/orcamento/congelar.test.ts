@@ -83,7 +83,7 @@ describe("buscarOrcamentoPorId — congeladoEm", () => {
 describe("congelarOrcamento", () => {
   it("grava congelado_em = now() do servidor quando o orçamento pertence à organização do usuário", async () => {
     supabaseMock.respostas.perfil = { data: { organizacao_id: "org-a" }, error: null };
-    supabaseMock.respostas.orcamento = { data: { id: "orc-1" }, error: null };
+    supabaseMock.respostas.orcamento = { data: { id: "orc-1", etapa_esteira: "novo" }, error: null };
 
     const antes = Date.now();
     const resultado = await congelarOrcamento("orc-1");
@@ -99,6 +99,28 @@ describe("congelarOrcamento", () => {
     const gravado = new Date(update?.valores.congelado_em as string).getTime();
     expect(gravado).toBeGreaterThanOrEqual(antes);
     expect(gravado).toBeLessThanOrEqual(depois);
+  });
+
+  it("Task 5.10-back (gatilho 2, Modelo 7.2): avança etapa_esteira para aguardando_aprovacao quando a etapa atual é anterior a ela", async () => {
+    supabaseMock.respostas.perfil = { data: { organizacao_id: "org-a" }, error: null };
+    supabaseMock.respostas.orcamento = { data: { id: "orc-1", etapa_esteira: "projeto_3d" }, error: null };
+
+    const resultado = await congelarOrcamento("orc-1");
+
+    expect(resultado).toEqual({ ok: true });
+    const update = supabaseMock.atualizacoes.find((u) => u.tabela === "orcamento" && "congelado_em" in u.valores);
+    expect(update?.valores.etapa_esteira).toBe("aguardando_aprovacao");
+  });
+
+  it("Task 5.10-back (recongelamento, I3): NÃO mexe em etapa_esteira quando o orçamento já está fechado", async () => {
+    supabaseMock.respostas.perfil = { data: { organizacao_id: "org-a" }, error: null };
+    supabaseMock.respostas.orcamento = { data: { id: "orc-1", etapa_esteira: "fechado" }, error: null };
+
+    const resultado = await congelarOrcamento("orc-1");
+
+    expect(resultado).toEqual({ ok: true });
+    const update = supabaseMock.atualizacoes.find((u) => u.tabela === "orcamento" && "congelado_em" in u.valores);
+    expect(update?.valores.etapa_esteira).toBeUndefined();
   });
 
   it("rejeita orçamento de outra organização sem gravar nada (defesa em profundidade, mesmo padrão IDOR de ambiente/acoes.ts)", async () => {

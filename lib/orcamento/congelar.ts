@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { deveAvancarParaAguardandoAprovacao, type EtapaEsteira } from "@/lib/orcamento/etapa-esteira";
 
 // Task 0.7a (Modelo-de-Dominio.md 5.4.1, invariantes I1/I2) — grava
 // `orcamento.congelado_em` (migration 20260803090000_orcamento_congelado_em.sql).
@@ -8,7 +9,14 @@ import { createClient } from "@/lib/supabase/server";
 // `valorRateado` em nenhuma `linha_proposta` (invariante I2 — "congelado ⇒
 // toda linha tem valorRateado" — é responsabilidade de quem chama, no mesmo
 // fluxo de "Gerar proposta", encadeando essa gravação ANTES de chamar
-// congelarOrcamento). Também não mexe em `status`/`etapa_esteira` — ortogonal.
+// congelarOrcamento).
+//
+// Task 5.10-back (Modelo-de-Dominio.md 7.2, gatilho 2) — este UPDATE também
+// avança `etapa_esteira` para `aguardando_aprovacao` quando a etapa atual é
+// anterior a ela (`novo`/`visita_agendada`/`projeto_3d`), na MESMA escrita
+// que grava `congelado_em` (mesmo ato, não uma chamada separada). Se a etapa
+// já for `fechado`, não mexe — é recongelamento (invariante I3): só a
+// proposta é regravada. `status` comercial continua intocado — ortogonal.
 //
 // Mesmo padrão de defesa em profundidade de `lib/ambiente/acoes.ts`
 // (corrigido por achado de segurança de IDOR): nunca confia em
@@ -47,10 +55,11 @@ export async function congelarOrcamento(orcamentoId: string): Promise<ResultadoC
   const organizacaoId = perfil.organizacao_id as string;
 
   // Posse: confirma que o orçamento existe E é desta organização antes de
-  // gravar — mesmo padrão de `criarAmbiente` (lib/ambiente/acoes.ts).
+  // gravar — mesmo padrão de `criarAmbiente` (lib/ambiente/acoes.ts). Lê
+  // também `etapa_esteira` para decidir o gatilho 2 (Modelo 7.2).
   const { data: orcamento, error: erroOrcamento } = await supabase
     .from("orcamento")
-    .select("id")
+    .select("id, etapa_esteira")
     .eq("id", orcamentoId)
     .eq("organizacao_id", organizacaoId)
     .maybeSingle();
@@ -60,11 +69,20 @@ export async function congelarOrcamento(orcamentoId: string): Promise<ResultadoC
     return { ok: false, erro: "Este orçamento não existe mais." };
   }
 
-  // `new Date()` aqui roda no servidor (Server Action) — nunca é o relógio
-  // do client, mesmo que o gatilho tenha vindo de uma requisição do browser.
+  const etapaAtual = orcamento.etapa_esteira as EtapaEsteira;
+  const valoresUpdate: { congelado_em: string; etapa_esteira?: EtapaEsteira } = {
+    // `new Date()` aqui roda no servidor (Server Action) — nunca é o
+    // relógio do client, mesmo que o gatilho tenha vindo de uma requisição
+    // do browser.
+    congelado_em: new Date().toISOString(),
+  };
+  if (deveAvancarParaAguardandoAprovacao(etapaAtual)) {
+    valoresUpdate.etapa_esteira = "aguardando_aprovacao";
+  }
+
   const { error: erroUpdate } = await supabase
     .from("orcamento")
-    .update({ congelado_em: new Date().toISOString() })
+    .update(valoresUpdate)
     .eq("id", orcamentoId)
     .eq("organizacao_id", organizacaoId);
 
