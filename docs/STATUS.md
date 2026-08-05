@@ -132,13 +132,24 @@ limpos.
   ("Modelo Recomendado" no Backlog) e espere o operador confirmar.
 - **Fluxo por task**: branch `feature/<task-id>` → Executor (subagente) →
   Code Auditor → Security Auditor (quando envolve RLS/secrets/infra) → QA
-  Engineer → UX Auditor ao vivo (feito pelo Maestro via Browser pane, não
-  por subagente — subagentes não têm ferramenta de browser) → merge
-  `--no-ff` em `main` → memory-manager sincroniza Backlog/Status → commit →
-  push.
-- Screenshots do Browser pane dão timeout neste ambiente — usar `read_page`
-  + `javascript_tool` (`getComputedStyle`, `getBoundingClientRect`,
-  `elementFromPoint`) como evidência.
+  Engineer → UX Auditor (subagente com `Bash`, sobe `preview_start`/dev
+  server e captura evidência — não é o Maestro operando a ferramenta de
+  Browser pane diretamente) → merge `--no-ff` em `main` → memory-manager
+  sincroniza Backlog/Status → commit → push.
+- **Plugin Maestro v3.5.0+ (instalado em 2026-08-05, confirmar em
+  `~/.claude/plugins/installed_plugins.json`)**: gates gravam veredito em
+  `.maestro/tmp/verdicts/<task-id>-<gate>.md` ANTES de responder em texto —
+  o Maestro lê o arquivo, nunca a mensagem de retorno. Corrige um bug real
+  do Claude Code
+  ([anthropics/claude-code#58109](https://github.com/anthropics/claude-code/issues/58109))
+  que descartava o texto final de subagentes cuja última ação era uma
+  chamada de ferramenta — não era `maxTurns` nem esgotamento de contexto,
+  apesar de parecer isso à primeira vista (ver
+  `.maestro/proposals/2026-08-04-gates-estouram-maxturns-sem-veredito.md`
+  para o histórico completo da investigação). Os 5 auditores agora rodam
+  `background: false`. Se uma sessão nova ver gate voltando sem veredito de
+  novo, checar a versão do plugin primeiro — pode ser instalação anterior
+  ao fix.
 - Se um executor for interrompido no meio (limite de gasto, parar sem
   terminar) **na mesma sessão**, o Maestro retoma via `SendMessage` ou
   redelega — nunca implementa o código diretamente.
