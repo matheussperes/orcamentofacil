@@ -1,6 +1,6 @@
 # Status Atual
 
-> Atualizado em 2026-08-05 (Task 1.7 fechada). Este arquivo é o ponto de partida de qualquer
+> Atualizado em 2026-08-05 (Task 1.7, 5.10-back fechadas). Este arquivo é o ponto de partida de qualquer
 > sessão nova. Histórico task-a-task (auditorias, tentativas, decisões)
 > não vive mais aqui — está no `git log` e nos commits de merge de cada
 > branch `feature/<task-id>`. Este arquivo mantém só o essencial.
@@ -21,7 +21,8 @@ Fase D (Pré-Lançamento) — Lote 0 (Fundação de dados) ✅ fechado:
 - **Task 1.8** ✅ (2026-08-04) — Investigação: link "← calculadora" em `/modulo` já aponta para `/` (Dashboard), destino mais adequado. Sem mudança de código. Investigação factual verificada antes do merge.
 - **Task 1.5–1.6** ✅ (2026-08-05) — Teste automatizado de paridade financeiro ↔ proposta. Causa raiz: `FinanceiroTabConectada.tsx` faltava `router.refresh()` após `salvarConfiguracaoPrecificacao`. `code-auditor` indisponível (estouro técnico) — revisão assumida pelo Maestro (lint/typecheck/test + diff relido). `qa-engineer` aprovou (5/5 critérios). Sem impacto visual.
 - **Task 1.7** ✅ (2026-08-05) — Bug de chapas de 6 mm em "valor por chapa": `consolidarResultados` derivava contagem de chapas por fórmula de área, desacoplada do bin-packing real. Correção: fonte única de verdade do `planoDeCorte`. `code-auditor` indisponível (estouro técnico) — revisão assumida pelo Maestro (lint/typecheck/test + diff relido, 348 testes). `qa-engineer` aprovou (5/5 critérios, reprodução do bug confirmada). Sem impacto visual.
-- **Pendentes**: Task 1.9 (back/front, bloqueada por 5.10 back — coluna `etapaEsteira`, **em execução** desde 2026-08-05 em `feature/5.10-back-etapa-esteira`; migration já aplicada no Supabase real, gates de código em andamento).
+- **Task 5.10 (back)** ✅ (2026-08-05, Lote 5) — Coluna `orcamento.etapa_esteira` (migration aplicada no Supabase real), Server Action `atualizarEtapaEsteira` (transições T1–T3), gatilho de avanço automático para `aguardando_aprovacao` no congelamento. `code-auditor` aprovado (veredito em arquivo), `qa-engineer` aprovado (358 testes, 5 critérios). Sem RLS nova, sem UI. Desbloqueia a Task 1.9 (back/front).
+- **Pendentes**: Task 1.9 (back/front, **desbloqueada pela conclusão da Task 5.10 (back)** — próxima fatia do Lote 1).
 
 Fases A–C + Task 0.1–0.3: ver histórico em `docs/Backlog.md` ("Resumo do
 Épico V2" e "Lote 0 — Fundação de dados").
