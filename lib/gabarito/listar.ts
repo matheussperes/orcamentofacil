@@ -40,8 +40,25 @@ export async function listarGabaritos(): Promise<GabaritosListados> {
     return { gabaritos: [], erro: true };
   }
 
-  return {
-    gabaritos: data.map((linha) => gabaritoRowDeLinha(linha as Record<string, unknown>)),
-    erro: false,
-  };
+  const gabaritos = data.map((linha) => gabaritoRowDeLinha(linha as Record<string, unknown>));
+
+  return { gabaritos: deduplicarPromovidos(gabaritos), erro: false };
+}
+
+// Task 2.1 (dedup) — regra 6, `docs/Modelo-de-Dominio.md` Seção 7.1: quando um
+// gabarito da própria org é promovido a global, a linha global nova nasce com
+// `origemGabaritoId` = id do gabarito da org que a originou, e a linha da org
+// permanece intocada. Sem esse filtro a org veria os dois — o original e a
+// versão global promovida a partir dele. Dedup derivado, nunca persistido: a
+// RLS já garante que `gabaritos` só contém globais + linhas da própria org, e
+// portanto qualquer `organizacaoId` não-null aqui é necessariamente da org
+// chamadora.
+function deduplicarPromovidos(gabaritos: GabaritoRow[]): GabaritoRow[] {
+  const idsProprios = new Set(
+    gabaritos.filter((g) => g.organizacaoId !== null).map((g) => g.id),
+  );
+
+  return gabaritos.filter(
+    (g) => !(g.organizacaoId === null && g.origemGabaritoId !== null && idsProprios.has(g.origemGabaritoId)),
+  );
 }
