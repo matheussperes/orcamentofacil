@@ -185,7 +185,7 @@ export default function EditorModulo() {
         <EditorItemNucleo
           key={pronto ? "pronto-placa" : "inicial-placa"}
           estadoInicial={estadoInicialPlaca}
-          onSalvar={async () => ({ ok: false, erro: "Placa ainda não tem biblioteca de presets." })}
+          onSalvar={async () => ({ ok: false, erro: "Placa ainda não tem biblioteca de módulos." })}
           exibirAcaoSalvar={false}
         />
       </div>
