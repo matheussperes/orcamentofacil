@@ -2,9 +2,17 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { FileText } from "lucide-react";
+import { AlertTriangle, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { formatarDataHora } from "@/lib/format";
 import { calcularEngineOrcamento } from "@/lib/ambiente/calcularEngineOrcamento";
 import { carregarCatalogo, catalogoParaPrecos, type Catalogo } from "@/lib/catalog";
 import { PRECOS_REFERENCIA } from "@/lib/engine/prices";
@@ -49,6 +57,10 @@ export interface PropostaLabProps {
   // Task 0.7b (Modelo-de-Dominio.md 5.4.1) — única fonte de verdade de
   // congelamento (I1); `null` = nunca congelado / reaberto (R1, ao vivo).
   congeladoEm: string | null;
+  // Task 1.9-front (Design-System.md §7.13.1, Q-18) — papel do usuário
+  // logado nesta organização; só `"admin"` vê o botão "Reabrir orçamento"
+  // no `Alert` de orçamento congelado.
+  papel: string | null;
   onCriarLinha: (titulo: string, itens: string[], descricao: string) => Promise<ResultadoLinhaProposta>;
   onAtualizarLinha: (id: string, patch: PatchLinhaProposta) => Promise<ResultadoOperacaoLinhaProposta>;
   onExcluirLinha: (id: string) => Promise<ResultadoOperacaoLinhaProposta>;
@@ -58,6 +70,7 @@ export interface PropostaLabProps {
   ) => Promise<{ ok: true; imagemUrl: string } | { ok: false; erro: string }>;
   onResolverUrlImagem: (imagemUrl: string) => Promise<string | null>;
   onCongelarOrcamento: (orcamentoId: string) => Promise<ResultadoOperacaoLinhaProposta>;
+  onReabrirOrcamento: (orcamentoId: string) => Promise<ResultadoOperacaoLinhaProposta>;
 }
 
 export function PropostaLab({
@@ -65,16 +78,40 @@ export function PropostaLab({
   estadoInicial,
   configuracaoInicial,
   linhasIniciais,
-  congeladoEm,
+  congeladoEm: congeladoEmInicial,
+  papel,
   onCriarLinha,
   onAtualizarLinha,
   onExcluirLinha,
   onRegenerarImagem,
   onResolverUrlImagem,
   onCongelarOrcamento,
+  onReabrirOrcamento,
 }: PropostaLabProps) {
   const irParaAba = useIrParaAba();
   const router = useRouter();
+
+  // Task 1.9-front — estado local pra que `congeladoEm` volte a `null` na
+  // tela sem F5 depois de reabrir (mesmo padrão de estado local espelhando
+  // prop inicial já usado em `linhas`/`linhasIniciais` acima).
+  const [congeladoEm, setCongeladoEm] = useState<string | null>(congeladoEmInicial);
+  const [dialogReabrirAberto, setDialogReabrirAberto] = useState(false);
+  const [reabrindo, setReabrindo] = useState(false);
+  const [erroReabrir, setErroReabrir] = useState<string | null>(null);
+
+  async function handleConfirmarReabrir() {
+    setReabrindo(true);
+    setErroReabrir(null);
+    const resultado = await onReabrirOrcamento(orcamentoId);
+    setReabrindo(false);
+    if (!resultado.ok) {
+      setErroReabrir(resultado.erro ?? "Não foi possível reabrir o orçamento.");
+      return;
+    }
+    setDialogReabrirAberto(false);
+    setCongeladoEm(null);
+    router.refresh();
+  }
 
   const [catalogo, setCatalogo] = useState<Catalogo | null>(null);
   useEffect(() => {
@@ -307,6 +344,23 @@ export function PropostaLab({
 
   return (
     <div className="flex flex-col gap-lg">
+      {congeladoEm !== null && (
+        <Alert variant="aviso">
+          <AlertTriangle className="h-4 w-4 text-aviso" aria-hidden="true" />
+          <AlertDescription className="flex flex-wrap items-center justify-between gap-sm">
+            <span>
+              Esta proposta está congelada desde {formatarDataHora(congeladoEm)}. Suas alterações não
+              mudam os valores até você reabrir o orçamento.
+            </span>
+            {papel === "admin" && (
+              <Button variant="ghost" size="sm" onClick={() => setDialogReabrirAberto(true)}>
+                Reabrir orçamento
+              </Button>
+            )}
+          </AlertDescription>
+        </Alert>
+      )}
+
       <Alert variant="informacao">
         <AlertDescription>
           Remover um ambiente aumenta o preço dos demais; regenere a proposta depois de dividir, mesclar
@@ -379,6 +433,37 @@ export function PropostaLab({
           </section>
         </>
       )}
+
+      <Dialog
+        open={dialogReabrirAberto}
+        onOpenChange={(aberto) => {
+          setDialogReabrirAberto(aberto);
+          if (aberto) setErroReabrir(null);
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Reabrir orçamento?</DialogTitle>
+          </DialogHeader>
+          <p className="text-corpo-pequeno text-cinza-500">
+            Os valores desta proposta voltam a ser recalculados a cada alteração até você congelar de
+            novo. O valor atual congelado deixa de ser exibido.
+          </p>
+          {erroReabrir && (
+            <Alert variant="erro">
+              <AlertDescription>{erroReabrir}</AlertDescription>
+            </Alert>
+          )}
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setDialogReabrirAberto(false)} disabled={reabrindo}>
+              Cancelar
+            </Button>
+            <Button variant="primary" onClick={handleConfirmarReabrir} disabled={reabrindo}>
+              {reabrindo ? "Reabrindo…" : "Reabrir orçamento"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -4,6 +4,7 @@ import { PropostaLab } from "./PropostaLab";
 import { criarLinhaProposta, atualizarLinhaProposta, excluirLinhaProposta } from "@/lib/linha-proposta/acoes";
 import { obterUrlAssinadaImagemLinha, uploadImagemLinhaProposta } from "@/lib/linha-proposta/storage";
 import { congelarOrcamento } from "@/lib/orcamento/congelar";
+import { reabrirOrcamento } from "@/lib/orcamento/reabrir";
 import type { LinhaProposta } from "@/lib/linha-proposta/tipos";
 import type { EstadoAmbiente } from "@/lib/ambiente/estado";
 import type { ConfiguracaoPrecificacaoCarregada } from "@/lib/precificacao/carregarConfiguracao";
@@ -18,6 +19,10 @@ import type { ConfiguracaoPrecificacaoCarregada } from "@/lib/precificacao/carre
 // `lib/linha-proposta/acoes.ts` + ao upload de imagem no Storage
 // (`lib/linha-proposta/storage.ts`, client-side — só aqui, nunca em
 // `PropostaLab`).
+//
+// Task 1.9-front (Design-System.md §7.13.1) — soma `papel` (lido em
+// `page.tsx` via `lib/perfil/papelAtual.ts`, repassado sem transformação) e
+// liga a Server Action `reabrirOrcamento` (Task 1.9-back) ao `PropostaLab`.
 export interface PropostaTabConectadaProps {
   orcamentoId: string;
   organizacaoId: string | null;
@@ -25,6 +30,7 @@ export interface PropostaTabConectadaProps {
   configuracaoInicial: ConfiguracaoPrecificacaoCarregada;
   linhasIniciais: LinhaProposta[];
   congeladoEm: string | null;
+  papel: string | null;
 }
 
 export function PropostaTabConectada({
@@ -34,6 +40,7 @@ export function PropostaTabConectada({
   configuracaoInicial,
   linhasIniciais,
   congeladoEm,
+  papel,
 }: PropostaTabConectadaProps) {
   async function onCriarLinha(titulo: string, itens: string[], descricao: string) {
     return criarLinhaProposta(orcamentoId, titulo, itens, descricao);
@@ -62,12 +69,14 @@ export function PropostaTabConectada({
       configuracaoInicial={configuracaoInicial}
       linhasIniciais={linhasIniciais}
       congeladoEm={congeladoEm}
+      papel={papel}
       onCriarLinha={onCriarLinha}
       onAtualizarLinha={atualizarLinhaProposta}
       onExcluirLinha={excluirLinhaProposta}
       onRegenerarImagem={onRegenerarImagem}
       onResolverUrlImagem={obterUrlAssinadaImagemLinha}
       onCongelarOrcamento={congelarOrcamento}
+      onReabrirOrcamento={reabrirOrcamento}
     />
   );
 }

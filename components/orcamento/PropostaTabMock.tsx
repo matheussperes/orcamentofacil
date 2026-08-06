@@ -76,6 +76,13 @@ export function PropostaTabMock() {
     return { ok: true };
   }
 
+  // Task 1.9-front — harness DEV-ONLY também mocka a reabertura, mesmo
+  // espírito das demais funções acima (sem Supabase, sem sessão real).
+  async function onReabrirOrcamento(_orcamentoId: string) {
+    await new Promise((resolve) => setTimeout(resolve, 150));
+    return { ok: true };
+  }
+
   return (
     <PropostaLab
       orcamentoId="preview-orcamento"
@@ -83,12 +90,14 @@ export function PropostaTabMock() {
       configuracaoInicial={CONFIGURACAO_MOCK}
       linhasIniciais={[]}
       congeladoEm={null}
+      papel="admin"
       onCriarLinha={onCriarLinha}
       onAtualizarLinha={onAtualizarLinha}
       onExcluirLinha={onExcluirLinha}
       onRegenerarImagem={onRegenerarImagem}
       onResolverUrlImagem={onResolverUrlImagem}
       onCongelarOrcamento={onCongelarOrcamento}
+      onReabrirOrcamento={onReabrirOrcamento}
     />
   );
 }
