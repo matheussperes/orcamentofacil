@@ -3,7 +3,13 @@
 import { useRouter } from "next/navigation";
 import { AmbientesLab } from "./AmbientesLab";
 import { salvarEstadoAmbiente } from "@/lib/ambiente/salvar";
-import type { EstadoAmbiente, ResultadoSalvarAmbiente } from "@/lib/ambiente/estado";
+import { mutarAmbientes } from "@/lib/ambiente/mutar";
+import type {
+  ComandoAmbiente,
+  EstadoAmbiente,
+  ResultadoMutarAmbientes,
+  ResultadoSalvarAmbiente,
+} from "@/lib/ambiente/estado";
 import type { ElementoParedePresetRow } from "@/lib/elemento-parede-preset/tipos";
 
 // Task 13.3d (contrato .maestro/tmp/13.3d-contract.md) — o "dono de I/O"
@@ -48,10 +54,21 @@ export function AmbientesTabConectada({
     return resultado;
   }
 
+  // Task 2.3-2.6 — CRUD imediato de ambiente/parede (criar/renomear/excluir/
+  // reordenar): NÃO chama `router.refresh()` — a Server Action já devolve a
+  // árvore fresca (`resultado.ambientes`) e `AmbientesLab` substitui o estado
+  // local direto, sem round-trip do Server Component (evitaria perder edição
+  // profunda em progresso na parede selecionada, que só existe em memória até
+  // "Salvar alterações").
+  async function onMutarAmbientes(comando: ComandoAmbiente): Promise<ResultadoMutarAmbientes> {
+    return mutarAmbientes(orcamentoId, comando);
+  }
+
   return (
     <AmbientesLab
       estadoInicial={estadoInicial}
       onSalvar={onSalvar}
+      onMutarAmbientes={onMutarAmbientes}
       orcamentoId={orcamentoId}
       presetsElementoParede={presetsElementoParede}
     />
