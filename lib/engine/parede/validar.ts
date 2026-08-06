@@ -6,6 +6,10 @@
 import type { EngineWarning } from "../types";
 import { alturaDoItem, larguraDoItem, type ModuloOrcamento } from "../../orcamento";
 import type { AlturasFaixas, ElementoParede, Faixa, ItemPosicionado, Parede } from "./types";
+// Só os tipos — sem dependência de runtime de conjunto/detectar.ts (evita
+// ciclo: detectar.ts já importa este arquivo).
+import type { Conjunto } from "../conjunto/types";
+import type { ElementoContinuo } from "../elemento-continuo/types";
 
 export type ResolvedorItens = Map<string, ModuloOrcamento>;
 
@@ -241,4 +245,82 @@ export function validarParedeTier2(
     ...validarFaixasNaoColidem(parede, alturasPadrao, itens),
     ...validarItensNaoSobrepoemElementos(parede, alturasPadrao, itens),
   ];
+}
+
+// TAMPO_SOBRE_PEDRA (Modelo de Domínio 3.2.2, "Efeito 2" do exemplo
+// trabalhado "pedra") — aviso, não erro: o cálculo segue, é só sinalização de
+// que um tampo derivado de um Conjunto ocupa, no plano da parede, o mesmo
+// trecho retangular que um ElementoParede tipo "pedra" já ocupa (bancada de
+// terceiros + tampo de MDF ali é material pago duas vezes).
+//
+// Função pura recebendo os três insumos como parâmetros explícitos (não
+// existe hoje um ponto único do pipeline com acesso simultâneo a Parede +
+// Conjuntos detectados + ElementoContinuo tipo tampo — ver contrato da Task
+// 2.7; o wiring que reúne os três é fora de escopo desta task).
+//
+// Retângulo do tampo, derivado do bloco (Conjunto) que ele tem como alvo:
+//   x/largura = da borda esquerda do item mais à esquerda até a borda direita
+//               do item mais à direita do bloco (mesma regra de "largura
+//               total dos módulos" de `derivarDimensoesTampo` em
+//               elemento-continuo/explode.ts — não reimportada aqui pra não
+//               acoplar parede a explode, que não tem contexto de parede).
+//   y         = topo do bloco (Y derivado da faixa + maior altura entre os
+//               itens do bloco) — é onde o tampo se apoia.
+//   altura    = espessura BASE do material do tampo (`material.espessura`),
+//               não a espessura final pós-engrossamento: engrossamento só
+//               AUMENTA o retângulo (nunca reduz), e no exemplo trabalhado da
+//               Seção 3.2.2 a pedra já começa exatamente no topo do bloco —
+//               qualquer espessura positiva já sobrepõe. Decisão de design
+//               documentada (spec não fecha esse detalhe).
+export function validarTampoSobrePedra(
+  parede: Parede,
+  conjuntos: Conjunto[],
+  tampos: ElementoContinuo[],
+  alturasPadrao: AlturasFaixas,
+  itens: ResolvedorItens
+): EngineWarning[] {
+  const warnings: EngineWarning[] = [];
+  const pedras = parede.elementos.filter((e) => e.tipo === "pedra");
+  if (pedras.length === 0) return warnings;
+
+  const alturas = alturasEfetivas(parede, alturasPadrao);
+  const conjuntosPorId = new Map(conjuntos.map((c) => [c.id, c]));
+
+  for (const tampo of tampos) {
+    if (tampo.tipo !== "tampo" || !("conjuntoId" in tampo.alvo)) continue;
+
+    const conjunto = conjuntosPorId.get(tampo.alvo.conjuntoId);
+    if (!conjunto) continue;
+
+    const itensDoBloco = conjunto.itensIds
+      .map((itemId) => parede.itens.find((i) => i.itemId === itemId))
+      .filter((i): i is ItemPosicionado => i !== undefined)
+      .map((i) => {
+        const modulo = resolveModulo(itens, i.itemId);
+        if (!modulo) return undefined;
+        return { x: i.x, largura: larguraDoItem(modulo), altura: alturaDoItem(modulo) };
+      })
+      .filter((i): i is { x: number; largura: number; altura: number } => i !== undefined);
+
+    if (itensDoBloco.length === 0) continue; // bloco sem nenhum item resolvível — mesmo tratamento silencioso do resto do arquivo
+
+    const xMin = Math.min(...itensDoBloco.map((i) => i.x));
+    const xMax = Math.max(...itensDoBloco.map((i) => i.x + i.largura));
+    const alturaMaxima = Math.max(...itensDoBloco.map((i) => i.altura));
+    const y = derivarY(conjunto.faixa, alturas) + alturaMaxima;
+    const espessura = tampo.material.espessura;
+
+    for (const pedra of pedras) {
+      if (retangulosSobrepoem(xMin, y, xMax - xMin, espessura, pedra.x, pedra.y, pedra.largura, pedra.altura)) {
+        warnings.push({
+          moduloId: tampo.id,
+          severidade: "aviso",
+          codigo: "TAMPO_SOBRE_PEDRA",
+          mensagem: `Tampo "${tampo.id}" do conjunto "${conjunto.id}" sobrepõe o elemento "pedra" da parede "${parede.id}" — material pago duas vezes.`,
+        });
+      }
+    }
+  }
+
+  return warnings;
 }

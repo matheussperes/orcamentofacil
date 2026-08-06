@@ -1,8 +1,17 @@
 import { describe, it, expect } from "vitest";
-import { alturasEfetivas, derivarY, validarParedeTier1, validarParedeTier2, type ResolvedorItens } from "./validar";
+import {
+  alturasEfetivas,
+  derivarY,
+  validarParedeTier1,
+  validarParedeTier2,
+  validarTampoSobrePedra,
+  type ResolvedorItens,
+} from "./validar";
 import type { AlturasFaixas, ElementoParede, Parede } from "./types";
 import type { ModuloOrcamento } from "../../orcamento";
 import type { Placa } from "../placa/types";
+import type { Conjunto } from "../conjunto/types";
+import type { ElementoContinuo } from "../elemento-continuo/types";
 
 const MATERIAL = { cor: "Branco TX", espessura: 15 };
 
@@ -325,5 +334,123 @@ describe("validarParedeTier2 — item vs. elemento de parede (2b)", () => {
     const warnings = validarParedeTier2(parede, ALTURAS, mapaItens(item));
 
     expect(warnings.filter((w) => w.codigo === "ITEM_SOBRE_ELEMENTO_PAREDE")).toHaveLength(0);
+  });
+});
+
+// Task 2.7 — Modelo de Domínio 3.2.2, exemplo trabalhado "pedra" (Efeito 2):
+// laje de pedra 2400×30, topo acabado a 900 do chão (y=870, altura=30);
+// rodapé 100, bloco de módulos com 770mm de altura ocupa 100..870 (encosta
+// sem sobrepor a pedra — Efeito 1, já coberto pelo Tier 2b existente). O
+// tampo derivado desse MESMO bloco fica exatamente no topo (y=870) — Efeito 2.
+describe("validarTampoSobrePedra — TAMPO_SOBRE_PEDRA (Modelo de Domínio 3.2.2)", () => {
+  const ALTURAS_PEDRA: AlturasFaixas = {
+    alturaRodape: 100,
+    alturaBancada: 900,
+    alturaInstalacaoAereo: 1400,
+    peDireito: 2700,
+  };
+  const MATERIAL_TAMPO = { cor: "Branco TX", espessura: 18 };
+  const PEDRA: ElementoParede = {
+    id: "pedra-1",
+    tipo: "pedra",
+    x: 0,
+    y: 870,
+    largura: 2400,
+    altura: 30,
+    refX: "esquerda",
+    refY: "chao",
+  };
+
+  function conjuntoInferior(itensIds: string[]): Conjunto {
+    return { id: "conjunto-1", paredeId: "parede-1", faixa: "inferior", itensIds };
+  }
+
+  function tampoDoConjunto(conjuntoId: string): ElementoContinuo {
+    return {
+      id: "tampo-1",
+      tipo: "tampo",
+      alvo: { conjuntoId },
+      posicao: "superior",
+      material: MATERIAL_TAMPO,
+    };
+  }
+
+  it("Efeito 2: tampo derivado cobre o mesmo trecho que a pedra já ocupa -> aviso TAMPO_SOBRE_PEDRA (severidade 'aviso')", () => {
+    const a = placaItem({ id: "a", largura: 600, altura: 770 });
+    const b = placaItem({ id: "b", largura: 600, altura: 770 });
+    const parede = paredeBase({
+      largura: 3000,
+      altura: 2700,
+      elementos: [PEDRA],
+      itens: [
+        { itemId: "a", x: 0, faixa: "inferior" },
+        { itemId: "b", x: 600, faixa: "inferior" }, // bloco 0..1200, topo = 100+770 = 870
+      ],
+    });
+    const conjunto = conjuntoInferior(["a", "b"]);
+    const tampo = tampoDoConjunto(conjunto.id);
+
+    const warnings = validarTampoSobrePedra(parede, [conjunto], [tampo], ALTURAS_PEDRA, mapaItens(a, b));
+
+    expect(warnings).toHaveLength(1);
+    expect(warnings[0].codigo).toBe("TAMPO_SOBRE_PEDRA");
+    expect(warnings[0].severidade).toBe("aviso");
+  });
+
+  it("tampo que NÃO se sobrepõe a nenhuma pedra não gera o aviso (bloco fora do trecho horizontal da pedra)", () => {
+    const a = placaItem({ id: "a", largura: 400, altura: 770 });
+    const b = placaItem({ id: "b", largura: 100, altura: 770 });
+    const parede = paredeBase({
+      largura: 3000,
+      altura: 2700,
+      elementos: [PEDRA], // pedra ocupa x 0..2400
+      itens: [
+        { itemId: "a", x: 2500, faixa: "inferior" },
+        { itemId: "b", x: 2900, faixa: "inferior" }, // bloco 2500..3000, fora de 0..2400
+      ],
+    });
+    const conjunto = conjuntoInferior(["a", "b"]);
+    const tampo = tampoDoConjunto(conjunto.id);
+
+    const warnings = validarTampoSobrePedra(parede, [conjunto], [tampo], ALTURAS_PEDRA, mapaItens(a, b));
+
+    expect(warnings.filter((w) => w.codigo === "TAMPO_SOBRE_PEDRA")).toHaveLength(0);
+  });
+
+  it("parede sem nenhum elemento 'pedra' — sem aviso, mesmo com tampo sobre o bloco", () => {
+    const a = placaItem({ id: "a", largura: 600, altura: 770 });
+    const b = placaItem({ id: "b", largura: 600, altura: 770 });
+    const parede = paredeBase({
+      elementos: [],
+      itens: [
+        { itemId: "a", x: 0, faixa: "inferior" },
+        { itemId: "b", x: 600, faixa: "inferior" },
+      ],
+    });
+    const conjunto = conjuntoInferior(["a", "b"]);
+    const tampo = tampoDoConjunto(conjunto.id);
+
+    const warnings = validarTampoSobrePedra(parede, [conjunto], [tampo], ALTURAS_PEDRA, mapaItens(a, b));
+
+    expect(warnings).toHaveLength(0);
+  });
+
+  it("ElementoContinuo com alvo { moduloId } (módulo isolado, não bloco) é ignorado — sem Conjunto correspondente", () => {
+    const a = placaItem({ id: "a", largura: 600, altura: 770 });
+    const parede = paredeBase({
+      elementos: [PEDRA],
+      itens: [{ itemId: "a", x: 0, faixa: "inferior" }],
+    });
+    const tampoIsolado: ElementoContinuo = {
+      id: "tampo-2",
+      tipo: "tampo",
+      alvo: { moduloId: "a" },
+      posicao: "superior",
+      material: MATERIAL_TAMPO,
+    };
+
+    const warnings = validarTampoSobrePedra(parede, [], [tampoIsolado], ALTURAS_PEDRA, mapaItens(a));
+
+    expect(warnings).toHaveLength(0);
   });
 });
