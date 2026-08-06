@@ -499,6 +499,58 @@ export async function atualizarParede(paredeId: string, campos: CamposParede): P
   return { ok: true };
 }
 
+// Task 2.3-2.6 (frontend) — mirror exato de `reordenarAmbientes`, um nível
+// abaixo: faltava uma ação de reordenar PAREDES dentro de um ambiente (as 7
+// Server Actions da Task 0.1-0.3 cobriam criar/renomear/excluir parede, mas
+// não reordenar). Mesma validação "lista recebida precisa bater com as
+// paredes reais do ambiente" da 0.1-0.3 (Achado 2 do QA em reordenarAmbientes).
+export async function reordenarParedes(
+  ambienteId: string,
+  idsNaNovaOrdem: string[]
+): Promise<Resultado> {
+  const supabase = await createClient();
+  const { organizacaoId, erro } = await organizacaoDoUsuario(supabase);
+  if (!organizacaoId) return { ok: false, erro };
+
+  const { data: paredesReais, error: erroParedesReais } = await supabase
+    .from("parede")
+    .select("id")
+    .eq("ambiente_id", ambienteId)
+    .eq("organizacao_id", organizacaoId);
+
+  if (erroParedesReais) {
+    console.error("[ambiente/acoes] falha ao validar paredes do ambiente:", erroParedesReais.message);
+    return { ok: false, erro: "Não foi possível salvar a nova ordem das paredes." };
+  }
+
+  const idsReais = new Set((paredesReais ?? []).map((p) => p.id as string));
+  const idsRecebidosUnicos = new Set(idsNaNovaOrdem);
+  const listaBate =
+    idsNaNovaOrdem.length === idsRecebidosUnicos.size &&
+    idsRecebidosUnicos.size === idsReais.size &&
+    idsNaNovaOrdem.every((id) => idsReais.has(id));
+
+  if (!listaBate) {
+    return { ok: false, erro: "A lista de paredes está incompleta ou desatualizada." };
+  }
+
+  for (let ordem = 0; ordem < idsNaNovaOrdem.length; ordem++) {
+    const { error: erroUpdate } = await supabase
+      .from("parede")
+      .update({ ordem })
+      .eq("id", idsNaNovaOrdem[ordem])
+      .eq("ambiente_id", ambienteId)
+      .eq("organizacao_id", organizacaoId);
+
+    if (erroUpdate) {
+      console.error("[ambiente/acoes] falha ao reordenar paredes:", erroUpdate.message);
+      return { ok: false, erro: "Não foi possível salvar a nova ordem das paredes." };
+    }
+  }
+
+  return { ok: true };
+}
+
 export async function excluirParede(paredeId: string): Promise<Resultado> {
   const supabase = await createClient();
   const { organizacaoId, erro } = await organizacaoDoUsuario(supabase);

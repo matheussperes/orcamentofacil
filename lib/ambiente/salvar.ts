@@ -5,35 +5,37 @@ import type { EstadoAmbiente, ResultadoSalvarAmbiente } from "./estado";
 import { linhaDeElementoContinuo, linhaDeParede } from "./mapear";
 
 // Task 13.3d (contrato .maestro/tmp/13.3d-contract.md) — Server Action que
-// persiste o estado profundo de Ambientes de um orçamento. Chamado a partir
-// de `components/ambientes/AmbientesTabConectada.tsx` (client) quando o
-// usuário clica em "Salvar alterações" — AÇÃO EXPLÍCITA, nunca autosave (a
-// própria `AmbientesLab.tsx` não chama isto sozinha a cada mudança de
-// estado).
+// persiste o conteúdo PROFUNDO de Ambientes de um orçamento (largura/altura/
+// elementos/itens de cada parede + módulos + elementos contínuos). Chamado a
+// partir de `components/ambientes/AmbientesTabConectada.tsx` (client) quando
+// o usuário clica em "Salvar alterações" — AÇÃO EXPLÍCITA, nunca autosave.
+//
+// Task 2.3-2.6 — [V2.1] fim do singleton: itera por TODOS os ambientes/
+// paredes de `estado.ambientes` (não mais "a única parede"). Cadastro/
+// renome/exclusão/reordenação de ambiente/parede são AÇÕES IMEDIATAS
+// (`lib/ambiente/mutar.ts`, chamando `lib/ambiente/acoes.ts` direto) — esta
+// função NUNCA cria/renomeia/exclui ambiente ou parede por conta própria,
+// EXCETO o caso abaixo:
+//
+// Bootstrap do orçamento novo: um orçamento sem nenhuma linha em `ambiente`/
+// `parede` ainda começa com 1 ambiente/1 parede só em MEMÓRIA (IDs sentinela
+// `AMBIENTE_PADRAO_ID`/`PAREDE_PADRAO_ID`, ver `lib/ambiente/estado.ts`) —
+// mesmo comportamento de hoje ("estado padrão limpo, sem erro"). Esta função
+// tenta UPDATE por id; se 0 linhas forem afetadas (a linha ainda não existe),
+// cria a linha real (mesmo espírito do "upsert manual" que já existia aqui
+// antes da 2.3-2.6, só que agora por ambiente/parede, não por orçamento
+// inteiro). Qualquer ambiente/parede criado pelo usuário via botão "+" já
+// nasce com id real (ação imediata) — na prática, o ramo de criação aqui só
+// dispara para o par sentinela de um orçamento nunca salvo.
 //
 // Mesmo padrão de autenticação/organização de `lib/orcamento/criar.ts`:
 // nunca confia em organizacao_id vindo do client — busca em `perfil` do
 // usuário autenticado, e RLS `with check` de cada tabela confirma de novo no
 // banco.
 //
-// Ordem das escritas (não há transação client-side possível via
-// supabase-js/PostgREST — cada `.update()`/`.insert()` é uma request HTTP
-// própria): itens do orçamento → ambiente → parede → elementos contínuos.
-// Se uma falhar no meio, as anteriores já foram persistidas (parcialmente
-// salvo) — o Alert de erro deixa isso visível pro usuário tentar salvar de
-// novo (idempotente: repetir não duplica nada, exceto elemento_continuo, que
-// já é delete+insert do zero por natureza).
-//
 // [V2.1] Invariante de escrita (Task 0.4, Modelo de Domínio 3.2.1): esta
 // função NUNCA escreve em `organizacao.alturas_padrao` — perfil só muda em
-// `/perfil` (`lib/perfil/`). O campo `estado.alturas` (perfil da
-// organização) segue existindo em `EstadoAmbiente` — é lido em
-// `carregar.ts` e usado por `calcularEngineOrcamento`/a validação do motor
-// (`alturasEfetivas`, lib/engine/parede/validar.ts, mescla com
-// `parede.alturasOverride`) — mas esta função de SALVAR não tem mais
-// nenhum uso para ele: não escreve, só repassa `estado.parede` (que carrega
-// seu próprio override, se algum dia vier preenchido pela UI) via
-// `linhaDeParede`.
+// `/perfil` (`lib/perfil/`).
 export async function salvarEstadoAmbiente(
   orcamentoId: string,
   estado: EstadoAmbiente
@@ -61,7 +63,8 @@ export async function salvarEstadoAmbiente(
 
   const organizacaoId = perfil.organizacao_id as string;
 
-  // 1. orcamento.itens = módulos (ModuloOrcamento[])
+  // 1. orcamento.itens = módulos (ModuloOrcamento[]) — escopo: orçamento
+  // inteiro, não muda com a Task 2.3-2.6.
   const { error: erroItens } = await supabase
     .from("orcamento")
     .update({ itens: estado.modulos })
@@ -71,70 +74,102 @@ export async function salvarEstadoAmbiente(
     return { ok: false, erro: "Não foi possível salvar os módulos do orçamento." };
   }
 
-  // 2. ambiente (1 linha) — upsert manual por orcamento_id (primeiro save
-  // cria a linha "Ambiente 1"; saves seguintes reaproveitam o mesmo id).
-  const { data: ambienteExistente, error: erroBuscarAmbiente } = await supabase
-    .from("ambiente")
-    .select("id")
-    .eq("orcamento_id", orcamentoId)
-    .order("criado_em", { ascending: true })
-    .limit(1)
-    .maybeSingle();
-  if (erroBuscarAmbiente) {
-    console.error("[ambiente] falha ao buscar ambiente existente:", erroBuscarAmbiente.message);
-    return { ok: false, erro: "Não foi possível salvar o ambiente." };
-  }
+  // 2. Cada ambiente e cada parede — update-ou-cria (ver nota de bootstrap
+  // acima). Requests sequenciais (mesma limitação de antes: não há
+  // transação client-side via supabase-js/PostgREST).
+  const idsRemapeados = { ambientes: {} as Record<string, string>, paredes: {} as Record<string, string> };
 
-  let ambienteId: string;
-  if (ambienteExistente?.id) {
-    ambienteId = ambienteExistente.id as string;
-  } else {
-    const { data: novoAmbiente, error: erroCriarAmbiente } = await supabase
+  for (const ambiente of estado.ambientes) {
+    const { data: ambienteExistente, error: erroBuscarAmbiente } = await supabase
       .from("ambiente")
-      .insert({ organizacao_id: organizacaoId, orcamento_id: orcamentoId, nome: "Ambiente 1" })
       .select("id")
-      .single();
-    if (erroCriarAmbiente || !novoAmbiente) {
-      console.error("[ambiente] falha ao criar ambiente:", erroCriarAmbiente?.message);
-      return { ok: false, erro: "Não foi possível criar o ambiente." };
+      .eq("id", ambiente.id)
+      .eq("organizacao_id", organizacaoId)
+      .maybeSingle();
+    if (erroBuscarAmbiente) {
+      console.error("[ambiente] falha ao verificar ambiente existente:", erroBuscarAmbiente.message);
+      return { ok: false, erro: "Não foi possível salvar o ambiente." };
     }
-    ambienteId = novoAmbiente.id as string;
+
+    let ambienteId = ambiente.id;
+    if (!ambienteExistente) {
+      const { data: novoAmbiente, error: erroCriarAmbiente } = await supabase
+        .from("ambiente")
+        .insert({
+          organizacao_id: organizacaoId,
+          orcamento_id: orcamentoId,
+          nome: ambiente.nome,
+          ordem: ambiente.ordem,
+        })
+        .select("id")
+        .single();
+      if (erroCriarAmbiente || !novoAmbiente) {
+        console.error("[ambiente] falha ao criar ambiente ao salvar:", erroCriarAmbiente?.message);
+        return { ok: false, erro: "Não foi possível salvar o ambiente." };
+      }
+      ambienteId = novoAmbiente.id as string;
+      idsRemapeados.ambientes[ambiente.id] = ambienteId;
+    }
+
+    for (const parede of ambiente.paredes) {
+      // Overrides de junção só fazem sentido dentro de uma parede (as
+      // posições x são relativas a ela) — a lista em `estado.overrides` é
+      // FLAT por orçamento (itemId já desambigua), então cada parede recebe
+      // só os overrides cujo par referencia algum item dela.
+      const overridesDaParede = estado.overrides.filter((o) =>
+        parede.itens.some((i) => i.itemId === o.itemIdA || i.itemId === o.itemIdB)
+      );
+
+      const linha = linhaDeParede({
+        organizacaoId,
+        ambienteId,
+        parede,
+        overrides: overridesDaParede,
+      });
+
+      const { data: paredeExistente, error: erroBuscarParede } = await supabase
+        .from("parede")
+        .select("id")
+        .eq("id", parede.id)
+        .eq("organizacao_id", organizacaoId)
+        .maybeSingle();
+      if (erroBuscarParede) {
+        console.error("[ambiente] falha ao verificar parede existente:", erroBuscarParede.message);
+        return { ok: false, erro: "Não foi possível salvar a parede." };
+      }
+
+      if (paredeExistente) {
+        const { error: erroParede } = await supabase
+          .from("parede")
+          .update(linha)
+          .eq("id", parede.id)
+          .eq("organizacao_id", organizacaoId);
+        if (erroParede) {
+          console.error("[ambiente] falha ao salvar parede:", erroParede.message);
+          return { ok: false, erro: "Não foi possível salvar a parede." };
+        }
+      } else {
+        const { data: novaParede, error: erroParede } = await supabase
+          .from("parede")
+          .insert({ ...linha, nome: parede.nome, ordem: parede.ordem })
+          .select("id")
+          .single();
+        if (erroParede || !novaParede) {
+          console.error("[ambiente] falha ao salvar parede:", erroParede?.message);
+          return { ok: false, erro: "Não foi possível salvar a parede." };
+        }
+        idsRemapeados.paredes[parede.id] = novaParede.id as string;
+      }
+    }
   }
 
-  // 3. parede (1 linha) — upsert manual por ambiente_id, mesmo espírito.
-  const { data: paredeExistente, error: erroBuscarParede } = await supabase
-    .from("parede")
-    .select("id")
-    .eq("ambiente_id", ambienteId)
-    .order("criado_em", { ascending: true })
-    .limit(1)
-    .maybeSingle();
-  if (erroBuscarParede) {
-    console.error("[ambiente] falha ao buscar parede existente:", erroBuscarParede.message);
-    return { ok: false, erro: "Não foi possível salvar a parede." };
-  }
-
-  const linhaParede = linhaDeParede({
-    organizacaoId,
-    ambienteId,
-    parede: estado.parede,
-    overrides: estado.overrides,
-  });
-
-  const { error: erroParede } = paredeExistente?.id
-    ? await supabase.from("parede").update(linhaParede).eq("id", paredeExistente.id as string)
-    : await supabase.from("parede").insert(linhaParede);
-  if (erroParede) {
-    console.error("[ambiente] falha ao salvar parede:", erroParede.message);
-    return { ok: false, erro: "Não foi possível salvar a parede." };
-  }
-
-  // 4. elemento_continuo — sincroniza por delete + insert do conjunto inteiro
-  // (decisão do contrato, "aceitável, documente"): mais simples que diffar
-  // linha a linha, e o `id` de cada `ElementoContinuo` em memória é sintético
-  // de UI (`novoElementoId()`, sem significado fora da sessão do browser) —
-  // depois de salvar, um reload busca os ids REAIS (uuid) gerados pelo
-  // insert, via `carregarEstadoAmbiente`.
+  // 3. elemento_continuo — sincroniza por delete + insert do conjunto inteiro
+  // (decisão do contrato 13.3d, "aceitável, documente"): mais simples que
+  // diffar linha a linha, e o `id` de cada `ElementoContinuo` em memória é
+  // sintético de UI (`novoElementoId()`, sem significado fora da sessão do
+  // browser) — depois de salvar, um reload busca os ids REAIS (uuid) gerados
+  // pelo insert, via `carregarEstadoAmbiente`. Escopo: orçamento inteiro, não
+  // muda com a Task 2.3-2.6.
   const { error: erroDelete } = await supabase
     .from("elemento_continuo")
     .delete()
@@ -155,5 +190,8 @@ export async function salvarEstadoAmbiente(
     }
   }
 
-  return { ok: true };
+  const houveRemapeamento =
+    Object.keys(idsRemapeados.ambientes).length > 0 || Object.keys(idsRemapeados.paredes).length > 0;
+
+  return houveRemapeamento ? { ok: true, idsRemapeados } : { ok: true };
 }

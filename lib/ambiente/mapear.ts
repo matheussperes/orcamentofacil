@@ -33,7 +33,10 @@ export function modulosDeJson(bruto: unknown): ModuloOrcamento[] {
   return Array.isArray(bruto) ? (bruto as ModuloOrcamento[]) : [];
 }
 
-// ---- parede (1 linha por orçamento — escopo desta task) ----
+// ---- parede (Task 2.3-2.6: N paredes por ambiente, N ambientes por
+// orçamento — `nome`/`ordem` são metadados de UI/CRUD tratados à parte por
+// `lib/ambiente/carregar.ts`/`salvar.ts`, este mapeamento cobre só o
+// conteúdo profundo comum a qualquer parede) ----
 
 export interface ParedeRow {
   id: string;

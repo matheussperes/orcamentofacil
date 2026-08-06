@@ -73,16 +73,27 @@ const GAVETEIRO_MOCK: ModuloOrcamento = {
 
 export function estadoMockPreenchido(): EstadoAmbiente {
   return {
-    parede: {
-      id: "parede-mock",
-      largura: 1400,
-      altura: 2700,
-      elementos: [],
-      itens: [
-        { itemId: "mock-balcao", x: 0, faixa: "inferior" },
-        { itemId: "mock-gaveteiro", x: 800, faixa: "inferior" },
-      ],
-    },
+    ambientes: [
+      {
+        id: "ambiente-mock",
+        nome: "Ambiente 1",
+        ordem: 0,
+        paredes: [
+          {
+            id: "parede-mock",
+            nome: "Parede 1",
+            ordem: 0,
+            largura: 1400,
+            altura: 2700,
+            elementos: [],
+            itens: [
+              { itemId: "mock-balcao", x: 0, faixa: "inferior" },
+              { itemId: "mock-gaveteiro", x: 800, faixa: "inferior" },
+            ],
+          },
+        ],
+      },
+    ],
     modulos: [BALCAO_MOCK, GAVETEIRO_MOCK],
     alturas: alturasIniciais(),
     elementosContinuos: [],
