@@ -111,13 +111,13 @@ header.top p {
   margin: 0 0 20px;
 }
 
-.grid {
+.legado-grid {
   display: grid;
   grid-template-columns: 1.3fr 1fr;
   gap: 20px;
 }
 @media (max-width: 860px) {
-  .grid {
+  .legado-grid {
     grid-template-columns: 1fr;
   }
 }

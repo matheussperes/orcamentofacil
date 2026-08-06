@@ -4,6 +4,7 @@ import { carregarEstadoAmbiente } from "@/lib/ambiente/carregar";
 import { buscarUltimaListaMaterial } from "@/lib/lista-material/buscarUltima";
 import { carregarConfiguracaoPrecificacao } from "@/lib/precificacao/carregarConfiguracao";
 import { carregarOuCriarLinhasProposta } from "@/lib/linha-proposta/carregar";
+import { papelAtual } from "@/lib/perfil/papelAtual";
 import { OrcamentoAbas } from "@/components/orcamento/OrcamentoAbas";
 import { AmbientesTabConectada } from "@/components/ambientes/AmbientesTabConectada";
 import { CorteMaterialTabConectada } from "@/components/orcamento/CorteMaterialTabConectada";
@@ -48,6 +49,11 @@ import { PropostaTabConectada } from "@/components/orcamento/PropostaTabConectad
 // as Linhas de Proposta já existentes quanto CRIA a linha default (D-17,
 // "linha = ambiente") no primeiro carregamento, quando ainda não existe
 // nenhuma — passa pra `OrcamentoAbas` via slot `abaProposta`.
+//
+// Task 1.9-front (Design-System.md §7.13.1, Q-16/Q-18) — soma `papelAtual()`
+// (nova leitura pequena, `lib/perfil/papelAtual.ts`) e passa `papel` como
+// prop nova até `PropostaLab`: decide se o botão "Reabrir orçamento" do
+// `Alert` de orçamento congelado aparece (só para `admin`).
 export default async function OrcamentoPage({ params }: { params: { id: string } }) {
   const orcamento = await buscarOrcamentoPorId(params.id);
 
@@ -60,6 +66,7 @@ export default async function OrcamentoPage({ params }: { params: { id: string }
   const ultimaCongeladaEm = await buscarUltimaListaMaterial(orcamento.id);
   const configuracaoPrecificacao = await carregarConfiguracaoPrecificacao(orcamento.id);
   const linhasProposta = await carregarOuCriarLinhasProposta(orcamento.id, estadoAmbiente);
+  const papel = await papelAtual();
 
   return (
     <OrcamentoAbas
@@ -94,6 +101,7 @@ export default async function OrcamentoPage({ params }: { params: { id: string }
           configuracaoInicial={configuracaoPrecificacao}
           linhasIniciais={linhasProposta.linhas}
           congeladoEm={orcamento.congeladoEm}
+          papel={papel}
         />
       }
     />

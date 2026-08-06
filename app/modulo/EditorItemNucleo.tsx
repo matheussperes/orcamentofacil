@@ -532,7 +532,7 @@ export function EditorItemNucleo({
   }
 
   return (
-    <div className="grid">
+    <div className="legado-grid">
       {/* Esquerda: configuração da caixa + divisões + conteúdo, OU as
           seções de Placa — nunca as duas ao mesmo tempo (origem é fixa). */}
       <div>
