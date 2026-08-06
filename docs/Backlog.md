@@ -174,8 +174,8 @@ Lote 1). Nenhuma task desta lista deve iniciar antes das Tasks do Lote 1
 
 | Task | O que é | Tag | Depende de | Executor | Modelo | Referências |
 |---|---|---|---|---|---|---|
-| 2.1 | Ponto de entrada de "criar módulo do zero" a partir de `/biblioteca` e do menu lateral — `lib/gabarito/criar.ts` **já existe e já cria** gabarito privado à org (`origem_gabarito_id: null`); falta só a entrada de UI | 🔴 BLOQ | Lote 0, Lote 1 | frontend-engineer (web) | Sonnet | Modelo 7.1; PRD RF-24, D-31 |
-| 2.1 (dedup) | Ocultar da listagem de `/biblioteca` o módulo global cuja origem (`origem_gabarito_id`) é um gabarito promovido da própria organização — sem isso o marceneiro vê o mesmo módulo duas vezes (versão da org + versão promovida global). Dispara raramente: só depois que o operador promove um gabarito daquela organização para global (fluxo já existente, Task 11.4/`fork_gabarito()`) | 🟡 LACUNA | Lote 0, Lote 1 | backend-engineer | Sonnet | Modelo-de-Dominio 7.1 regra 6; PRD RF-04 (emenda Fase D) |
+| 2.1 | Ponto de entrada de "criar módulo do zero" a partir de `/biblioteca` e do menu lateral — investigação conclui que o caminho já existe e já funciona ponta a ponta (`/biblioteca` → botão "Novo módulo" → `/modulo` sem `?preset=` → salvar chama `criarGabarito` já existente → volta e aparece na listagem). Sidebar (`components/shell/Sidebar.tsx`) deliberadamente exclui `/modulo` do menu principal (Task 13.3b), sem mudança de código necessária | ✅ Completo | Lote 0, Lote 1 | frontend-engineer (web) | Sonnet | Modelo 7.1; PRD RF-24, D-31 |
+| 2.1 (dedup) | Ocultar da listagem de `/biblioteca` o módulo global cuja origem (`origem_gabarito_id`) é um gabarito promovido da própria organização — sem isso o marceneiro vê o mesmo módulo duas vezes (versão da org + versão promovida global). Implementação: `deduplicarPromovidos()` em `lib/gabarito/listar.ts` — filtro derivado em memória que esconde gabaritosglobais cuja `origemGabaritoId` aponta para um gabarito da própria organização; 3 testes novos em `lib/gabarito/listar.test.ts`. `code-auditor` APROVADO, `qa-engineer` APROVADO (370 testes, 3 critérios de comportamento). Sem RLS nova. Merge `--no-ff` em `main` | ✅ Completo | Lote 0, Lote 1 | backend-engineer | Sonnet | Modelo-de-Dominio 7.1 regra 6; PRD RF-04 (emenda Fase D) |
 | 2.3–2.6 | Cadastrar/editar/ordenar ambientes e paredes dentro do orçamento; seletor de parede que expande o painel daquela parede; indicação visual permanente de qual ambiente e qual parede estão em edição | 🟡 LACUNA / 🔵 UX | Lote 0 (0.1–0.3), Lote 1 | frontend-engineer (web) | Sonnet | Modelo 3.2, 11.5; PRD RF-19 |
 | 2.3–2.6 (alturas) | UI de override de altura por parede: indicador visual "herdado" vs. "customizado" por parede (derivado, nunca um campo à parte); botão "voltar ao herdado" que apaga a chave de override (nunca copia o valor numérico); no formulário de `/perfil`, aviso de propagação ao salvar as alturas padrão da organização ("mudar o default afeta as paredes não customizadas") | 🟡 LACUNA | 0.4, Lote 0, Lote 1 | frontend-engineer (web) | Sonnet | Modelo 3.2.1; PRD RF-20, D-27 |
 | 2.7 | Motor: tipo de elemento de parede "pedra" + regra de bloqueio de conjunto por tipo (porta/janela quebram o bloco físico; pedra/tomada/ponto_hidráulico não quebram) + aviso `TAMPO_SOBRE_PEDRA` | 🟡 LACUNA | Lote 0, Lote 1 | motor-engineer | Sonnet | Modelo 3.2.2 (tabela de bloqueio, exemplo trabalhado) |
@@ -196,6 +196,12 @@ Lote 1). Nenhuma task desta lista deve iniciar antes das Tasks do Lote 1
 
 *Nota: item 2.2 (manter filtro por ambiente na listagem da biblioteca) já
 está bom hoje — sem task.*
+
+**Histórico de execução:**
+- **Task 2.1** ✅ (2026-08-06) — Investigação: caminho de "criar módulo do zero" já existe e funciona ponta a ponta. Sidebar deliberadamente exclui `/modulo` do menu (Task 13.3b). Sem mudança de código necessária. Nenhuma branch de merge.
+- **Task 2.1 (dedup)** ✅ (2026-08-06) — `deduplicarPromovidos()` em `lib/gabarito/listar.ts`: filtro derivado em memória escondendo gabaritosglobais promovidos da própria organização. 3 testes novos em `lib/gabarito/listar.test.ts`. `code-auditor` APROVADO (veredito em arquivo, build/lint/typecheck limpos), `qa-engineer` APROVADO (veredito em arquivo, 370/370 testes, 3 critérios). Sem RLS nova. Merge `--no-ff` em `main`.
+
+**Lote 2 — 2/~17 tasks concluídas iniciado 2026-08-06** (Lote 0/1 desbloquearam).
 
 #### Lote 3 — Precisão do motor
 

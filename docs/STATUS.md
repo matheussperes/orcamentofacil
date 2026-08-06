@@ -1,6 +1,6 @@
 # Status Atual
 
-> Atualizado em 2026-08-05 (Task 1.7, 5.10-back fechadas). Este arquivo é o ponto de partida de qualquer
+> Atualizado em 2026-08-06 (Task 2.1, 2.1-dedup fechadas). Este arquivo é o ponto de partida de qualquer
 > sessão nova. Histórico task-a-task (auditorias, tentativas, decisões)
 > não vive mais aqui — está no `git log` e nos commits de merge de cada
 > branch `feature/<task-id>`. Este arquivo mantém só o essencial.
@@ -16,7 +16,13 @@ da experiência construídas. Fases A (Discovery), B (Motor e dados) e C
 Fase D (Pré-Lançamento) — Lote 0 (Fundação de dados) ✅ fechado:
 **Tasks 0.1–0.3, 0.4, 0.5a, 0.7a, 0.7b, 0.5b mescladas** (wiring multi-Ambiente/Parede, migration, Server Actions, alturas de faixa, dados de cliente, congelamento real, formulário de cliente — Lote 0 completo 6/6).
 
-**Lote 1 (Confiança e estado) ✅ fechado por completo** — 7/7 tasks concluídas (5/5 back + 2/2 front):
+**Lote 1 (Confiança e estado) ✅ fechado por completo** — 7/7 tasks concluídas (5/5 back + 2/2 front).
+
+**Lote 2 (Lacunas funcionais) ▶️ iniciado 2026-08-06** — 2/~17 tasks concluídas:
+- **Task 2.1** ✅ (2026-08-06) — Investigação: caminho de "criar módulo do zero" já existe e funciona ponta a ponta (`/biblioteca` → botão "Novo módulo" → `/modulo` sem `?preset=` → salvar chama `criarGabarito` já existente → volta e aparece na listagem). Sidebar deliberadamente exclui `/modulo` do menu principal (Task 13.3b). Sem mudança de código necessária. Nenhuma branch de merge.
+- **Task 2.1 (dedup)** ✅ (2026-08-06) — `deduplicarPromovidos()` em `lib/gabarito/listar.ts`: filtro derivado em memória escondendo gabaritosglobais promovidos da própria organização. 3 testes novos em `lib/gabarito/listar.test.ts`. `code-auditor` APROVADO (veredito em arquivo, build/lint/typecheck limpos), `qa-engineer` APROVADO (veredito em arquivo, 370 testes, 3 critérios). Sem RLS nova. Merge `--no-ff` em `main`.
+
+**Lote 1 (Confiança e estado) — Histórico (7/7 tasks concluídas):**
 - **Task 1.1–1.3** ✅ (2026-08-04) — Invalidação de cache após mutação + aba persistida na URL + "atualizar render" sem F5. `code-auditor` indisponível (2x sem veredito, estouro técnico) — revisão assumida pelo Maestro. `qa-engineer` aprovou com veredito próprio (verificação real: aba sobrevive a F5, `forceMount` e `router.refresh()` validados). Sem impacto visual.
 - **Task 1.8** ✅ (2026-08-04) — Investigação: link "← calculadora" em `/modulo` já aponta para `/` (Dashboard), destino mais adequado. Sem mudança de código. Investigação factual verificada antes do merge.
 - **Task 1.5–1.6** ✅ (2026-08-05) — Teste automatizado de paridade financeiro ↔ proposta. Causa raiz: `FinanceiroTabConectada.tsx` faltava `router.refresh()` após `salvarConfiguracaoPrecificacao`. `code-auditor` indisponível (estouro técnico) — revisão assumida pelo Maestro (lint/typecheck/test + diff relido). `qa-engineer` aprovado (5/5 critérios). Sem impacto visual.
