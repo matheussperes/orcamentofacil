@@ -123,7 +123,17 @@ const CINZA_200 = "#E2E8F0";
 const CINZA_50 = "#F8FAFC";
 const CINZA_0 = "#FFFFFF";
 
-export function ElevacaoParede({ parede, alturas }: { parede: Parede; alturas: AlturasFaixas }) {
+export interface ElevacaoParedeProps {
+  parede: Parede;
+  alturas: AlturasFaixas;
+  /** Task 2.7-2.11 (front) — clicar num elemento desenhado entra no mesmo
+   * modo de edição inline do botão de lápis na lista (convergem no mesmo
+   * estado, ver AmbientesLab.tsx). Opcional: sem handler, o elemento
+   * continua só desenho, sem afordância de clique. */
+  onClicarElemento?: (elemento: ElementoParede, indice: number) => void;
+}
+
+export function ElevacaoParede({ parede, alturas, onClicarElemento }: ElevacaoParedeProps) {
   const layout = layoutElevacao(parede, alturas, AREA_W, AREA_H);
   const x0 = MARGIN_LEFT + (AREA_W - layout.larguraPx) / 2;
   const y0 = MARGIN_TOP + (AREA_H - layout.alturaPx); // alinhado ao chão
@@ -240,8 +250,26 @@ export function ElevacaoParede({ parede, alturas }: { parede: Parede; alturas: A
       {parede.elementos.map((el, i) => {
         const rect = retanguloParaPx(el.x, el.y, el.largura, el.altura, layout);
         const svgY = y0 + rect.y;
+        const clicavel = Boolean(onClicarElemento);
         return (
-          <g key={i}>
+          <g
+            key={el.id}
+            className={clicavel ? "cursor-pointer" : undefined}
+            role={clicavel ? "button" : undefined}
+            tabIndex={clicavel ? 0 : undefined}
+            aria-label={clicavel ? `Editar elemento ${ROTULO_ELEMENTO[el.tipo]}` : undefined}
+            onClick={clicavel ? () => onClicarElemento?.(el, i) : undefined}
+            onKeyDown={
+              clicavel
+                ? (e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      onClicarElemento?.(el, i);
+                    }
+                  }
+                : undefined
+            }
+          >
             <rect
               x={x0 + rect.x}
               y={svgY}

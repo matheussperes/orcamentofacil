@@ -35,6 +35,12 @@ import {
   type ResolvedorItens,
 } from "@/lib/engine/parede";
 import { aplicarOverrides, detectarConjuntos, type Conjunto, type OverrideJuncao } from "@/lib/engine/conjunto";
+import {
+  canonicoParaValor,
+  valorParaCanonico,
+  type ReferenciaX,
+  type ReferenciaY,
+} from "@/lib/engine/parede/referenciaMedida";
 import type { EngineWarning } from "@/lib/engine/types";
 import {
   calcularOrcamentoMisto,
@@ -79,17 +85,55 @@ import { resolverAlvoElemento } from "@/lib/ambiente/resolverAlvo";
 // posicionado vem do próprio módulo (`box.nome`/`placa.nome`), não mais de um
 // lookup em `presets` por `presetId`.
 
-const TIPOS_ELEMENTO: ElementoParede["tipo"][] = ["janela", "porta", "tomada", "ponto_hidraulico"];
+const TIPOS_ELEMENTO: ElementoParede["tipo"][] = ["janela", "porta", "tomada", "ponto_hidraulico", "pedra"];
 const ROTULO_TIPO_ELEMENTO: Record<ElementoParede["tipo"], string> = {
   janela: "Janela",
   porta: "Porta",
   tomada: "Tomada",
   ponto_hidraulico: "Ponto hidráulico",
-  // [Task 2.7] "pedra" só existe no tipo do motor por ora — UI de criação
-  // (`TIPOS_ELEMENTO` acima) fica fora do escopo desta task de motor puro;
-  // rótulo aqui só satisfaz a exaustividade do Record (compila).
   pedra: "Pedra",
 };
+
+// Modelo de Domínio 3.2.2 ([V2.1] itens 2.9/2.11) — rótulos exatos, nunca
+// "X"/"Y" na tela.
+const ROTULO_REF_X: Record<ReferenciaX, string> = {
+  esquerda: "Distância da parede esquerda",
+  direita: "Distância da parede direita",
+};
+const ROTULO_REF_Y: Record<ReferenciaY, string> = {
+  chao: "Altura do chão",
+  teto: "Distância do teto",
+};
+
+/** Recalcula o valor EXIBIDO ao trocar refX/refY, preservando o canônico —
+ * trocar a referência sozinha nunca move o elemento (Modelo de Domínio
+ * 3.2.2). Extraída como função pura pra ser testável sem jsdom (este
+ * projeto não tem ambiente de render — mesmo motivo de `ElevacaoParede.tsx`
+ * só exportar a geometria pura, ver `ElevacaoParede.test.ts`). */
+export function recalcularValorAoTrocarRef<R extends ReferenciaX | ReferenciaY>(
+  valorAtual: number,
+  refAtual: R,
+  refNova: R,
+  dimensaoTotal: number,
+  tamanhoElemento: number
+): number {
+  const canonico = valorParaCanonico(valorAtual, refAtual, dimensaoTotal, tamanhoElemento);
+  return canonicoParaValor(canonico, refNova, dimensaoTotal, tamanhoElemento);
+}
+
+/** Substitui o elemento no índice em edição, ou adiciona ao final quando não
+ * há edição em curso — a mesma função cobre os dois caminhos (lista/clique
+ * no 2D) porque os dois convergem no mesmo estado `elementoEditandoIndice`. */
+export function salvarElementoNaLista(
+  elementos: ElementoParede[],
+  elemento: ElementoParede,
+  indiceEditando: number | null
+): ElementoParede[] {
+  if (indiceEditando === null) return [...elementos, elemento];
+  const copia = [...elementos];
+  copia[indiceEditando] = elemento;
+  return copia;
+}
 const FAIXAS: Faixa[] = ["inferior", "bancada", "aereo", "torre"];
 const ROTULO_FAIXA: Record<Faixa, string> = {
   inferior: "Inferior",
@@ -168,10 +212,19 @@ export function AmbientesLab({ estadoInicial, onSalvar, orcamentoId }: Ambientes
   const [modulos, setModulos] = useState<ModuloOrcamento[]>(() => estadoInicial.modulos);
 
   const [novoTipo, setNovoTipo] = useState<ElementoParede["tipo"]>("janela");
+  // `novoX`/`novoY` guardam o valor EXIBIDO na referência selecionada
+  // (`novoRefX`/`novoRefY`), não necessariamente o canônico — só coincidem
+  // quando a referência é "esquerda"/"chao" (default).
   const [novoX, setNovoX] = useState(0);
   const [novoY, setNovoY] = useState(900);
   const [novaLargura, setNovaLargura] = useState(600);
   const [novaAltura, setNovaAltura] = useState(1000);
+  const [novoRefX, setNovoRefX] = useState<ReferenciaX>("esquerda");
+  const [novoRefY, setNovoRefY] = useState<ReferenciaY>("chao");
+  // Task 2.7-2.11 (front) — índice do elemento em edição inline; `null` =
+  // formulário em modo "adicionar". Os dois caminhos de entrada (lápis na
+  // lista, clique no 2D) só setam este estado, convergindo no mesmo form.
+  const [elementoEditandoIndice, setElementoEditandoIndice] = useState<number | null>(null);
 
   const [presetSelecionado, setPresetSelecionado] = useState<string>("");
   const [faixaSelecionada, setFaixaSelecionada] = useState<Faixa>("inferior");
@@ -221,22 +274,59 @@ export function AmbientesLab({ estadoInicial, onSalvar, orcamentoId }: Ambientes
     setResultadoSalvar(null);
   }
 
-  function adicionarElemento() {
+  function mudarRefX(ref: ReferenciaX) {
+    setNovoX(recalcularValorAoTrocarRef(novoX, novoRefX, ref, parede.largura, novaLargura));
+    setNovoRefX(ref);
+  }
+  function mudarRefY(ref: ReferenciaY) {
+    setNovoY(recalcularValorAoTrocarRef(novoY, novoRefY, ref, parede.altura, novaAltura));
+    setNovoRefY(ref);
+  }
+
+  function limparFormularioElemento() {
+    setElementoEditandoIndice(null);
+    setNovoTipo("janela");
+    setNovoRefX("esquerda");
+    setNovoRefY("chao");
+    setNovoX(0);
+    setNovoY(900);
+    setNovaLargura(600);
+    setNovaAltura(1000);
+  }
+
+  function editarElemento(indice: number) {
+    const el = parede.elementos[indice];
+    setNovoTipo(el.tipo);
+    setNovoRefX(el.refX);
+    setNovoRefY(el.refY);
+    setNovoX(canonicoParaValor(el.x, el.refX, parede.largura, el.largura));
+    setNovoY(canonicoParaValor(el.y, el.refY, parede.altura, el.altura));
+    setNovaLargura(el.largura);
+    setNovaAltura(el.altura);
+    setElementoEditandoIndice(indice);
+  }
+
+  function salvarElemento() {
     const elemento: ElementoParede = {
-      id: novoItemId(),
+      id: elementoEditandoIndice !== null ? parede.elementos[elementoEditandoIndice].id : novoItemId(),
       tipo: novoTipo,
-      x: novoX,
-      y: novoY,
+      x: valorParaCanonico(novoX, novoRefX, parede.largura, novaLargura),
+      y: valorParaCanonico(novoY, novoRefY, parede.altura, novaAltura),
       largura: novaLargura,
       altura: novaAltura,
-      refX: "esquerda",
-      refY: "chao",
+      refX: novoRefX,
+      refY: novoRefY,
     };
-    setParede((p) => ({ ...p, elementos: [...p.elementos, elemento] }));
+    setParede((p) => ({
+      ...p,
+      elementos: salvarElementoNaLista(p.elementos, elemento, elementoEditandoIndice),
+    }));
     setResultadoSalvar(null);
+    limparFormularioElemento();
   }
   function removerElemento(indice: number) {
     setParede((p) => ({ ...p, elementos: p.elementos.filter((_, i) => i !== indice) }));
+    if (elementoEditandoIndice === indice) limparFormularioElemento();
     setResultadoSalvar(null);
   }
 
@@ -608,7 +698,19 @@ export function AmbientesLab({ estadoInicial, onSalvar, orcamentoId }: Ambientes
             </Select>
           </div>
           <div>
-            <Label htmlFor="elemento-x">X (mm)</Label>
+            <Label htmlFor="elemento-ref-x">Referência X</Label>
+            <Select value={novoRefX} onValueChange={(v) => mudarRefX(v as ReferenciaX)}>
+              <SelectTrigger id="elemento-ref-x" className="w-40">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="esquerda">{ROTULO_REF_X.esquerda}</SelectItem>
+                <SelectItem value="direita">{ROTULO_REF_X.direita}</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label htmlFor="elemento-x">{ROTULO_REF_X[novoRefX]} (mm)</Label>
             <Input
               id="elemento-x"
               type="number"
@@ -618,7 +720,19 @@ export function AmbientesLab({ estadoInicial, onSalvar, orcamentoId }: Ambientes
             />
           </div>
           <div>
-            <Label htmlFor="elemento-y">Y (mm)</Label>
+            <Label htmlFor="elemento-ref-y">Referência Y</Label>
+            <Select value={novoRefY} onValueChange={(v) => mudarRefY(v as ReferenciaY)}>
+              <SelectTrigger id="elemento-ref-y" className="w-40">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="chao">{ROTULO_REF_Y.chao}</SelectItem>
+                <SelectItem value="teto">{ROTULO_REF_Y.teto}</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label htmlFor="elemento-y">{ROTULO_REF_Y[novoRefY]} (mm)</Label>
             <Input
               id="elemento-y"
               type="number"
@@ -647,9 +761,14 @@ export function AmbientesLab({ estadoInicial, onSalvar, orcamentoId }: Ambientes
               onChange={(e) => setNovaAltura(numero(e.target.value))}
             />
           </div>
-          <Button variant="primary" onClick={adicionarElemento}>
-            Adicionar
+          <Button variant="primary" onClick={salvarElemento}>
+            {elementoEditandoIndice !== null ? "Salvar" : "Adicionar"}
           </Button>
+          {elementoEditandoIndice !== null && (
+            <Button variant="ghost" onClick={limparFormularioElemento}>
+              Cancelar
+            </Button>
+          )}
         </div>
 
         {parede.elementos.length === 0 ? (
@@ -664,26 +783,39 @@ export function AmbientesLab({ estadoInicial, onSalvar, orcamentoId }: Ambientes
                   <TableHead className="text-right">Y</TableHead>
                   <TableHead className="text-right">Largura</TableHead>
                   <TableHead className="text-right">Altura</TableHead>
-                  <TableHead className="w-10" />
+                  <TableHead className="w-20" />
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {parede.elementos.map((el, i) => (
-                  <TableRow key={i}>
+                  <TableRow
+                    key={el.id}
+                    className={elementoEditandoIndice === i ? "bg-accent-subtle" : undefined}
+                  >
                     <TableCell>{ROTULO_TIPO_ELEMENTO[el.tipo]}</TableCell>
                     <TableCell className="text-right tabular-nums">{el.x}</TableCell>
                     <TableCell className="text-right tabular-nums">{el.y}</TableCell>
                     <TableCell className="text-right tabular-nums">{el.largura}</TableCell>
                     <TableCell className="text-right tabular-nums">{el.altura}</TableCell>
                     <TableCell className="text-right">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => removerElemento(i)}
-                        aria-label={`Remover elemento ${ROTULO_TIPO_ELEMENTO[el.tipo]}`}
-                      >
-                        <X size={14} />
-                      </Button>
+                      <div className="flex justify-end gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => editarElemento(i)}
+                          aria-label={`Editar elemento ${ROTULO_TIPO_ELEMENTO[el.tipo]}`}
+                        >
+                          <Pencil size={14} />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => removerElemento(i)}
+                          aria-label={`Remover elemento ${ROTULO_TIPO_ELEMENTO[el.tipo]}`}
+                        >
+                          <X size={14} />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -825,7 +957,11 @@ export function AmbientesLab({ estadoInicial, onSalvar, orcamentoId }: Ambientes
         <section className="rounded-lg border border-cinza-200 bg-cinza-0 p-4 shadow-xs">
           <h2 className="mb-3 text-titulo-secao text-cinza-900">Elevação da parede</h2>
           <div className="max-w-full overflow-x-auto rounded-md border border-cinza-200 bg-cinza-50 p-2">
-            <ElevacaoParede parede={parede} alturas={alturas} />
+            <ElevacaoParede
+              parede={parede}
+              alturas={alturas}
+              onClicarElemento={(_, indice) => editarElemento(indice)}
+            />
           </div>
         </section>
         <section className="rounded-lg border border-cinza-200 bg-cinza-0 p-4 shadow-xs">
