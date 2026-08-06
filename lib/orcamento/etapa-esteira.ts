@@ -21,7 +21,7 @@ export const ETAPAS_ESTEIRA = [
 
 export type EtapaEsteira = (typeof ETAPAS_ESTEIRA)[number];
 
-const ETAPA_TERMINAL: EtapaEsteira = "fechado";
+export const ETAPA_TERMINAL: EtapaEsteira = "fechado";
 
 function etapaEhValida(valor: string): valor is EtapaEsteira {
   return (ETAPAS_ESTEIRA as readonly string[]).includes(valor);
