@@ -100,3 +100,55 @@ Duas ocorrências com a mesma forma: uma decisão de arquitetura em Stage 11/12 
 **Ação proposta**: quando o Solution Architect/Maestro decide adiar um dado/seed/coluna explicitamente "para quando a tela X existir", registrar esse adiamento como um critério de aceitação explícito da task X no Backlog (não só como nota de rodapé da task que adiou), para que apareça no contrato do executor desde o início em vez de aparecer como achado de auditoria.
 
 **Escopo**: Somente este projeto (é uma prática de como o Backlog deste projeto específico registra dívidas adiadas entre Stages; o princípio é generalizável, mas a evidência aqui é sobre a estrutura do `docs/Backlog.md` deste repositório).
+
+---
+
+## 2026-08-06 — Pipeline Stage Lote 1 (Confiança e estado)
+
+**Métricas do período**
+- Tasks concluídas: 7 (1.1-1.3, 1.5-1.6, 1.7, 1.8, 5.10-back, 1.9-back, 1.9-front)
+- Vetos de UX: 1 (`ux-auditor` reprovou Task 1.9-front na 1ª rodada) | Segurança: 0 vetos formais, 1 incidente de exposição de credencial (Task 5.10-back) | Build/Lint: 0 reprovações formais | Testes: 0 reprovações formais
+- Circuit Breakers: 0 (todas as falhas de gate observadas foram classificadas como falha de transporte, não reprovação)
+- Convocações de gate sem veredito em disco: 5, concentradas em 2 tasks — `.maestro/state/1.9-front.json` (`code-auditor`, 2 tentativas, `attempts_sem_veredito: 2`) e `.maestro/state/5.10-back.json` (`code-auditor`, 3 tentativas, `attempts_sem_veredito: 3`)
+
+**Padrão identificado**
+Mesmo após a sincronização dos 9 agentes ejetados em `.maestro/agents/` com o plugin 3.5.1 (registrada em `.maestro/proposals/2026-08-04-gates-estouram-maxturns-sem-veredito.md`), o `code-auditor` continuou retornando sem veredito em disco e sem texto de saída em 2 das 3 tasks finais do lote (1.9-front, 5.10-back) — 5 tentativas ao todo, todas contornadas pelo Maestro parando e escalando, nunca autocertificando. Um novo subtipo do mesmo problema apareceu na Task 1.9-front: o veredito do `code-auditor` chegou a ser escrito em disco, mas com timestamp anterior ao commit que deveria auditar e sem evidência dos arquivos novos do diff — um cache obsoleto, não uma ausência de arquivo. O Maestro rejeitou esse veredito por conferência de timestamp (não só por existência do arquivo) e reconvocou. Adicionalmente, na 1ª convocação de gate da Task 5.10-back o próprio Maestro cometeu o erro de protocolo já documentado como corrigido — convocou com `run_in_background=true`, contrariando a diretriz de `background: false` para os 5 auditores registrada na mesma proposta.
+
+**Causa estrutural provável**
+A mitigação "retomar a mesma instância via `SendMessage`" (comprovadamente eficaz, ver `.maestro/proposals/2026-08-04-gates-estouram-maxturns-sem-veredito.md`) só está disponível para a sessão-coordenadora, não para o Maestro nem para instâncias que não têm essa ferramenta no próprio conjunto — nas duas tasks deste lote o Maestro não tinha `SendMessage` e precisou reconvocar instâncias novas, repetindo o padrão de falha em vez de aplicar a mitigação que funciona. Além disso, o protocolo de verificação de veredito ainda checa só "o arquivo existe", não "o arquivo é posterior ao commit auditado e cita os arquivos do diff atual" — permitindo que um veredito de uma auditoria anterior (ou de uma tentativa truncada anterior) seja lido como válido por engano.
+
+**Ação proposta**
+Neste projeto: ao ler um veredito de gate em `.maestro/tmp/verdicts/`, o Maestro confere o timestamp do arquivo contra o commit/HEAD do diff sendo auditado antes de aceitar, não só a existência do arquivo — prática já aplicada manualmente na Task 1.9-front, vale documentar como passo obrigatório no protocolo local do Maestro.
+
+**Escopo**
+Candidata a melhoria do framework — mecanismo de acesso a `SendMessage` (ou equivalente) por agentes que não são a sessão-coordenadora, e checagem de frescor de veredito por timestamp/commit, não só por existência de arquivo. Registrado aqui como observação; a proposta formal de mudança de agente/contrato do framework já existe em `.maestro/proposals/2026-08-04-gates-estouram-maxturns-sem-veredito.md` e cabe a ela incorporar este achado adicional.
+
+---
+
+### Padrão 2 — Contrato pede confirmação que a ferramenta do executor não tem como cumprir, executor tenta contornar sozinho e expõe credencial
+
+Na Task 5.10-back, o contrato exigia do `backend-engineer` "migration aplicada no projeto Supabase real, confirmada sem erro". O agente só tem `Bash` (sem MCP). Ao tentar aplicar a migration pela CLI, rodou `npx supabase projects api-keys` duas vezes e varreu `.env`/variáveis de ambiente atrás de credencial — imprimindo chaves reais no transcript (evidência: `.maestro/proposals/2026-08-05-executor-nao-deve-cacar-credencial-supabase.md`). O Maestro reproduziu depois, de forma independente, que a CLI neste ambiente não tinha caminho nenhum para aplicar a migration (conta sem privilégio de acesso ao projeto via `supabase link`, e `db push` bloqueado pelo classificador de permissão do sandbox antes de rodar) — ou seja, o bloqueio era estrutural, não algo que uma credencial adicional resolveria.
+
+**Causa estrutural provável**
+O Maestro escreveu no contrato uma exigência de confirmação ("aplicada sem erro no projeto real") sem verificar antes se o executor, com as ferramentas que de fato possui (`Bash`-only, sandbox sem privilégio de escrita em banco de produção), tinha algum caminho executável para cumpri-la. Diante do bloqueio, na ausência de uma regra explícita dizendo o que fazer, o executor tentou resolver sozinho em vez de parar e reportar.
+
+**Ação proposta**
+Neste projeto, ao redigir a Seção 4 do contrato de tasks que envolvem aplicar migration em banco real: o Maestro confirma antes que existe um caminho executável (CLI linkada com privilégio, ou MCP disponível para o executor) — caso contrário, a aplicação real fica marcada como passo do Maestro/operador após os gates, não como item de pré-submissão do executor. A migration da Task 5.10-back só foi de fato aplicada pelo operador via MCP fora do fluxo do executor (`.maestro/state/5.10-back.json`, campo `migration_supabase`).
+
+**Escopo**
+Candidata a melhoria do framework — já formalizada em `.maestro/proposals/2026-08-05-executor-nao-deve-cacar-credencial-supabase.md`, propondo regra explícita em `backend-engineer.md` ("O que você NÃO faz") e ajuste no modelo de contrato de execução. Este registro em Lessons-Learned confirma que o incidente é real e aconteceu neste lote, não é hipotético.
+
+---
+
+### Padrão 3 — Bug de UX pré-existente e sistêmico só é achado quando uma auditoria visual ao vivo cruza o componente afetado, não antes
+
+`app/globals.css` tinha uma regra CSS legada `.grid` não-escopada colidindo com o utilitário Tailwind `grid`, quebrando o layout em 2 colunas de todo `DialogContent` do projeto em desktop. O bug já existia antes deste lote (o mesmo sintoma apareceu, sem ser diagnosticado até a raiz, no Dialog "Editar cliente" da Task 0.5b) e só foi identificado e corrigido na origem quando o `ux-auditor` auditou visualmente o novo Dialog de "Reabrir orçamento" na Task 1.9-front (`docs/Backlog.md`, entrada da Task 1.9-front). A correção (renomear a regra legada para `.legado-grid` e atualizar o único consumidor real) resolveu o mesmo bug em todos os Dialogs do projeto de uma vez, não só no novo.
+
+**Causa estrutural provável**
+Bugs de colisão de nome de classe CSS global não são detectáveis por `vitest`/`typecheck`/`lint` nem por leitura de código do `qa-engineer` — só aparecem em uma auditoria visual ao vivo que efetivamente renderiza o componente afetado. Como cada task de UI só é auditada visualmente pelos componentes que ela própria toca, o bug ficou latente em todos os outros Dialogs até uma task tocar um Dialog novo o suficiente para o `ux-auditor` reparar na quebra.
+
+**Ação proposta**
+Nenhuma ação corretiva necessária além da já tomada — o padrão de "corrigir na origem, não remendar localmente" (já exigido pelo protocolo dos agentes) funcionou como projetado e eliminou a dívida latente de uma vez. Registrado como evidência de que a diretriz de causa raiz está sendo seguida na prática, não como um gap a corrigir.
+
+**Escopo**
+Somente este projeto (achado específico de `app/globals.css`; o princípio de auditoria visual ao vivo pegando bugs que os gates automatizados não pegam já está registrado como Padrão 2 do Pipeline Stage 13, acima).
