@@ -137,11 +137,14 @@ describe("detectarConjuntos", () => {
     expect(detectarConjuntos(semPorta, ALTURAS, mapaItens(a, b))).toHaveLength(1);
 
     const porta: ElementoParede = {
+      id: "porta-1",
       tipo: "porta",
       x: 500,
       y: 0,
       largura: 200, // 500..700 — cobre o vão de encoste entre a (termina em 600) e b (começa em 602)
       altura: 2100, // porta típica: chão até ~2100mm, cobre o Y da faixa "inferior" (0..700)
+      refX: "esquerda",
+      refY: "chao",
     };
     const comPorta = paredeBase({ elementos: [porta], itens: posicoes });
 
@@ -157,11 +160,14 @@ describe("detectarConjuntos", () => {
     const a = placaItem("a", 600, 700);
     const b = placaItem("b", 600, 700);
     const janela: ElementoParede = {
+      id: "janela-1",
       tipo: "janela",
       x: 500,
       y: 1000, // acima da altura da bancada (900) e acima do topo dos itens "inferior" (Y=0..700)
       largura: 200,
       altura: 400,
+      refX: "esquerda",
+      refY: "chao",
     };
     const parede = paredeBase({
       elementos: [janela],
@@ -181,11 +187,14 @@ describe("detectarConjuntos", () => {
     const a = placaItem("a", 600, 700);
     const b = placaItem("b", 600, 700);
     const tomada: ElementoParede = {
+      id: "tomada-1",
       tipo: "tomada",
       x: 500,
       y: 0,
       largura: 200, // cobre o vão de encoste entre a (termina em 600) e b (começa em 602)
       altura: 2100, // cobre o Y da faixa "inferior", igual à porta do teste acima
+      refX: "esquerda",
+      refY: "chao",
     };
     const parede = paredeBase({
       elementos: [tomada],
@@ -207,7 +216,16 @@ describe("detectarConjuntos", () => {
   it("Task 2.7: uma pedra entre dois itens encostados NÃO impede a formação do Conjunto", () => {
     const a = placaItem("a", 600, 700);
     const b = placaItem("b", 600, 700);
-    const pedra: ElementoParede = { tipo: "pedra", x: 500, y: 0, largura: 200, altura: 2100 };
+    const pedra: ElementoParede = {
+      id: "pedra-1",
+      tipo: "pedra",
+      x: 500,
+      y: 0,
+      largura: 200,
+      altura: 2100,
+      refX: "esquerda",
+      refY: "chao",
+    };
     const parede = paredeBase({
       elementos: [pedra],
       itens: [
@@ -304,7 +322,16 @@ describe("aplicarOverrides", () => {
   it('override "unido" junta dois itens que a detecção automática não uniria por causa de elemento bloqueante', () => {
     const a = placaItem("a", 600, 700);
     const b = placaItem("b", 600, 700);
-    const porta: ElementoParede = { tipo: "porta", x: 500, y: 0, largura: 200, altura: 2100 };
+    const porta: ElementoParede = {
+      id: "porta-2",
+      tipo: "porta",
+      x: 500,
+      y: 0,
+      largura: 200,
+      altura: 2100,
+      refX: "esquerda",
+      refY: "chao",
+    };
     const parede = paredeBase({
       elementos: [porta],
       itens: [

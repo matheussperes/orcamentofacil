@@ -279,7 +279,16 @@ describe("validarParedeTier2 — faixas colidindo (2a)", () => {
 });
 
 describe("validarParedeTier2 — item vs. elemento de parede (2b)", () => {
-  const janela: ElementoParede = { tipo: "janela", x: 200, y: 900, largura: 800, altura: 1000 };
+  const janela: ElementoParede = {
+    id: "janela-1",
+    tipo: "janela",
+    x: 200,
+    y: 900,
+    largura: 800,
+    altura: 1000,
+    refX: "esquerda",
+    refY: "chao",
+  };
 
   it("item posicionado sobrepõe uma janela", () => {
     const item = placaItem({ id: "a", largura: 600, altura: 700 });
@@ -294,7 +303,16 @@ describe("validarParedeTier2 — item vs. elemento de parede (2b)", () => {
   });
 
   it("item posicionado sobrepõe uma porta", () => {
-    const porta: ElementoParede = { tipo: "porta", x: 0, y: 0, largura: 800, altura: 2100 };
+    const porta: ElementoParede = {
+      id: "porta-1",
+      tipo: "porta",
+      x: 0,
+      y: 0,
+      largura: 800,
+      altura: 2100,
+      refX: "esquerda",
+      refY: "chao",
+    };
     const item = placaItem({ id: "a", largura: 600, altura: 700 });
     const parede = paredeBase({
       elementos: [porta],
@@ -332,7 +350,16 @@ describe("validarTampoSobrePedra — TAMPO_SOBRE_PEDRA (Modelo de Domínio 3.2.2
     peDireito: 2700,
   };
   const MATERIAL_TAMPO = { cor: "Branco TX", espessura: 18 };
-  const PEDRA: ElementoParede = { tipo: "pedra", x: 0, y: 870, largura: 2400, altura: 30 };
+  const PEDRA: ElementoParede = {
+    id: "pedra-1",
+    tipo: "pedra",
+    x: 0,
+    y: 870,
+    largura: 2400,
+    altura: 30,
+    refX: "esquerda",
+    refY: "chao",
+  };
 
   function conjuntoInferior(itensIds: string[]): Conjunto {
     return { id: "conjunto-1", paredeId: "parede-1", faixa: "inferior", itensIds };

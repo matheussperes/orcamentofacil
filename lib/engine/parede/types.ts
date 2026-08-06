@@ -14,17 +14,23 @@ export interface ItemPosicionado {
 }
 
 // Retângulo com posição/dimensão ABSOLUTAS na parede — ao contrário de
-// ItemPosicionado, não usa faixa (Modelo de Domínio, Seção 3.2).
+// ItemPosicionado, não usa faixa (Modelo de Domínio, Seção 3.2.2). `x`/`y`
+// são sempre canônicos (borda esquerda/chão) — `refX`/`refY` são só
+// preferência de leitura/escrita, ver `lib/engine/parede/referenciaMedida.ts`.
 export interface ElementoParede {
+  id: string;
   // [V2.1] +"pedra" (Modelo de Domínio 3.2.2, Task 2.7) — bancada de
   // terceiros (granito/quartzo). Tratada como qualquer outro ElementoParede
   // pra não-sobreposição com itens posicionados; NÃO quebra bloco de
   // Conjunto (ver tabela de bloqueio por tipo em conjunto/detectar.ts).
   tipo: "janela" | "porta" | "tomada" | "ponto_hidraulico" | "pedra";
+  nome?: string;
   x: number;
   y: number;
   largura: number;
   altura: number;
+  refX: "esquerda" | "direita";
+  refY: "chao" | "teto";
 }
 
 export interface Parede {

@@ -223,11 +223,14 @@ export function AmbientesLab({ estadoInicial, onSalvar, orcamentoId }: Ambientes
 
   function adicionarElemento() {
     const elemento: ElementoParede = {
+      id: novoItemId(),
       tipo: novoTipo,
       x: novoX,
       y: novoY,
       largura: novaLargura,
       altura: novaAltura,
+      refX: "esquerda",
+      refY: "chao",
     };
     setParede((p) => ({ ...p, elementos: [...p.elementos, elemento] }));
     setResultadoSalvar(null);
@@ -694,17 +697,17 @@ export function AmbientesLab({ estadoInicial, onSalvar, orcamentoId }: Ambientes
         <h2 className="mb-3 text-titulo-secao text-cinza-900">Itens posicionados</h2>
         {presets.length === 0 ? (
           <p className="text-corpo-pequeno text-cinza-500">
-            Nenhum preset disponível. Crie um módulo em{" "}
+            Nenhum módulo disponível. Crie um módulo em{" "}
             <a href="/modulo" className="text-accent hover:underline">
               /modulo
             </a>{" "}
-            e salve como preset da biblioteca.
+            e salve como módulo da biblioteca.
           </p>
         ) : (
           <>
             <div className="mb-3 flex flex-wrap items-end gap-sm">
               <div>
-                <Label htmlFor="item-preset">Preset</Label>
+                <Label htmlFor="item-preset">Módulo</Label>
                 <Select value={presetSelecionado} onValueChange={setPresetSelecionado}>
                   <SelectTrigger id="item-preset" className="w-48">
                     <SelectValue />
