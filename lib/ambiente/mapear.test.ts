@@ -63,12 +63,14 @@ describe("paredeDeLinha", () => {
     expect(resultado.overrides).toEqual([]);
   });
 
-  it("mapeia uma linha completa 1:1 pro shape de domínio", () => {
+  it("mapeia uma linha completa 1:1 pro shape de domínio (elemento já no formato novo)", () => {
     const row: ParedeRow = {
       id: "parede-uuid-1",
       altura: 2700,
       largura: 3200,
-      elementos: [{ tipo: "janela", x: 100, y: 900, largura: 600, altura: 500 }],
+      elementos: [
+        { id: "elemento-1", tipo: "janela", x: 100, y: 900, largura: 600, altura: 500, refX: "esquerda", refY: "chao" },
+      ],
       itens: [{ itemId: "instancia-1", x: 0, faixa: "inferior" }],
       overrides_juncao: [{ itemIdA: "instancia-1", itemIdB: "instancia-2", forcar: "unido" }],
     };
@@ -83,6 +85,31 @@ describe("paredeDeLinha", () => {
       itens: row.itens,
     });
     expect(resultado.overrides).toEqual(row.overrides_juncao);
+  });
+
+  it("migra elemento legado (sem id/refX/refY) na leitura, sem alterar x/y/largura/altura/tipo", () => {
+    const row: ParedeRow = {
+      id: "parede-uuid-legado",
+      altura: 2700,
+      largura: 3200,
+      elementos: [{ tipo: "janela", x: 100, y: 900, largura: 600, altura: 500 }],
+      itens: [],
+      overrides_juncao: [],
+    };
+
+    const resultado = paredeDeLinha(row);
+
+    expect(resultado.parede.elementos).toHaveLength(1);
+    const [elemento] = resultado.parede.elementos;
+    expect(elemento.tipo).toBe("janela");
+    expect(elemento.x).toBe(100);
+    expect(elemento.y).toBe(900);
+    expect(elemento.largura).toBe(600);
+    expect(elemento.altura).toBe(500);
+    expect(elemento.refX).toBe("esquerda");
+    expect(elemento.refY).toBe("chao");
+    expect(typeof elemento.id).toBe("string");
+    expect(elemento.id.length).toBeGreaterThan(0);
   });
 
   it("usa [] quando elementos/itens/overrides_juncao vêm null (default da tabela)", () => {

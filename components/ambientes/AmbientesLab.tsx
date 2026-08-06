@@ -219,11 +219,14 @@ export function AmbientesLab({ estadoInicial, onSalvar, orcamentoId }: Ambientes
 
   function adicionarElemento() {
     const elemento: ElementoParede = {
+      id: novoItemId(),
       tipo: novoTipo,
       x: novoX,
       y: novoY,
       largura: novaLargura,
       altura: novaAltura,
+      refX: "esquerda",
+      refY: "chao",
     };
     setParede((p) => ({ ...p, elementos: [...p.elementos, elemento] }));
     setResultadoSalvar(null);

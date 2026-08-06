@@ -3,6 +3,7 @@
 // mockar o client do Supabase (`lib/ambiente/mapear.test.ts`).
 
 import type { AlturasFaixas, ElementoParede, ItemPosicionado, Parede } from "@/lib/engine/parede/types";
+import { migrarElementoParede } from "@/lib/engine/parede/migrate";
 import type { ElementoContinuo } from "@/lib/engine/elemento-continuo/types";
 import type { OverrideJuncao } from "@/lib/engine/conjunto";
 import type { ModuloOrcamento } from "@/lib/orcamento";
@@ -50,7 +51,7 @@ export function paredeDeLinha(row: ParedeRow | null): { parede: Parede; override
       id: row.id,
       altura: row.altura,
       largura: row.largura,
-      elementos: (row.elementos as ElementoParede[] | null) ?? [],
+      elementos: ((row.elementos as ElementoParede[] | null) ?? []).map(migrarElementoParede),
       itens: (row.itens as ItemPosicionado[] | null) ?? [],
     },
     overrides: (row.overrides_juncao as OverrideJuncao[] | null) ?? [],
