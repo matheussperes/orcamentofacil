@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { buscarOrcamentoPorId } from "@/lib/orcamento/buscar";
 import { carregarEstadoAmbiente } from "@/lib/ambiente/carregar";
+import { listarElementoParedePresets } from "@/lib/elemento-parede-preset/listar";
 import { buscarUltimaListaMaterial } from "@/lib/lista-material/buscarUltima";
 import { carregarConfiguracaoPrecificacao } from "@/lib/precificacao/carregarConfiguracao";
 import { carregarOuCriarLinhasProposta } from "@/lib/linha-proposta/carregar";
@@ -67,6 +68,7 @@ export default async function OrcamentoPage({ params }: { params: { id: string }
   const configuracaoPrecificacao = await carregarConfiguracaoPrecificacao(orcamento.id);
   const linhasProposta = await carregarOuCriarLinhasProposta(orcamento.id, estadoAmbiente);
   const papel = await papelAtual();
+  const { presets: presetsElementoParede } = await listarElementoParedePresets();
 
   return (
     <OrcamentoAbas
@@ -76,7 +78,11 @@ export default async function OrcamentoPage({ params }: { params: { id: string }
       clienteEndereco={orcamento.clienteEndereco}
       idCurto={idCurto}
       abaAmbientes={
-        <AmbientesTabConectada orcamentoId={orcamento.id} estadoInicial={estadoAmbiente} />
+        <AmbientesTabConectada
+          orcamentoId={orcamento.id}
+          estadoInicial={estadoAmbiente}
+          presetsElementoParede={presetsElementoParede}
+        />
       }
       abaCorteMaterial={
         <CorteMaterialTabConectada
