@@ -6,9 +6,10 @@
 // 2D) e o preenchimento do formulário são verificados visualmente no
 // browser.
 import { describe, expect, it } from "vitest";
-import { recalcularValorAoTrocarRef, salvarElementoNaLista } from "./AmbientesLab";
+import { aplicarPresetElementoParede, recalcularValorAoTrocarRef, salvarElementoNaLista } from "./AmbientesLab";
 import { valorParaCanonico } from "@/lib/engine/parede/referenciaMedida";
 import type { ElementoParede } from "@/lib/engine/parede";
+import type { ElementoParedePresetRow } from "@/lib/elemento-parede-preset/tipos";
 
 describe("recalcularValorAoTrocarRef", () => {
   it("trocar refX sem editar o valor exibido preserva o canônico (nunca move o elemento)", () => {
@@ -63,5 +64,36 @@ describe("salvarElementoNaLista", () => {
 
     expect(resultado).toHaveLength(1);
     expect(resultado[0]).toEqual(editado);
+  });
+});
+
+describe("aplicarPresetElementoParede", () => {
+  const presetBase: ElementoParedePresetRow = {
+    id: "preset-1",
+    organizacaoId: "org-1",
+    nome: "Janela padrão",
+    larguraPadrao: 800,
+    alturaPadrao: 1200,
+    criadoEm: new Date(0).toISOString(),
+  };
+
+  it("preset com larguraPadrao/alturaPadrao definidos sobrescreve os campos atuais", () => {
+    const resultado = aplicarPresetElementoParede({ novaLargura: 600, novaAltura: 1000 }, presetBase);
+
+    expect(resultado).toEqual({ novoNome: "Janela padrão", novaLargura: 800, novaAltura: 1200 });
+  });
+
+  it("preset com larguraPadrao/alturaPadrao ausentes mantém os valores atuais do formulário", () => {
+    const preset: ElementoParedePresetRow = { ...presetBase, larguraPadrao: null, alturaPadrao: null };
+    const resultado = aplicarPresetElementoParede({ novaLargura: 600, novaAltura: 1000 }, preset);
+
+    expect(resultado).toEqual({ novoNome: "Janela padrão", novaLargura: 600, novaAltura: 1000 });
+  });
+
+  it("nome do preset sempre copiado, independente de largura/altura estarem definidos", () => {
+    const preset: ElementoParedePresetRow = { ...presetBase, larguraPadrao: null };
+    const resultado = aplicarPresetElementoParede({ novaLargura: 600, novaAltura: 1000 }, preset);
+
+    expect(resultado.novoNome).toBe("Janela padrão");
   });
 });

@@ -62,6 +62,9 @@ import { listarPresets, seedPresetsPadrao, type BoxPreset } from "@/lib/boxPrese
 import { carregarCatalogo, coresDisponiveis, espessurasDaCor, type Catalogo } from "@/lib/catalog";
 import type { EstadoAmbiente, ResultadoSalvarAmbiente } from "@/lib/ambiente/estado";
 import { resolverAlvoElemento } from "@/lib/ambiente/resolverAlvo";
+import { criarElementoParedePreset } from "@/lib/elemento-parede-preset/criar";
+import { excluirElementoParedePreset } from "@/lib/elemento-parede-preset/excluir";
+import type { ElementoParedePresetRow } from "@/lib/elemento-parede-preset/tipos";
 
 // Task 13.3d (contrato .maestro/tmp/13.3d-contract.md) — refatoração para
 // componente PRESENTACIONAL: recebe o estado profundo de Ambientes (parede,
@@ -134,6 +137,22 @@ export function salvarElementoNaLista(
   copia[indiceEditando] = elemento;
   return copia;
 }
+
+/** Task 2.12 (front) — campos do formulário de "adicionar elemento" após
+ * aplicar um preset (Modelo de Domínio 3.2.3: cópia, sem vínculo vivo —
+ * `larguraPadrao`/`alturaPadrao` são opcionais, mantém o valor atual do
+ * formulário quando ausentes). Extraída como função pura pra ser testável
+ * sem jsdom, mesmo motivo de `salvarElementoNaLista`. */
+export function aplicarPresetElementoParede(
+  campoAtual: { novaLargura: number; novaAltura: number },
+  preset: ElementoParedePresetRow
+): { novoNome: string; novaLargura: number; novaAltura: number } {
+  return {
+    novoNome: preset.nome,
+    novaLargura: preset.larguraPadrao ?? campoAtual.novaLargura,
+    novaAltura: preset.alturaPadrao ?? campoAtual.novaAltura,
+  };
+}
 const FAIXAS: Faixa[] = ["inferior", "bancada", "aereo", "torre"];
 const ROTULO_FAIXA: Record<Faixa, string> = {
   inferior: "Inferior",
@@ -203,9 +222,22 @@ export interface AmbientesLabProps {
    * numa rota que funcione) — decisão de menor esforço documentada no
    * relatório da 13.3e. */
   orcamentoId?: string;
+  /** Presets de elemento de parede da organização (Task 2.12, Modelo de
+   * Domínio 3.2.3), carregados server-side por quem monta este componente
+   * (`AmbientesTabConectada`/`app/(app)/orcamento/[id]/page.tsx`) — só
+   * existe onde há Supabase real. Ausente em `AmbientesLabStandalone`
+   * (`/ambientes`) e `AmbientesTabMock` (harness), que não recebem esta
+   * prop: a UI de preset fica vazia/oculta pra eles (mesmo tratamento de
+   * `orcamentoId` opcional). */
+  presetsElementoParede?: ElementoParedePresetRow[];
 }
 
-export function AmbientesLab({ estadoInicial, onSalvar, orcamentoId }: AmbientesLabProps) {
+export function AmbientesLab({
+  estadoInicial,
+  onSalvar,
+  orcamentoId,
+  presetsElementoParede = [],
+}: AmbientesLabProps) {
   const [parede, setParede] = useState<Parede>(() => estadoInicial.parede);
   const [alturas, setAlturas] = useState<AlturasFaixas>(() => estadoInicial.alturas);
   const [presets, setPresets] = useState<BoxPreset[]>([]);
@@ -219,8 +251,19 @@ export function AmbientesLab({ estadoInicial, onSalvar, orcamentoId }: Ambientes
   const [novoY, setNovoY] = useState(900);
   const [novaLargura, setNovaLargura] = useState(600);
   const [novaAltura, setNovaAltura] = useState(1000);
+  const [novoNome, setNovoNome] = useState("");
   const [novoRefX, setNovoRefX] = useState<ReferenciaX>("esquerda");
   const [novoRefY, setNovoRefY] = useState<ReferenciaY>("chao");
+
+  // Task 2.12 (front) — presets de elemento de parede: lista local (mesmo
+  // padrão de `GabaritoLab.tsx::removerLocal` — atualiza em memória, sem
+  // `router.refresh()`), form de aplicar/criar/excluir dentro da própria
+  // seção "Elementos de parede".
+  const [listaPresetsParede, setListaPresetsParede] =
+    useState<ElementoParedePresetRow[]>(presetsElementoParede);
+  const [presetParedeSelecionado, setPresetParedeSelecionado] = useState("");
+  const [salvandoPreset, setSalvandoPreset] = useState(false);
+  const [erroPreset, setErroPreset] = useState<string | null>(null);
   // Task 2.7-2.11 (front) — índice do elemento em edição inline; `null` =
   // formulário em modo "adicionar". Os dois caminhos de entrada (lápis na
   // lista, clique no 2D) só setam este estado, convergindo no mesmo form.
@@ -292,6 +335,7 @@ export function AmbientesLab({ estadoInicial, onSalvar, orcamentoId }: Ambientes
     setNovoY(900);
     setNovaLargura(600);
     setNovaAltura(1000);
+    setNovoNome("");
   }
 
   function editarElemento(indice: number) {
@@ -303,6 +347,7 @@ export function AmbientesLab({ estadoInicial, onSalvar, orcamentoId }: Ambientes
     setNovoY(canonicoParaValor(el.y, el.refY, parede.altura, el.altura));
     setNovaLargura(el.largura);
     setNovaAltura(el.altura);
+    setNovoNome(el.nome ?? "");
     setElementoEditandoIndice(indice);
   }
 
@@ -310,6 +355,7 @@ export function AmbientesLab({ estadoInicial, onSalvar, orcamentoId }: Ambientes
     const elemento: ElementoParede = {
       id: elementoEditandoIndice !== null ? parede.elementos[elementoEditandoIndice].id : novoItemId(),
       tipo: novoTipo,
+      nome: novoNome.trim() || undefined,
       x: valorParaCanonico(novoX, novoRefX, parede.largura, novaLargura),
       y: valorParaCanonico(novoY, novoRefY, parede.altura, novaAltura),
       largura: novaLargura,
@@ -328,6 +374,52 @@ export function AmbientesLab({ estadoInicial, onSalvar, orcamentoId }: Ambientes
     setParede((p) => ({ ...p, elementos: p.elementos.filter((_, i) => i !== indice) }));
     if (elementoEditandoIndice === indice) limparFormularioElemento();
     setResultadoSalvar(null);
+  }
+
+  // Task 2.12 (front) — selecionar um preset copia nome/largura/altura pro
+  // formulário de adicionar elemento (Modelo de Domínio 3.2.3: cópia, sem
+  // vínculo vivo — `ElementoParede` não guarda `presetId`). Reseta o Select
+  // de volta ao placeholder logo em seguida pra permitir reaplicar o mesmo
+  // preset outra vez.
+  function selecionarPresetParede(id: string) {
+    const preset = listaPresetsParede.find((p) => p.id === id);
+    if (preset) {
+      const campos = aplicarPresetElementoParede({ novaLargura, novaAltura }, preset);
+      setNovoNome(campos.novoNome);
+      setNovaLargura(campos.novaLargura);
+      setNovaAltura(campos.novaAltura);
+    }
+    setPresetParedeSelecionado("");
+  }
+
+  async function salvarComoPresetParede() {
+    if (!novoNome.trim()) {
+      setErroPreset("Informe o nome antes de salvar como preset.");
+      return;
+    }
+    setSalvandoPreset(true);
+    setErroPreset(null);
+    const resultado = await criarElementoParedePreset({
+      nome: novoNome,
+      larguraPadrao: novaLargura,
+      alturaPadrao: novaAltura,
+    });
+    setSalvandoPreset(false);
+    if (!resultado.ok || !resultado.preset) {
+      setErroPreset(resultado.erro ?? "Não foi possível salvar este preset.");
+      return;
+    }
+    const presetCriado = resultado.preset;
+    setListaPresetsParede((atuais) =>
+      [...atuais, presetCriado].sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"))
+    );
+  }
+
+  async function excluirPresetParede(id: string) {
+    const resultado = await excluirElementoParedePreset(id);
+    if (resultado.ok) {
+      setListaPresetsParede((atuais) => atuais.filter((p) => p.id !== id));
+    }
   }
 
   // Ao posicionar: COPIA o box do preset pra um módulo de instância novo (id
@@ -681,6 +773,56 @@ export function AmbientesLab({ estadoInicial, onSalvar, orcamentoId }: Ambientes
 
       <section className="rounded-lg border border-cinza-200 bg-cinza-0 p-4 shadow-xs">
         <h2 className="mb-3 text-titulo-secao text-cinza-900">Elementos de parede</h2>
+
+        {/* Task 2.12 (front) — presets de elemento de parede (Modelo de
+            Domínio 3.2.3): aplicar copia nome/largura/altura pro formulário
+            abaixo, sem vínculo vivo. Select fica vazio quando não há
+            presets (`AmbientesLabStandalone`/`AmbientesTabMock`, sem
+            Supabase real, sempre caem neste caso — prop opcional default
+            `[]`). */}
+        <div className="mb-3 flex flex-wrap items-end gap-sm">
+          <div>
+            <Label htmlFor="elemento-preset">Aplicar preset</Label>
+            <Select
+              value={presetParedeSelecionado}
+              onValueChange={selecionarPresetParede}
+              disabled={listaPresetsParede.length === 0}
+            >
+              <SelectTrigger id="elemento-preset" className="w-52">
+                <SelectValue placeholder="Nenhum preset salvo" />
+              </SelectTrigger>
+              <SelectContent>
+                {listaPresetsParede.map((p) => (
+                  <SelectItem key={p.id} value={p.id}>
+                    {p.nome}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          {listaPresetsParede.length > 0 && (
+            <div className="flex flex-wrap items-center gap-1">
+              {listaPresetsParede.map((p) => (
+                <span
+                  key={p.id}
+                  className="inline-flex items-center gap-1 rounded-md border border-cinza-200 bg-cinza-0 py-1 pl-2 pr-1 text-corpo-pequeno text-cinza-700"
+                >
+                  {p.nome}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-5 w-5"
+                    onClick={() => excluirPresetParede(p.id)}
+                    aria-label={`Excluir preset ${p.nome}`}
+                  >
+                    <X size={12} />
+                  </Button>
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+
         <div className="mb-3 flex flex-wrap items-end gap-sm">
           <div>
             <Label htmlFor="elemento-tipo">Tipo</Label>
@@ -696,6 +838,16 @@ export function AmbientesLab({ estadoInicial, onSalvar, orcamentoId }: Ambientes
                 ))}
               </SelectContent>
             </Select>
+          </div>
+          <div>
+            <Label htmlFor="elemento-nome">Nome (opcional)</Label>
+            <Input
+              id="elemento-nome"
+              type="text"
+              className="w-40"
+              value={novoNome}
+              onChange={(e) => setNovoNome(e.target.value)}
+            />
           </div>
           <div>
             <Label htmlFor="elemento-ref-x">Referência X</Label>
@@ -769,7 +921,16 @@ export function AmbientesLab({ estadoInicial, onSalvar, orcamentoId }: Ambientes
               Cancelar
             </Button>
           )}
+          <Button variant="ghost" onClick={salvarComoPresetParede} disabled={salvandoPreset}>
+            Salvar como preset
+          </Button>
         </div>
+
+        {erroPreset && (
+          <Alert variant="erro" className="mb-3">
+            <AlertDescription>{erroPreset}</AlertDescription>
+          </Alert>
+        )}
 
         {parede.elementos.length === 0 ? (
           <p className="text-corpo-pequeno text-cinza-500">Nenhum elemento adicionado.</p>

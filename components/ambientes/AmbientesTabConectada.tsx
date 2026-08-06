@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { AmbientesLab } from "./AmbientesLab";
 import { salvarEstadoAmbiente } from "@/lib/ambiente/salvar";
 import type { EstadoAmbiente, ResultadoSalvarAmbiente } from "@/lib/ambiente/estado";
+import type { ElementoParedePresetRow } from "@/lib/elemento-parede-preset/tipos";
 
 // Task 13.3d (contrato .maestro/tmp/13.3d-contract.md) — o "dono de I/O"
 // Supabase de `/orcamento/[id]`: recebe o estado já carregado pelo Server
@@ -26,9 +27,17 @@ import type { EstadoAmbiente, ResultadoSalvarAmbiente } from "@/lib/ambiente/est
 export interface AmbientesTabConectadaProps {
   orcamentoId: string;
   estadoInicial: EstadoAmbiente;
+  /** Task 2.12 (front) — presets de elemento de parede da organização,
+   * carregados server-side (`listarElementoParedePresets`) por
+   * `app/(app)/orcamento/[id]/page.tsx` e só repassados adiante. */
+  presetsElementoParede: ElementoParedePresetRow[];
 }
 
-export function AmbientesTabConectada({ orcamentoId, estadoInicial }: AmbientesTabConectadaProps) {
+export function AmbientesTabConectada({
+  orcamentoId,
+  estadoInicial,
+  presetsElementoParede,
+}: AmbientesTabConectadaProps) {
   const router = useRouter();
 
   async function onSalvar(estado: EstadoAmbiente): Promise<ResultadoSalvarAmbiente> {
@@ -39,5 +48,12 @@ export function AmbientesTabConectada({ orcamentoId, estadoInicial }: AmbientesT
     return resultado;
   }
 
-  return <AmbientesLab estadoInicial={estadoInicial} onSalvar={onSalvar} orcamentoId={orcamentoId} />;
+  return (
+    <AmbientesLab
+      estadoInicial={estadoInicial}
+      onSalvar={onSalvar}
+      orcamentoId={orcamentoId}
+      presetsElementoParede={presetsElementoParede}
+    />
+  );
 }
