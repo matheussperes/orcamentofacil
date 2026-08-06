@@ -96,6 +96,9 @@ const ROTULO_ELEMENTO: Record<ElementoParede["tipo"], string> = {
   porta: "Porta",
   tomada: "Tomada",
   ponto_hidraulico: "Hidráulico",
+  // [Task 2.7] só satisfaz a exaustividade do Record — UI de "pedra" fica
+  // fora do escopo desta task de motor puro.
+  pedra: "Pedra",
 };
 
 // Layout do SVG: margens reservadas pros rótulos de banda (esquerda), régua

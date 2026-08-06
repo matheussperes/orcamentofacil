@@ -85,6 +85,10 @@ const ROTULO_TIPO_ELEMENTO: Record<ElementoParede["tipo"], string> = {
   porta: "Porta",
   tomada: "Tomada",
   ponto_hidraulico: "Ponto hidráulico",
+  // [Task 2.7] "pedra" só existe no tipo do motor por ora — UI de criação
+  // (`TIPOS_ELEMENTO` acima) fica fora do escopo desta task de motor puro;
+  // rótulo aqui só satisfaz a exaustividade do Record (compila).
+  pedra: "Pedra",
 };
 const FAIXAS: Faixa[] = ["inferior", "bancada", "aereo", "torre"];
 const ROTULO_FAIXA: Record<Faixa, string> = {

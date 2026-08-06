@@ -177,6 +177,54 @@ describe("detectarConjuntos", () => {
     expect(conjuntos[0].itensIds).toEqual(["a", "b"]);
   });
 
+  it("Task 2.7 (bug corrigido): uma tomada entre dois itens encostados NÃO impede a formação do Conjunto", () => {
+    const a = placaItem("a", 600, 700);
+    const b = placaItem("b", 600, 700);
+    const tomada: ElementoParede = {
+      tipo: "tomada",
+      x: 500,
+      y: 0,
+      largura: 200, // cobre o vão de encoste entre a (termina em 600) e b (começa em 602)
+      altura: 2100, // cobre o Y da faixa "inferior", igual à porta do teste acima
+    };
+    const parede = paredeBase({
+      elementos: [tomada],
+      itens: [
+        { itemId: "a", x: 0, faixa: "inferior" },
+        { itemId: "b", x: 602, faixa: "inferior" },
+      ],
+    });
+
+    const conjuntos = detectarConjuntos(parede, ALTURAS, mapaItens(a, b));
+
+    // Antes da correção, qualquer ElementoParede quebrava o bloco (bug).
+    // Tomada e ponto_hidraulico NÃO bloqueiam (Modelo de Domínio 3.2.2,
+    // "Bloqueio de conjunto por tipo") — só porta/janela quebram.
+    expect(conjuntos).toHaveLength(1);
+    expect(conjuntos[0].itensIds).toEqual(["a", "b"]);
+  });
+
+  it("Task 2.7: uma pedra entre dois itens encostados NÃO impede a formação do Conjunto", () => {
+    const a = placaItem("a", 600, 700);
+    const b = placaItem("b", 600, 700);
+    const pedra: ElementoParede = { tipo: "pedra", x: 500, y: 0, largura: 200, altura: 2100 };
+    const parede = paredeBase({
+      elementos: [pedra],
+      itens: [
+        { itemId: "a", x: 0, faixa: "inferior" },
+        { itemId: "b", x: 602, faixa: "inferior" },
+      ],
+    });
+
+    const conjuntos = detectarConjuntos(parede, ALTURAS, mapaItens(a, b));
+
+    expect(conjuntos).toHaveLength(1);
+    expect(conjuntos[0].itensIds).toEqual(["a", "b"]);
+  });
+
+  // Regressão porta: já coberta acima em "briefing 6.2: uma porta entre dois
+  // itens da faixa inferior impede a junção" — porta continua bloqueando.
+
   it("itens em faixas diferentes nunca formam conjunto entre si, mesmo fisicamente próximos", () => {
     const a = placaItem("a", 600);
     const b = placaItem("b", 600);
