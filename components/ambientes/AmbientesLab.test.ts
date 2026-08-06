@@ -6,10 +6,18 @@
 // 2D) e o preenchimento do formulário são verificados visualmente no
 // browser.
 import { describe, expect, it } from "vitest";
-import { aplicarPresetElementoParede, recalcularValorAoTrocarRef, salvarElementoNaLista } from "./AmbientesLab";
+import {
+  aplicarPresetElementoParede,
+  moverIdNaLista,
+  recalcularValorAoTrocarRef,
+  remapearIdsAmbientes,
+  salvarElementoNaLista,
+  substituirParedeNaLista,
+} from "./AmbientesLab";
 import { valorParaCanonico } from "@/lib/engine/parede/referenciaMedida";
 import type { ElementoParede } from "@/lib/engine/parede";
 import type { ElementoParedePresetRow } from "@/lib/elemento-parede-preset/tipos";
+import type { AmbienteItem, ParedeComMeta } from "@/lib/ambiente/estado";
 
 describe("recalcularValorAoTrocarRef", () => {
   it("trocar refX sem editar o valor exibido preserva o canônico (nunca move o elemento)", () => {
@@ -95,5 +103,97 @@ describe("aplicarPresetElementoParede", () => {
     const resultado = aplicarPresetElementoParede({ novaLargura: 600, novaAltura: 1000 }, preset);
 
     expect(resultado.novoNome).toBe("Janela padrão");
+  });
+});
+
+describe("moverIdNaLista", () => {
+  it("move 'cima' faz swap com o vizinho anterior", () => {
+    const resultado = moverIdNaLista(["a", "b", "c"], "b", "cima");
+    expect(resultado).toEqual(["b", "a", "c"]);
+  });
+
+  it("move 'baixo' faz swap com o vizinho seguinte", () => {
+    const resultado = moverIdNaLista(["a", "b", "c"], "b", "baixo");
+    expect(resultado).toEqual(["a", "c", "b"]);
+  });
+
+  it("primeiro item não se move 'cima' (sem efeito na ponta)", () => {
+    const ids = ["a", "b", "c"];
+    expect(moverIdNaLista(ids, "a", "cima")).toEqual(ids);
+  });
+
+  it("último item não se move 'baixo' (sem efeito na ponta)", () => {
+    const ids = ["a", "b", "c"];
+    expect(moverIdNaLista(ids, "c", "baixo")).toEqual(ids);
+  });
+
+  it("id inexistente devolve a lista original, sem alterar nada", () => {
+    const ids = ["a", "b", "c"];
+    expect(moverIdNaLista(ids, "z", "cima")).toEqual(ids);
+  });
+});
+
+function paredeDeTeste(overrides: Partial<ParedeComMeta> = {}): ParedeComMeta {
+  return {
+    id: "parede-x",
+    nome: "Parede X",
+    ordem: 0,
+    largura: 3000,
+    altura: 2700,
+    elementos: [],
+    itens: [],
+    ...overrides,
+  };
+}
+
+function ambienteDeTeste(overrides: Partial<AmbienteItem> = {}): AmbienteItem {
+  return { id: "ambiente-x", nome: "Ambiente X", ordem: 0, paredes: [paredeDeTeste()], ...overrides };
+}
+
+describe("substituirParedeNaLista", () => {
+  it("substitui a parede identificada por ambienteId/paredeId pelo objeto informado", () => {
+    const ambientes = [ambienteDeTeste()];
+    const atualizada = paredeDeTeste({ nome: "Parede Renomeada", largura: 4000 });
+
+    const resultado = substituirParedeNaLista(ambientes, "ambiente-x", atualizada);
+
+    expect(resultado[0].paredes[0]).toEqual(atualizada);
+  });
+
+  it("não afeta paredes de outros ambientes nem outras paredes do mesmo ambiente", () => {
+    const outraParede = paredeDeTeste({ id: "parede-y", nome: "Parede Y" });
+    const ambientes = [
+      ambienteDeTeste({ paredes: [paredeDeTeste(), outraParede] }),
+      ambienteDeTeste({ id: "ambiente-z", paredes: [paredeDeTeste({ id: "parede-z" })] }),
+    ];
+
+    const resultado = substituirParedeNaLista(ambientes, "ambiente-x", paredeDeTeste({ nome: "Editada" }));
+
+    expect(resultado[0].paredes[0].nome).toBe("Editada");
+    expect(resultado[0].paredes[1]).toEqual(outraParede);
+    expect(resultado[1].paredes[0].id).toBe("parede-z");
+  });
+});
+
+describe("remapearIdsAmbientes", () => {
+  it("substitui ids de ambiente e parede pelos ids reais informados no mapa", () => {
+    const ambientes = [ambienteDeTeste()];
+
+    const resultado = remapearIdsAmbientes(ambientes, {
+      ambientes: { "ambiente-x": "uuid-ambiente-real" },
+      paredes: { "parede-x": "uuid-parede-real" },
+    });
+
+    expect(resultado[0].id).toBe("uuid-ambiente-real");
+    expect(resultado[0].paredes[0].id).toBe("uuid-parede-real");
+  });
+
+  it("mantém o id original quando não há entrada correspondente no mapa", () => {
+    const ambientes = [ambienteDeTeste()];
+
+    const resultado = remapearIdsAmbientes(ambientes, { ambientes: {}, paredes: {} });
+
+    expect(resultado[0].id).toBe("ambiente-x");
+    expect(resultado[0].paredes[0].id).toBe("parede-x");
   });
 });
