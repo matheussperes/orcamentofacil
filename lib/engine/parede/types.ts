@@ -11,6 +11,11 @@ export interface ItemPosicionado {
   itemId: string;
   x: number;
   faixa: Faixa;
+  /** [V2.1] Task 2.18 — só registra qual referência ("esquerda"/"direita") o
+   * usuário usou na última entrada por vão, pra reabrir o campo com o mesmo
+   * número digitado (Modelo de Domínio Seção 3.1.1). Puramente de exibição:
+   * ausente/ignorado nunca altera `x` nem qualquer geometria calculada. */
+  refEntrada?: "esquerda" | "direita";
 }
 
 // Retângulo com posição/dimensão ABSOLUTAS na parede — ao contrário de

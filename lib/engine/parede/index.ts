@@ -9,3 +9,13 @@ export {
   validarTampoSobrePedra,
 } from "./validar";
 export type { ResolvedorItens } from "./validar";
+export { calcularVizinhos, converterVaoParaX, converterXParaVao } from "./posicionamento";
+export type {
+  ErroConversaoVao,
+  ItemParaVizinhos,
+  ReferenciaVao,
+  ResultadoConversaoVao,
+  VaoExibido,
+  Vizinho,
+  Vizinhos,
+} from "./posicionamento";
