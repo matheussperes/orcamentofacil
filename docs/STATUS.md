@@ -18,9 +18,13 @@ Fase D (Pré-Lançamento) — Lote 0 (Fundação de dados) ✅ fechado:
 
 **Lote 1 (Confiança e estado) ✅ fechado por completo** — 7/7 tasks concluídas (5/5 back + 2/2 front).
 
-**Lote 2 (Lacunas funcionais) ▶️ iniciado 2026-08-06** — 2/~17 tasks concluídas:
+**Lote 2 (Lacunas funcionais) ▶️ em execução** — 6/~17 tasks concluídas:
 - **Task 2.1** ✅ (2026-08-06) — Investigação: caminho de "criar módulo do zero" já existe e funciona ponta a ponta (`/biblioteca` → botão "Novo módulo" → `/modulo` sem `?preset=` → salvar chama `criarGabarito` já existente → volta e aparece na listagem). Sidebar deliberadamente exclui `/modulo` do menu principal (Task 13.3b). Sem mudança de código necessária. Nenhuma branch de merge.
 - **Task 2.1 (dedup)** ✅ (2026-08-06) — `deduplicarPromovidos()` em `lib/gabarito/listar.ts`: filtro derivado em memória escondendo gabaritosglobais promovidos da própria organização. 3 testes novos em `lib/gabarito/listar.test.ts`. `code-auditor` APROVADO (veredito em arquivo, build/lint/typecheck limpos), `qa-engineer` APROVADO (veredito em arquivo, 370 testes, 3 critérios). Sem RLS nova. Merge `--no-ff` em `main`.
+- **Task 2.13** ✅ (2026-08-06) — Rename "Preset" → "Módulo" em toda a UI. Identificadores de código mantidos intactos. `code-auditor` APROVADO, `qa-engineer` APROVADO. Impacto Visual: Nenhum.
+- **Task 2.8–2.11 (back)** ✅ (2026-08-06) — Backfill de `id`/`refX`/`refY`/`nome` em `ElementoParede` via migração de leitura. Sem migration SQL. `code-auditor` APROVADO, `qa-engineer` APROVADO (26 testes do domínio).
+- **Task 2.7** ✅ (2026-08-06) — Motor: tipo `"pedra"`, bug fix em `existeElementoBloqueante`, aviso `TAMPO_SOBRE_PEDRA`. `code-auditor` APROVADO, `qa-engineer` APROVADO. Conflito de merge resolvido pelo motor-engineer.
+- **Task 2.12 (back)** ✅ (2026-08-06) — Tabela `elemento_parede_preset`, RLS, domínio completo. `code-auditor` APROVADO, `security-auditor` APROVADO. Migration não aplicada em Supabase real (bloqueio de permissão de CLI).
 
 **Lote 1 (Confiança e estado) — Histórico (7/7 tasks concluídas):**
 - **Task 1.1–1.3** ✅ (2026-08-04) — Invalidação de cache após mutação + aba persistida na URL + "atualizar render" sem F5. `code-auditor` indisponível (2x sem veredito, estouro técnico) — revisão assumida pelo Maestro. `qa-engineer` aprovou com veredito próprio (verificação real: aba sobrevive a F5, `forceMount` e `router.refresh()` validados). Sem impacto visual.
@@ -124,6 +128,8 @@ limpos.
   (o Maestro nunca cria conta nem digita senha).
 - **Operador**: cadastrar os ~380 padrões reais de MDF em `/catalogo` (ou via
   Supabase Table Editor) — hoje só o catálogo seed genérico existe.
+- **Operador**: aplicar migration real `elemento_parede_preset` (Task 2.12-back)
+  via MCP ou Dashboard Supabase — migration `20260806100000_elemento_parede_preset.sql` foi aprovada em audit mas não pode ser aplicada via CLI (bloqueio de permissão de conta).
 - Dívida de segurança de baixa prioridade nunca endereçada — ver
   `docs/Backlog.md` (Stage 3): headers de segurança, auditoria de operações
   sensíveis, limite de cache de fórmulas.
