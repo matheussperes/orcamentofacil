@@ -13,7 +13,8 @@
 // com o suficiente para os dois `select` que `criarAmbiente` faz antes do
 // INSERT (nunca alcançado no cenário de rejeição testado).
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { atualizarParede, criarAmbiente, itensSemOrfaos, reordenarAmbientes, sanearAlturasOverride } from "./acoes";
+import { atualizarParede, criarAmbiente, reordenarAmbientes } from "./acoes";
+import { itensSemOrfaos, sanearAlturasOverride } from "./validar";
 import { idDoItem, type ModuloOrcamento } from "@/lib/orcamento";
 import type { ItemPosicionado } from "@/lib/engine/parede/types";
 

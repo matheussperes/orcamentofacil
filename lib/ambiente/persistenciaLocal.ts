@@ -16,6 +16,11 @@ import { estadoAmbientePadrao, type EstadoAmbiente } from "./estado";
 // o motor já trata como "item sem módulo" (mesmo comportamento defensivo de
 // `lib/engine/parede/validar.ts`), não como erro. Não há usuário real
 // afetado por isso hoje (produto pré-lançamento).
+//
+// Task 2.3-2.6 — mesmo espírito para a virada singleton→lista: um blob salvo
+// antes desta task tem `parede` (singular), não `ambientes`. `parsed.ambientes`
+// não existe nesse formato antigo e cai no default (1 ambiente/1 parede),
+// mesmo tratamento defensivo de qualquer campo ausente aqui.
 
 function chaveLocal(escopo: string): string {
   return `ambientes:${escopo}:estado`;
@@ -29,7 +34,7 @@ export function carregarEstadoLocal(escopo: string): EstadoAmbiente {
     const parsed = JSON.parse(bruto) as Partial<EstadoAmbiente>;
     const padrao = estadoAmbientePadrao();
     return {
-      parede: parsed.parede ?? padrao.parede,
+      ambientes: parsed.ambientes ?? padrao.ambientes,
       modulos: parsed.modulos ?? padrao.modulos,
       alturas: parsed.alturas ?? padrao.alturas,
       elementosContinuos: parsed.elementosContinuos ?? padrao.elementosContinuos,

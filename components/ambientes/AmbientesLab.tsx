@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/table";
 import { BoxCanvas, type ItemDoConjunto } from "@/app/components/BoxCanvas";
 import { ElevacaoParede } from "./ElevacaoParede";
+import { SeletorLista } from "./SeletorLista";
 import {
   validarParedeTier1,
   validarParedeTier2,
@@ -60,7 +61,16 @@ import {
 } from "@/lib/engine/elemento-continuo/types";
 import { listarPresets, seedPresetsPadrao, type BoxPreset } from "@/lib/boxPresets";
 import { carregarCatalogo, coresDisponiveis, espessurasDaCor, type Catalogo } from "@/lib/catalog";
-import type { EstadoAmbiente, ResultadoSalvarAmbiente } from "@/lib/ambiente/estado";
+import {
+  ambienteInicial,
+  aplicarComandoAmbiente,
+  type AmbienteItem,
+  type ComandoAmbiente,
+  type EstadoAmbiente,
+  type ParedeComMeta,
+  type ResultadoMutarAmbientes,
+  type ResultadoSalvarAmbiente,
+} from "@/lib/ambiente/estado";
 import { resolverAlvoElemento } from "@/lib/ambiente/resolverAlvo";
 import { criarElementoParedePreset } from "@/lib/elemento-parede-preset/criar";
 import { excluirElementoParedePreset } from "@/lib/elemento-parede-preset/excluir";
@@ -171,6 +181,25 @@ function novoItemId(): string {
 function novoElementoId(): string {
   return `elemento-continuo-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
 }
+// Task 2.3-2.6 — id local de ambiente/parede quando NÃO há `onMutarAmbientes`
+// (harness/laboratório, sem Supabase real — `aplicarComandoAmbiente` roda em
+// memória). `AmbientesTabConectada` nunca cai neste caminho: lá o id real
+// vem do banco via `lib/ambiente/mutar.ts`.
+function novoIdLocal(): string {
+  return `local-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
+}
+
+/** Aplica um movimento ↑/↓ numa lista de ids (ordem de exibição = ordem do
+ * array) — swap com o vizinho, sem efeito nas pontas. Pura, testável sem
+ * jsdom (mesmo motivo de `salvarElementoNaLista` acima). */
+export function moverIdNaLista(ids: string[], id: string, direcao: "cima" | "baixo"): string[] {
+  const indice = ids.indexOf(id);
+  const alvo = direcao === "cima" ? indice - 1 : indice + 1;
+  if (indice === -1 || alvo < 0 || alvo >= ids.length) return ids;
+  const copia = [...ids];
+  [copia[indice], copia[alvo]] = [copia[alvo], copia[indice]];
+  return copia;
+}
 
 // Task 13.2c — painel lateral de Elemento Contínuo. Rótulos de exibição.
 const ROTULO_TIPO_ELEMENTO_CONTINUO: Record<TipoElementoContinuo, string> = {
@@ -222,6 +251,15 @@ export interface AmbientesLabProps {
    * numa rota que funcione) — decisão de menor esforço documentada no
    * relatório da 13.3e. */
   orcamentoId?: string;
+  /** Task 2.3-2.6 — CRUD imediato (criar/renomear/excluir/reordenar) de
+   * ambiente/parede: NUNCA autosave, mas também nunca espera o botão
+   * "Salvar alterações" (que continua só para o conteúdo profundo — elementos/
+   * itens de cada parede). Ausente em `AmbientesLabStandalone`/`AmbientesTabMock`
+   * (sem `orcamentoId`/Supabase real) — nesse caso `AmbientesLab` aplica o
+   * comando em memória via `aplicarComandoAmbiente` (`lib/ambiente/estado.ts`),
+   * mesma função pura usada como referência de comportamento pelos dois
+   * caminhos. */
+  onMutarAmbientes?: (comando: ComandoAmbiente) => Promise<ResultadoMutarAmbientes>;
   /** Presets de elemento de parede da organização (Task 2.12, Modelo de
    * Domínio 3.2.3), carregados server-side por quem monta este componente
    * (`AmbientesTabConectada`/`app/(app)/orcamento/[id]/page.tsx`) — só
@@ -232,16 +270,95 @@ export interface AmbientesLabProps {
   presetsElementoParede?: ElementoParedePresetRow[];
 }
 
+/** Estado inicial de ambientes sempre não-vazio na entrada de `AmbientesLab`
+ * — `carregarEstadoAmbiente`/`estadoAmbientePadrao` já garantem isso, mas um
+ * blob de localStorage salvo por uma sessão anterior à Task 2.3-2.6 (ainda no
+ * formato singular `parede`) cai em `parsed.ambientes ?? padrao.ambientes`
+ * (`persistenciaLocal.ts`) — nunca em array vazio de verdade, mas o guarda
+ * abaixo é a rede de segurança pra nunca indexar `[0]` de um array vazio. */
+function ambientesGarantidos(ambientes: AmbienteItem[]): AmbienteItem[] {
+  return ambientes.length > 0 ? ambientes : [ambienteInicial()];
+}
+
+/** Substitui, dentro da lista de ambientes, a parede identificada por
+ * `ambienteId`/`paredeAtualizada.id` pelo objeto informado — usada tanto para
+ * gravar de volta a edição em progresso da parede selecionada (troca de
+ * seleção, "Salvar alterações") quanto para reconciliar com a árvore fresca
+ * devolvida por um comando de CRUD imediato. */
+export function substituirParedeNaLista(
+  ambientes: AmbienteItem[],
+  ambienteId: string,
+  paredeAtualizada: ParedeComMeta
+): AmbienteItem[] {
+  return ambientes.map((a) =>
+    a.id !== ambienteId
+      ? a
+      : { ...a, paredes: a.paredes.map((p) => (p.id === paredeAtualizada.id ? paredeAtualizada : p)) }
+  );
+}
+
+function encontrarParede(
+  ambientes: AmbienteItem[],
+  ambienteId: string,
+  paredeId: string
+): ParedeComMeta | undefined {
+  return ambientes.find((a) => a.id === ambienteId)?.paredes.find((p) => p.id === paredeId);
+}
+
+/** Aplica o remapeamento de ids sentinela → ids reais devolvido por
+ * `salvarEstadoAmbiente` no bootstrap do orçamento novo (ver
+ * `ResultadoSalvarAmbiente.idsRemapeados`) — pura, testável sem jsdom. */
+export function remapearIdsAmbientes(
+  ambientes: AmbienteItem[],
+  idsRemapeados: { ambientes: Record<string, string>; paredes: Record<string, string> }
+): AmbienteItem[] {
+  return ambientes.map((a) => ({
+    ...a,
+    id: idsRemapeados.ambientes[a.id] ?? a.id,
+    paredes: a.paredes.map((p) => ({ ...p, id: idsRemapeados.paredes[p.id] ?? p.id })),
+  }));
+}
+
 export function AmbientesLab({
   estadoInicial,
   onSalvar,
+  onMutarAmbientes,
   orcamentoId,
   presetsElementoParede = [],
 }: AmbientesLabProps) {
-  const [parede, setParede] = useState<Parede>(() => estadoInicial.parede);
+  const [ambientes, setAmbientes] = useState<AmbienteItem[]>(() =>
+    ambientesGarantidos(estadoInicial.ambientes)
+  );
+  const [ambienteSelecionadoId, setAmbienteSelecionadoId] = useState<string>(
+    () => ambientesGarantidos(estadoInicial.ambientes)[0].id
+  );
+  const [paredeSelecionadaId, setParedeSelecionadaId] = useState<string>(
+    () => ambientesGarantidos(estadoInicial.ambientes)[0].paredes[0].id
+  );
+  // `parede` é a cópia de trabalho da parede SELECIONADA — todo o restante do
+  // componente (elementos, itens, elevação, conjuntos) já lê/edita só este
+  // estado, sem saber que existem outras paredes. Trocar a seleção grava esta
+  // cópia de volta em `ambientes` (`selecionarAmbiente`/`selecionarParede`)
+  // antes de carregar a nova — nunca mistura dados de duas paredes na tela.
+  const [parede, setParede] = useState<ParedeComMeta>(
+    () => ambientesGarantidos(estadoInicial.ambientes)[0].paredes[0]
+  );
   const [alturas, setAlturas] = useState<AlturasFaixas>(() => estadoInicial.alturas);
   const [presets, setPresets] = useState<BoxPreset[]>([]);
   const [modulos, setModulos] = useState<ModuloOrcamento[]>(() => estadoInicial.modulos);
+
+  // Task 2.3-2.6 — CRUD imediato de ambiente/parede: `comandoEmVoo` desabilita
+  // a lista inteira durante um round-trip ao servidor (evita dois comandos
+  // concorrentes); `erroComando` é feedback legível (Design-System Seção 11).
+  const [comandoEmVoo, setComandoEmVoo] = useState(false);
+  const [erroComando, setErroComando] = useState<string | null>(null);
+
+  // Ambiente selecionado — nunca `undefined` na prática (`ambientesGarantidos`
+  // garante >= 1 ambiente/parede na entrada, e `aplicarNovaListaAmbientes`
+  // sempre reconcilia a seleção para um id que existe na árvore fresca), mas
+  // cai no primeiro ambiente por segurança se a seleção ficar momentaneamente
+  // desalinhada entre re-renders.
+  const ambienteSelecionado = ambientes.find((a) => a.id === ambienteSelecionadoId) ?? ambientes[0];
 
   const [novoTipo, setNovoTipo] = useState<ElementoParede["tipo"]>("janela");
   // `novoX`/`novoY` guardam o valor EXIBIDO na referência selecionada
@@ -315,6 +432,117 @@ export function AmbientesLab({
   function atualizarAlturas(patch: Partial<AlturasFaixas>) {
     setAlturas((a) => ({ ...a, ...patch }));
     setResultadoSalvar(null);
+  }
+
+  // Task 2.3-2.6 — troca de seleção de ambiente/parede: sempre grava a cópia
+  // de trabalho ATUAL (`parede`) de volta em `ambientes` antes de trocar, e só
+  // então carrega a nova seleção — nenhum dado de edição em progresso (ainda
+  // não salvo pelo botão "Salvar alterações") se perde ao navegar entre
+  // paredes. Reseta seleção de Conjunto/formulário de elemento: pertencem à
+  // parede anterior.
+  function limparSelecaoAoTrocarDeParede() {
+    setSelecao(null);
+    limparFormularioElemento();
+    setResultadoSalvar(null);
+  }
+
+  function selecionarParede(novaParedeId: string) {
+    if (novaParedeId === paredeSelecionadaId) return;
+    const listaAtualizada = substituirParedeNaLista(ambientes, ambienteSelecionadoId, parede);
+    const novaParede = encontrarParede(listaAtualizada, ambienteSelecionadoId, novaParedeId);
+    setAmbientes(listaAtualizada);
+    if (novaParede) setParede(novaParede);
+    setParedeSelecionadaId(novaParedeId);
+    limparSelecaoAoTrocarDeParede();
+  }
+
+  function selecionarAmbiente(novoAmbienteId: string) {
+    if (novoAmbienteId === ambienteSelecionadoId) return;
+    const listaAtualizada = substituirParedeNaLista(ambientes, ambienteSelecionadoId, parede);
+    const novoAmbiente = listaAtualizada.find((a) => a.id === novoAmbienteId);
+    const novaParede = novoAmbiente?.paredes[0];
+    setAmbientes(listaAtualizada);
+    setAmbienteSelecionadoId(novoAmbienteId);
+    if (novaParede) {
+      setParede(novaParede);
+      setParedeSelecionadaId(novaParede.id);
+    }
+    limparSelecaoAoTrocarDeParede();
+  }
+
+  // Aplica a árvore fresca devolvida por um comando de CRUD imediato
+  // (`onMutarAmbientes`/`aplicarComandoAmbiente`). Se a parede/ambiente
+  // selecionados continuam existindo e não mudaram, preserva a edição
+  // profunda em progresso (`parede.elementos`/`itens`/`largura`/`altura`, só
+  // persistida pelo botão "Salvar alterações") por cima da árvore fresca —
+  // só nome/ordem (o que o comando pode ter mudado) vêm da árvore fresca.
+  // Se a seleção precisou mudar (o item selecionado foi excluído), adota a
+  // árvore fresca como está e cai para o primeiro ambiente/parede disponível.
+  function aplicarNovaListaAmbientes(novaLista: AmbienteItem[]) {
+    const ambienteContinuaExistindo = novaLista.some((a) => a.id === ambienteSelecionadoId);
+    let novoAmbienteId = ambienteSelecionadoId;
+    let novaParedeId = paredeSelecionadaId;
+
+    if (!ambienteContinuaExistindo) {
+      novoAmbienteId = novaLista[0]?.id ?? "";
+      novaParedeId = novaLista[0]?.paredes[0]?.id ?? "";
+    } else {
+      const ambienteAtual = novaLista.find((a) => a.id === novoAmbienteId)!;
+      if (!ambienteAtual.paredes.some((p) => p.id === novaParedeId)) {
+        novaParedeId = ambienteAtual.paredes[0]?.id ?? "";
+      }
+    }
+
+    const selecaoInalterada = novoAmbienteId === ambienteSelecionadoId && novaParedeId === paredeSelecionadaId;
+    const paredeFresca = encontrarParede(novaLista, novoAmbienteId, novaParedeId);
+    const listaFinal =
+      selecaoInalterada && paredeFresca
+        ? substituirParedeNaLista(novaLista, novoAmbienteId, { ...paredeFresca, elementos: parede.elementos, itens: parede.itens, largura: parede.largura, altura: parede.altura })
+        : novaLista;
+
+    setAmbientes(listaFinal);
+    setAmbienteSelecionadoId(novoAmbienteId);
+    setParedeSelecionadaId(novaParedeId);
+    if (!selecaoInalterada) {
+      const novaParedeSelecionada = encontrarParede(listaFinal, novoAmbienteId, novaParedeId);
+      if (novaParedeSelecionada) setParede(novaParedeSelecionada);
+      limparSelecaoAoTrocarDeParede();
+    }
+  }
+
+  async function executarComandoAmbiente(comando: ComandoAmbiente) {
+    setComandoEmVoo(true);
+    setErroComando(null);
+    const resultado = onMutarAmbientes
+      ? await onMutarAmbientes(comando)
+      : { ok: true, ambientes: aplicarComandoAmbiente(ambientes, comando, novoIdLocal) };
+    setComandoEmVoo(false);
+    if (!resultado.ok || !resultado.ambientes) {
+      setErroComando(resultado.erro ?? "Não foi possível concluir esta ação.");
+      return;
+    }
+    if (resultado.modulos) setModulos(resultado.modulos);
+    aplicarNovaListaAmbientes(resultado.ambientes);
+  }
+
+  function moverAmbiente(id: string, direcao: "cima" | "baixo") {
+    const idsAtuais = ambientes.map((a) => a.id);
+    const novaOrdem = moverIdNaLista(idsAtuais, id, direcao);
+    if (novaOrdem !== idsAtuais) {
+      executarComandoAmbiente({ tipo: "reordenarAmbientes", idsNaNovaOrdem: novaOrdem });
+    }
+  }
+
+  function moverParede(id: string, direcao: "cima" | "baixo") {
+    const idsAtuais = ambienteSelecionado.paredes.map((p) => p.id);
+    const novaOrdem = moverIdNaLista(idsAtuais, id, direcao);
+    if (novaOrdem !== idsAtuais) {
+      executarComandoAmbiente({
+        tipo: "reordenarParedes",
+        ambienteId: ambienteSelecionadoId,
+        idsNaNovaOrdem: novaOrdem,
+      });
+    }
   }
 
   function mudarRefX(ref: ReferenciaX) {
@@ -689,14 +917,87 @@ export function AmbientesLab({
   async function handleSalvar() {
     setSalvando(true);
     setResultadoSalvar(null);
-    const estado: EstadoAmbiente = { parede, modulos, alturas, elementosContinuos, overrides };
+    // Grava a edição em progresso da parede selecionada de volta na árvore
+    // ANTES de enviar — `onSalvar` (Task 13.3d) sempre recebe/grava a lista
+    // inteira (Task 2.3-2.6 — [V2.1] fim do singleton), não só a parede ativa.
+    const ambientesParaSalvar = substituirParedeNaLista(ambientes, ambienteSelecionadoId, parede);
+    const estado: EstadoAmbiente = {
+      ambientes: ambientesParaSalvar,
+      modulos,
+      alturas,
+      elementosContinuos,
+      overrides,
+    };
     const resultado = await onSalvar(estado);
     setSalvando(false);
     setResultadoSalvar(resultado);
+    if (resultado.ok) {
+      // Bootstrap do orçamento novo (ver `ResultadoSalvarAmbiente.idsRemapeados`):
+      // troca os ids sentinela em memória pelos ids reais do banco, senão o
+      // PRÓXIMO salvamento tentaria um UPDATE que não afeta nenhuma linha e
+      // criaria uma linha duplicada.
+      const listaFinal = resultado.idsRemapeados
+        ? remapearIdsAmbientes(ambientesParaSalvar, resultado.idsRemapeados)
+        : ambientesParaSalvar;
+      const novoAmbienteId = resultado.idsRemapeados?.ambientes[ambienteSelecionadoId] ?? ambienteSelecionadoId;
+      const novaParedeId = resultado.idsRemapeados?.paredes[paredeSelecionadaId] ?? paredeSelecionadaId;
+      setAmbientes(listaFinal);
+      setAmbienteSelecionadoId(novoAmbienteId);
+      setParedeSelecionadaId(novaParedeId);
+      if (novaParedeId !== paredeSelecionadaId) {
+        setParede((p) => ({ ...p, id: novaParedeId }));
+      }
+    }
   }
 
   return (
     <div className="flex flex-col gap-lg">
+      {/* Task 2.3-2.6 — seletor de ambiente/parede: indicação visual
+          PERMANENTE (aba ativa, não hover — Design-System §7.8) de qual
+          ambiente e qual parede estão em edição. Selecionar uma parede troca
+          o painel inteiro abaixo (Parede/Elementos/Itens/Elevação) para os
+          dados dela — `parede` só reflete a seleção atual. */}
+      <section className="rounded-lg border border-cinza-200 bg-cinza-0 p-4 shadow-xs">
+        <h2 className="mb-3 text-titulo-secao text-cinza-900">Ambientes e paredes</h2>
+        {erroComando && (
+          <Alert variant="erro" className="mb-3">
+            <AlertDescription>{erroComando}</AlertDescription>
+          </Alert>
+        )}
+        <div className="flex flex-col gap-lg">
+          <SeletorLista
+            rotulo="ambiente"
+            rotuloPlural="Ambientes"
+            itens={ambientes.map((a) => ({ id: a.id, nome: a.nome }))}
+            selecionadoId={ambienteSelecionadoId}
+            onSelecionar={selecionarAmbiente}
+            onCriar={(nome) => executarComandoAmbiente({ tipo: "criarAmbiente", nome })}
+            onRenomear={(id, nome) =>
+              executarComandoAmbiente({ tipo: "renomearAmbiente", ambienteId: id, nome })
+            }
+            onExcluir={(id) => executarComandoAmbiente({ tipo: "excluirAmbiente", ambienteId: id })}
+            onMover={moverAmbiente}
+            desabilitado={comandoEmVoo}
+          />
+          <SeletorLista
+            rotulo="parede"
+            rotuloPlural="Paredes"
+            itens={ambienteSelecionado.paredes.map((p) => ({ id: p.id, nome: p.nome }))}
+            selecionadoId={paredeSelecionadaId}
+            onSelecionar={selecionarParede}
+            onCriar={(nome) =>
+              executarComandoAmbiente({ tipo: "criarParede", ambienteId: ambienteSelecionadoId, nome })
+            }
+            onRenomear={(id, nome) =>
+              executarComandoAmbiente({ tipo: "renomearParede", paredeId: id, nome })
+            }
+            onExcluir={(id) => executarComandoAmbiente({ tipo: "excluirParede", paredeId: id })}
+            onMover={moverParede}
+            desabilitado={comandoEmVoo}
+          />
+        </div>
+      </section>
+
       <div className="grid grid-cols-1 gap-lg md:grid-cols-2">
         <section className="rounded-lg border border-cinza-200 bg-cinza-0 p-4 shadow-xs">
           <h2 className="mb-3 text-titulo-secao text-cinza-900">Parede</h2>

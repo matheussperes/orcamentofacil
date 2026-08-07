@@ -29,12 +29,23 @@ export function calcularEngineOrcamento(estadoInicial: EstadoAmbiente): Resultad
     // `estadoInicial.alturas` é o perfil bruto, sem passar por `alturasEfetivas`
     // — no-op hoje porque nenhuma UI escreve `parede.alturasOverride` (Task
     // 0.4/Lote 0). Passa a importar quando o Lote 2 ligar essa UI.
-    const conjuntosAutomaticos = detectarConjuntos(estadoInicial.parede, estadoInicial.alturas, resolvedor);
-    const conjuntosFinais = aplicarOverrides(
-      conjuntosAutomaticos,
-      estadoInicial.parede.itens,
-      estadoInicial.overrides
-    );
+    //
+    // Task 2.3-2.6 — `x`/faixa de `ItemPosicionado` são relativos à PAREDE
+    // (cada parede tem seu próprio espaço de posições), então detecção de
+    // conjuntos automáticos e aplicação de overrides de junção rodam POR
+    // PAREDE, de todos os ambientes — mesmo filtro de posse do itemId que
+    // `lib/ambiente/salvar.ts` usa para gravar cada override na parede dona.
+    // O resultado (lista achatada de Conjuntos de todas as paredes) é o que
+    // alimenta o cálculo do orçamento inteiro, que sempre foi por orçamento
+    // completo, nunca por parede isolada.
+    const paredes = estadoInicial.ambientes.flatMap((ambiente) => ambiente.paredes);
+    const conjuntosFinais = paredes.flatMap((parede) => {
+      const conjuntosAutomaticos = detectarConjuntos(parede, estadoInicial.alturas, resolvedor);
+      const overridesDaParede = estadoInicial.overrides.filter((o) =>
+        parede.itens.some((item) => item.itemId === o.itemIdA || item.itemId === o.itemIdB)
+      );
+      return aplicarOverrides(conjuntosAutomaticos, parede.itens, overridesDaParede);
+    });
     const elementosContinuosResolvidos: ElementoContinuoResolvido[] = estadoInicial.elementosContinuos
       .map((elemento) => {
         const alvo = resolverAlvoElemento(elemento, resolvedor, conjuntosFinais);

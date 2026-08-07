@@ -1,8 +1,8 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
-import { idDoItem, type ModuloOrcamento } from "@/lib/orcamento";
 import { modulosDeJson } from "./mapear";
+import { itensSemOrfaos, sanearAlturasOverride } from "./validar";
 import type { AlturasFaixas, ItemPosicionado } from "@/lib/engine/parede/types";
 
 // Task 0.1-0.3 (contrato .maestro/tmp — "Ambiente/Parede como entidade real
@@ -37,33 +37,6 @@ function nomeMuitoLongo(nomeLimpo: string): Resultado | null {
   return null;
 }
 
-// Achado 1: `alturasOverride` chega como `Partial<AlturasFaixas>` só em
-// tipo — TypeScript não protege em runtime (Server Action = endpoint HTTP
-// público). Whitelist de chave + validação de valor antes de gravar em
-// `parede.alturas_override` (jsonb sem shape formal no banco).
-const CHAVES_ALTURAS_FAIXAS = new Set<keyof AlturasFaixas>([
-  "alturaRodape",
-  "alturaBancada",
-  "alturaInstalacaoAereo",
-  "peDireito",
-]);
-const ALTURA_MAX_MM = 6000; // teto de faixa residencial — cobre pé-direito duplo, barra blob arbitrário
-
-export function sanearAlturasOverride(
-  entrada: Partial<AlturasFaixas>
-): { ok: true; valor: Partial<AlturasFaixas> } | { ok: false; erro: string } {
-  const valor: Partial<AlturasFaixas> = {};
-  for (const chave of Object.keys(entrada) as (keyof AlturasFaixas)[]) {
-    if (!CHAVES_ALTURAS_FAIXAS.has(chave)) continue; // descarta chave fora do shape
-    const v = entrada[chave];
-    if (typeof v !== "number" || !Number.isFinite(v) || !(v > 0) || v > ALTURA_MAX_MM) {
-      return { ok: false, erro: "Altura inválida em alturas_override." };
-    }
-    valor[chave] = v;
-  }
-  return { ok: true, valor };
-}
-
 interface Resultado {
   ok: boolean;
   erro?: string;
@@ -96,22 +69,6 @@ async function organizacaoDoUsuario(
   }
 
   return { organizacaoId: perfil.organizacao_id as string };
-}
-
-// ---------------------------------------------------------------------------
-// Cascata órfã (ponto de atenção real, sem FK que garanta): excluir um
-// ambiente ou uma parede pode deixar `itemId` de `orcamento.itens`
-// (ModuloOrcamento[]) sem nenhum `ItemPosicionado` que o referencie em
-// nenhuma parede restante do orçamento. Função PURA (sem I/O), testável sem
-// mockar o client do Supabase — mesmo espírito de `lib/ambiente/mapear.ts`
-// (o projeto não tem infraestrutura de mock do client Supabase ainda).
-// ---------------------------------------------------------------------------
-export function itensSemOrfaos(
-  modulos: ModuloOrcamento[],
-  itensPorParedeRestante: ItemPosicionado[][]
-): ModuloOrcamento[] {
-  const referenciados = new Set(itensPorParedeRestante.flat().map((item) => item.itemId));
-  return modulos.filter((modulo) => referenciados.has(idDoItem(modulo)));
 }
 
 /** Recalcula e grava `orcamento.itens` sem os `itemId` que não são mais
@@ -494,6 +451,58 @@ export async function atualizarParede(paredeId: string, campos: CamposParede): P
   }
   if (!data) {
     return { ok: false, erro: "Esta parede não existe mais." };
+  }
+
+  return { ok: true };
+}
+
+// Task 2.3-2.6 (frontend) — mirror exato de `reordenarAmbientes`, um nível
+// abaixo: faltava uma ação de reordenar PAREDES dentro de um ambiente (as 7
+// Server Actions da Task 0.1-0.3 cobriam criar/renomear/excluir parede, mas
+// não reordenar). Mesma validação "lista recebida precisa bater com as
+// paredes reais do ambiente" da 0.1-0.3 (Achado 2 do QA em reordenarAmbientes).
+export async function reordenarParedes(
+  ambienteId: string,
+  idsNaNovaOrdem: string[]
+): Promise<Resultado> {
+  const supabase = await createClient();
+  const { organizacaoId, erro } = await organizacaoDoUsuario(supabase);
+  if (!organizacaoId) return { ok: false, erro };
+
+  const { data: paredesReais, error: erroParedesReais } = await supabase
+    .from("parede")
+    .select("id")
+    .eq("ambiente_id", ambienteId)
+    .eq("organizacao_id", organizacaoId);
+
+  if (erroParedesReais) {
+    console.error("[ambiente/acoes] falha ao validar paredes do ambiente:", erroParedesReais.message);
+    return { ok: false, erro: "Não foi possível salvar a nova ordem das paredes." };
+  }
+
+  const idsReais = new Set((paredesReais ?? []).map((p) => p.id as string));
+  const idsRecebidosUnicos = new Set(idsNaNovaOrdem);
+  const listaBate =
+    idsNaNovaOrdem.length === idsRecebidosUnicos.size &&
+    idsRecebidosUnicos.size === idsReais.size &&
+    idsNaNovaOrdem.every((id) => idsReais.has(id));
+
+  if (!listaBate) {
+    return { ok: false, erro: "A lista de paredes está incompleta ou desatualizada." };
+  }
+
+  for (let ordem = 0; ordem < idsNaNovaOrdem.length; ordem++) {
+    const { error: erroUpdate } = await supabase
+      .from("parede")
+      .update({ ordem })
+      .eq("id", idsNaNovaOrdem[ordem])
+      .eq("ambiente_id", ambienteId)
+      .eq("organizacao_id", organizacaoId);
+
+    if (erroUpdate) {
+      console.error("[ambiente/acoes] falha ao reordenar paredes:", erroUpdate.message);
+      return { ok: false, erro: "Não foi possível salvar a nova ordem das paredes." };
+    }
   }
 
   return { ok: true };

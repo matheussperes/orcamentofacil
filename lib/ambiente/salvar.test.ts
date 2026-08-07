@@ -71,6 +71,7 @@ beforeEach(() => {
   // o suficiente pra exercitar o caminho feliz completo sem precisar mockar
   // o ramo de criação (`.insert().select().single()`).
   supabaseMock.respostas.perfil = { data: { organizacao_id: "org-1" }, error: null };
+  supabaseMock.respostas.orcamento = { data: { id: "orcamento-1" }, error: null };
   supabaseMock.respostas.ambiente = { data: { id: "ambiente-1" }, error: null };
   supabaseMock.respostas.parede = { data: { id: "parede-1" }, error: null };
 });
@@ -86,5 +87,16 @@ describe("salvarEstadoAmbiente — nunca escreve em organizacao.alturas_padrao (
     expect(resultado).toEqual({ ok: true });
     expect(supabaseMock.fromChamadas).not.toContain("organizacao");
     expect(supabaseMock.atualizacoes.some((u) => u.tabela === "organizacao")).toBe(false);
+  });
+});
+
+describe("salvarEstadoAmbiente — posse do orçamento (Achado 2, Security-Decline-Payload tentativa 1)", () => {
+  it("orcamentoId de outra organização: retorna erro antes de qualquer INSERT/UPDATE", async () => {
+    supabaseMock.respostas.orcamento = { data: null, error: null };
+
+    const resultado = await salvarEstadoAmbiente("orcamento-de-outra-org", estadoAmbientePadrao());
+
+    expect(resultado).toEqual({ ok: false, erro: "Este orçamento não existe mais." });
+    expect(supabaseMock.atualizacoes).toHaveLength(0);
   });
 });

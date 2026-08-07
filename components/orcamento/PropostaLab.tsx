@@ -140,11 +140,18 @@ export function PropostaLab({
     return m;
   }, [estadoInicial.modulos]);
 
+  // Task 2.3-2.6 — [V2.1] fim do singleton: `itemId` é achatado por TODAS as
+  // paredes de TODOS os ambientes (globalmente único, ver `lib/ambiente/
+  // estado.ts`), mesmo padrão de `lib/ambiente/calcularEngineOrcamento.ts`.
   const posicoesPorItemId = useMemo(() => {
     const m = new Map<string, ItemPosicionado>();
-    for (const posicao of estadoInicial.parede.itens) m.set(posicao.itemId, posicao);
+    for (const ambiente of estadoInicial.ambientes) {
+      for (const parede of ambiente.paredes) {
+        for (const posicao of parede.itens) m.set(posicao.itemId, posicao);
+      }
+    }
     return m;
-  }, [estadoInicial.parede.itens]);
+  }, [estadoInicial.ambientes]);
 
   function itensDoConjuntoDaLinha(linha: LinhaProposta): ItemDoConjunto[] {
     return linha.itens
