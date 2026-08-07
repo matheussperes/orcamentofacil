@@ -100,8 +100,8 @@ export function SeletorLista({
                 disabled={desabilitado}
                 className={
                   item.id === selecionadoId
-                    ? "border-b-2 border-accent pb-1 text-corpo font-medium text-accent"
-                    : "border-b-2 border-transparent pb-1 text-corpo font-medium text-cinza-500 hover:text-cinza-700"
+                    ? "rounded-none border-0 border-b-2 border-accent bg-transparent p-0 pb-1 text-corpo font-medium text-accent"
+                    : "rounded-none border-0 border-b-2 border-transparent bg-transparent p-0 pb-1 text-corpo font-medium text-cinza-500 hover:text-cinza-700"
                 }
               >
                 {item.nome}
