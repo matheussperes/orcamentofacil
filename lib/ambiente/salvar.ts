@@ -63,6 +63,21 @@ export async function salvarEstadoAmbiente(
 
   const organizacaoId = perfil.organizacao_id as string;
 
+  // Achado 2 (Security-Decline-Payload.md, tentativa 1): `orcamentoId` vem do
+  // client — confirma posse antes de qualquer UPDATE/INSERT que o referencie,
+  // mesmo padrão de `criarAmbiente` em `lib/ambiente/acoes.ts`.
+  const { data: orcamentoDoUsuario, error: erroOrcamento } = await supabase
+    .from("orcamento")
+    .select("id")
+    .eq("id", orcamentoId)
+    .eq("organizacao_id", organizacaoId)
+    .maybeSingle();
+
+  if (erroOrcamento || !orcamentoDoUsuario) {
+    console.error("[ambiente] falha ao localizar orçamento ao salvar:", erroOrcamento?.message);
+    return { ok: false, erro: "Este orçamento não existe mais." };
+  }
+
   // 1. orcamento.itens = módulos (ModuloOrcamento[]) — escopo: orçamento
   // inteiro, não muda com a Task 2.3-2.6.
   const { error: erroItens } = await supabase
