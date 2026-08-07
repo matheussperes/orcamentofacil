@@ -164,6 +164,29 @@ export function aplicarPresetElementoParede(
     novaAltura: preset.alturaPadrao ?? campoAtual.novaAltura,
   };
 }
+/** Grava um campo de altura customizado no override, preservando os demais.
+ * Extraída como função pura pra ser testável sem jsdom, mesmo motivo de
+ * `salvarElementoNaLista`. */
+export function definirAlturaOverride(
+  overrides: Partial<AlturasFaixas> | undefined,
+  campo: keyof AlturasFaixas,
+  valor: number
+): Partial<AlturasFaixas> {
+  return { ...overrides, [campo]: valor };
+}
+
+/** "Voltar ao herdado": apaga a chave do override (nunca copia o valor
+ * numérico do perfil) — Modelo de Domínio 3.2.1. Preserva os demais campos
+ * do override. */
+export function removerAlturaOverride(
+  overrides: Partial<AlturasFaixas> | undefined,
+  campo: keyof AlturasFaixas
+): Partial<AlturasFaixas> {
+  const resto = { ...overrides };
+  delete resto[campo];
+  return resto;
+}
+
 const FAIXAS: Faixa[] = ["inferior", "bancada", "aereo", "torre"];
 const ROTULO_FAIXA: Record<Faixa, string> = {
   inferior: "Inferior",
@@ -455,13 +478,11 @@ export function AmbientesLab({
   function alturaEfetiva(campo: keyof AlturasFaixas): number {
     return parede.alturasOverride?.[campo] ?? alturas[campo];
   }
-  function definirAlturaOverride(campo: keyof AlturasFaixas, valor: number) {
-    atualizarParede({ alturasOverride: { ...parede.alturasOverride, [campo]: valor } });
+  function setAlturaOverride(campo: keyof AlturasFaixas, valor: number) {
+    atualizarParede({ alturasOverride: definirAlturaOverride(parede.alturasOverride, campo, valor) });
   }
   function voltarAoHerdado(campo: keyof AlturasFaixas) {
-    const resto = { ...parede.alturasOverride };
-    delete resto[campo];
-    atualizarParede({ alturasOverride: resto });
+    atualizarParede({ alturasOverride: removerAlturaOverride(parede.alturasOverride, campo) });
   }
 
   // Task 2.3-2.6 — troca de seleção de ambiente/parede: sempre grava a cópia
@@ -1136,7 +1157,7 @@ export function AmbientesLab({
                   id={id}
                   type="number"
                   value={alturaEfetiva(campo)}
-                  onChange={(e) => definirAlturaOverride(campo, numero(e.target.value))}
+                  onChange={(e) => setAlturaOverride(campo, numero(e.target.value))}
                 />
                 {customizada && (
                   <Button
