@@ -286,3 +286,61 @@ prático, independente de nunca sabermos o mecanismo exato.
 Aguardando decisão humana. Esta proposta não altera nenhum arquivo do
 plugin. Ver também [[2026-08-04-maestro-autocertifica-gate]] — achado
 separado e mais grave, encontrado no processo desta mesma investigação.
+
+## Adendo (2026-08-07) — confirmado que o fix de gates não cobre executores; possível regressão do `background: false`
+
+Sessão de 2026-08-07 (`orcamentofacil`, Lote 2): o mesmo padrão de sintoma
+(notificação chega com `<status>completed</status>`, mas o texto final vem
+truncado/genérico) aconteceu **2x seguidas com um executor**
+(`frontend-engineer`, Task 2.3-2.6 (alturas)), não com um gate:
+
+1. 1ª instância: 46 tool calls / 373s, parou no meio da investigação, sem
+   escrever nenhum arquivo (`git status` limpo no worktree).
+2. 2ª instância (redelegada com `Agent` novo, `SendMessage` indisponível
+   nesta sessão): 53 tool calls / 317s, notificação `completed`, texto
+   final truncado ("Now let's look at /perfil alturas form..." na 1ª,
+   "matches PropostaLab's pattern exactly..." na 2ª) — mas desta vez **com
+   trabalho real não commitado no worktree** (`AmbientesLab.tsx` e
+   `mapear.ts` modificados, diff coerente e quase completo).
+
+**O que isso confirma**: o fix "veredito em arquivo" (v3.5.0+) só cobre os
+5 auditores — eles gravam `.maestro/tmp/verdicts/`, e o Maestro já sabia
+não confiar na mensagem de retorno deles. **Executores não têm nenhum
+mecanismo equivalente.** A única fonte de verdade confiável quando um
+executor "some" no meio é o estado real do worktree (`git status`/
+`git diff`/`git log`), nunca a mensagem final nem o `<status>` da
+notificação — que segue sempre `completed` mesmo quando o trabalho estava
+visivelmente incompleto (achado #3 da investigação original, agora também
+confirmado para executor, não só gate).
+
+**Mitigação usada nesta sessão, funcionou bem**: ao invés de redelegar do
+zero, o Maestro leu `git status`/`git diff` no worktree, confirmou que o
+trabalho em andamento estava coerente com o contrato, e redelegou um
+executor apontando explicitamente "há mudança não comitada em X e Y,
+continue/finalize" — preservando o trabalho já feito.
+
+**Achado novo, não investigado a fundo**: nesta sessão, tanto a convocação
+de um gate (`ux-auditor`, que tem `background: false` no frontmatter) quanto
+a de um executor (`frontend-engineer`, sem essa flag) retornaram
+identicamente como "Async agent launched successfully... running in
+background" pela ferramenta `Agent` deste harness. Se `background: false`
+deveria evitar o despacho assíncrono (conforme o racional original do fix,
+achado #2 da investigação forense: notificação de 2º nível não chega ao
+convocador direto), **isso não está acontecendo neste ambiente/versão** —
+merece verificação separada (pode ser que este harness específico do
+Maestro sempre despache `Agent` de forma assíncrona, independente do
+frontmatter, tornando esse campo do frontmatter sem efeito aqui).
+
+### Recomendação (não aplicada, aguarda decisão)
+- Estender o protocolo de "estado em arquivo" para executores: não
+  necessariamente um veredito formal, mas uma prática já testada e
+  funcional — o Maestro **sempre** confirma `git status`/`git diff` no
+  worktree do executor antes de agir sobre qualquer notificação de
+  background dele, nunca confiando no texto/`<status>` de retorno. Isso já
+  virou prática de fato nesta sessão; formalizar como instrução explícita
+  no agente `maestro.md` (Seção "Protocolo de Fechamento de Rodada" ou
+  próxima a ela) evitaria redescobrir isso por tentativa e erro em cada
+  sessão nova.
+- Investigar separadamente se `background: false` tem efeito real neste
+  harness — se não tiver, é uma linha morta no frontmatter dos 5 auditores
+  desde o fix v3.5.0, e vale documentar isso em vez de manter a suposição.
