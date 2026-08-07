@@ -2,11 +2,12 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { Pencil, X } from "lucide-react";
+import { AlertTriangle, Pencil, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
@@ -163,6 +164,29 @@ export function aplicarPresetElementoParede(
     novaAltura: preset.alturaPadrao ?? campoAtual.novaAltura,
   };
 }
+/** Grava um campo de altura customizado no override, preservando os demais.
+ * Extraída como função pura pra ser testável sem jsdom, mesmo motivo de
+ * `salvarElementoNaLista`. */
+export function definirAlturaOverride(
+  overrides: Partial<AlturasFaixas> | undefined,
+  campo: keyof AlturasFaixas,
+  valor: number
+): Partial<AlturasFaixas> {
+  return { ...overrides, [campo]: valor };
+}
+
+/** "Voltar ao herdado": apaga a chave do override (nunca copia o valor
+ * numérico do perfil) — Modelo de Domínio 3.2.1. Preserva os demais campos
+ * do override. */
+export function removerAlturaOverride(
+  overrides: Partial<AlturasFaixas> | undefined,
+  campo: keyof AlturasFaixas
+): Partial<AlturasFaixas> {
+  const resto = { ...overrides };
+  delete resto[campo];
+  return resto;
+}
+
 const FAIXAS: Faixa[] = ["inferior", "bancada", "aereo", "torre"];
 const ROTULO_FAIXA: Record<Faixa, string> = {
   inferior: "Inferior",
@@ -229,6 +253,15 @@ function numero(valor: string): number {
   const n = Number(valor);
   return Number.isFinite(n) ? n : 0;
 }
+
+// Task 2.3-2.6 (alturas) — os 4 campos de altura de faixa (Modelo-de-Domínio
+// Seção 3.2.1), na mesma ordem já usada pelo card "Alturas do perfil".
+const CAMPOS_ALTURA: { campo: keyof AlturasFaixas; rotulo: string; id: string }[] = [
+  { campo: "alturaRodape", rotulo: "Rodapé (mm)", id: "override-altura-rodape" },
+  { campo: "alturaBancada", rotulo: "Bancada (mm)", id: "override-altura-bancada" },
+  { campo: "alturaInstalacaoAereo", rotulo: "Instalação aéreo (mm)", id: "override-altura-aereo" },
+  { campo: "peDireito", rotulo: "Pé-direito (mm)", id: "override-pe-direito" },
+];
 
 export interface AmbientesLabProps {
   /** Estado inicial (carregado pelo dono de I/O — Supabase, localStorage ou
@@ -432,6 +465,24 @@ export function AmbientesLab({
   function atualizarAlturas(patch: Partial<AlturasFaixas>) {
     setAlturas((a) => ({ ...a, ...patch }));
     setResultadoSalvar(null);
+  }
+
+  // Task 2.3-2.6 (alturas) — estado "herdado" vs "customizado" é DERIVADO de
+  // `parede.alturasOverride?.[campo] !== undefined` (Modelo-de-Domínio Seção
+  // 3.2.1), nunca um flag próprio. "Voltar ao herdado" apaga a chave do
+  // override (nunca copia o valor numérico do perfil) — é isso que mantém a
+  // propagação futura funcionando quando o perfil muda depois.
+  function alturaCustomizada(campo: keyof AlturasFaixas): boolean {
+    return parede.alturasOverride?.[campo] !== undefined;
+  }
+  function alturaEfetiva(campo: keyof AlturasFaixas): number {
+    return parede.alturasOverride?.[campo] ?? alturas[campo];
+  }
+  function setAlturaOverride(campo: keyof AlturasFaixas, valor: number) {
+    atualizarParede({ alturasOverride: definirAlturaOverride(parede.alturasOverride, campo, valor) });
+  }
+  function voltarAoHerdado(campo: keyof AlturasFaixas) {
+    atualizarParede({ alturasOverride: removerAlturaOverride(parede.alturasOverride, campo) });
   }
 
   // Task 2.3-2.6 — troca de seleção de ambiente/parede: sempre grava a cópia
@@ -1029,6 +1080,19 @@ export function AmbientesLab({
             Perfil de alturas da marcenaria — ao salvar, vale para todos os orçamentos da
             organização, não só este.
           </p>
+          {/* Task 2.3-2.6 (alturas) — o formulário de alturas padrão da
+              organização vive só aqui (decisão documentada da Task 13.7a:
+              `/perfil` deliberadamente não duplica este campo). O aviso de
+              propagação pedido pelo contrato entra ao lado deste salvamento,
+              que é o único lugar real onde `organizacao.alturas_padrao` é
+              editado. */}
+          <Alert variant="aviso" className="mb-3">
+            <AlertTriangle className="h-4 w-4 text-aviso" aria-hidden="true" />
+            <AlertDescription>
+              Mudar uma altura aqui afeta todas as paredes que não têm essa altura customizada
+              individualmente — paredes com override próprio continuam com o valor delas.
+            </AlertDescription>
+          </Alert>
           <div className="grid grid-cols-2 gap-sm">
             <div>
               <Label htmlFor="altura-rodape">Rodapé (mm)</Label>
@@ -1071,6 +1135,46 @@ export function AmbientesLab({
           </div>
         </section>
       </div>
+
+      <section className="rounded-lg border border-cinza-200 bg-cinza-0 p-4 shadow-xs">
+        <h2 className="mb-1 text-titulo-secao text-cinza-900">Alturas desta parede</h2>
+        <p className="mb-3 text-corpo-pequeno text-cinza-500">
+          Cada altura herda o valor do perfil da organização até ser customizada aqui — a
+          customização vale só para esta parede.
+        </p>
+        <div className="grid grid-cols-2 gap-sm">
+          {CAMPOS_ALTURA.map(({ campo, rotulo, id }) => {
+            const customizada = alturaCustomizada(campo);
+            return (
+              <div key={campo}>
+                <div className="mb-1 flex items-center justify-between gap-sm">
+                  <Label htmlFor={id}>{rotulo}</Label>
+                  <Badge variant={customizada ? "enviado" : "neutro"}>
+                    {customizada ? "Customizado" : "Herdado"}
+                  </Badge>
+                </div>
+                <Input
+                  id={id}
+                  type="number"
+                  value={alturaEfetiva(campo)}
+                  onChange={(e) => setAlturaOverride(campo, numero(e.target.value))}
+                />
+                {customizada && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="mt-1"
+                    onClick={() => voltarAoHerdado(campo)}
+                  >
+                    Voltar ao herdado
+                  </Button>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </section>
 
       <section className="rounded-lg border border-cinza-200 bg-cinza-0 p-4 shadow-xs">
         <h2 className="mb-3 text-titulo-secao text-cinza-900">Elementos de parede</h2>

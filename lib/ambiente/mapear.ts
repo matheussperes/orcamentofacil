@@ -45,10 +45,15 @@ export interface ParedeRow {
   elementos: unknown;
   itens: unknown;
   overrides_juncao: unknown;
+  /** Task 2.3-2.6 (alturas) — override CAMPO A CAMPO das 4 alturas de faixa
+   * (Modelo-de-Domínio Seção 3.2.1). Chave ausente/coluna `null` = herdado do
+   * perfil da organização; nunca gravamos aqui uma cópia integral do perfil. */
+  alturas_override: unknown;
 }
 
 export function paredeDeLinha(row: ParedeRow | null): { parede: Parede; overrides: OverrideJuncao[] } {
   if (!row) return { parede: paredeInicial(), overrides: [] };
+  const alturasOverride = (row.alturas_override as Partial<AlturasFaixas> | null) ?? undefined;
   return {
     parede: {
       id: row.id,
@@ -56,6 +61,7 @@ export function paredeDeLinha(row: ParedeRow | null): { parede: Parede; override
       largura: row.largura,
       elementos: ((row.elementos as ElementoParede[] | null) ?? []).map(migrarElementoParede),
       itens: (row.itens as ItemPosicionado[] | null) ?? [],
+      ...(alturasOverride ? { alturasOverride } : {}),
     },
     overrides: (row.overrides_juncao as OverrideJuncao[] | null) ?? [],
   };
@@ -75,6 +81,7 @@ export function linhaDeParede(input: {
     elementos: input.parede.elementos,
     itens: input.parede.itens,
     overrides_juncao: input.overrides,
+    alturas_override: input.parede.alturasOverride ?? null,
   };
 }
 

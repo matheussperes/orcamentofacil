@@ -8,9 +8,11 @@
 import { describe, expect, it } from "vitest";
 import {
   aplicarPresetElementoParede,
+  definirAlturaOverride,
   moverIdNaLista,
   recalcularValorAoTrocarRef,
   remapearIdsAmbientes,
+  removerAlturaOverride,
   salvarElementoNaLista,
   substituirParedeNaLista,
 } from "./AmbientesLab";
@@ -72,6 +74,42 @@ describe("salvarElementoNaLista", () => {
 
     expect(resultado).toHaveLength(1);
     expect(resultado[0]).toEqual(editado);
+  });
+});
+
+describe("definirAlturaOverride", () => {
+  it("seta um campo preservando os demais campos já presentes no override", () => {
+    const resultado = definirAlturaOverride(
+      { alturaRodape: 900, peDireito: 2100 },
+      "alturaBancada",
+      1000
+    );
+
+    expect(resultado).toEqual({ alturaRodape: 900, peDireito: 2100, alturaBancada: 1000 });
+  });
+
+  it("override inicial undefined: cria o objeto só com o campo setado", () => {
+    const resultado = definirAlturaOverride(undefined, "alturaInstalacaoAereo", 1500);
+
+    expect(resultado).toEqual({ alturaInstalacaoAereo: 1500 });
+  });
+});
+
+describe("removerAlturaOverride", () => {
+  it("remove a chave sem copiar valor numérico do perfil, preservando os demais campos", () => {
+    const resultado = removerAlturaOverride(
+      { alturaRodape: 900, alturaBancada: 1000, peDireito: 2100 },
+      "alturaBancada"
+    );
+
+    expect(resultado).toEqual({ alturaRodape: 900, peDireito: 2100 });
+    expect("alturaBancada" in resultado).toBe(false);
+  });
+
+  it("override inicial undefined: não quebra, resultado fica vazio", () => {
+    const resultado = removerAlturaOverride(undefined, "peDireito");
+
+    expect(resultado).toEqual({});
   });
 });
 

@@ -73,6 +73,7 @@ describe("paredeDeLinha", () => {
       ],
       itens: [{ itemId: "instancia-1", x: 0, faixa: "inferior" }],
       overrides_juncao: [{ itemIdA: "instancia-1", itemIdB: "instancia-2", forcar: "unido" }],
+      alturas_override: null,
     };
 
     const resultado = paredeDeLinha(row);
@@ -87,6 +88,22 @@ describe("paredeDeLinha", () => {
     expect(resultado.overrides).toEqual(row.overrides_juncao);
   });
 
+  it("popula parede.alturasOverride quando alturas_override vem preenchida (Task 2.3-2.6)", () => {
+    const row: ParedeRow = {
+      id: "parede-uuid-override",
+      altura: 2700,
+      largura: 3200,
+      elementos: [],
+      itens: [],
+      overrides_juncao: [],
+      alturas_override: { alturaRodape: 150 },
+    };
+
+    const resultado = paredeDeLinha(row);
+
+    expect(resultado.parede.alturasOverride).toEqual({ alturaRodape: 150 });
+  });
+
   it("migra elemento legado (sem id/refX/refY) na leitura, sem alterar x/y/largura/altura/tipo", () => {
     const row: ParedeRow = {
       id: "parede-uuid-legado",
@@ -95,6 +112,7 @@ describe("paredeDeLinha", () => {
       elementos: [{ tipo: "janela", x: 100, y: 900, largura: 600, altura: 500 }],
       itens: [],
       overrides_juncao: [],
+      alturas_override: null,
     };
 
     const resultado = paredeDeLinha(row);
@@ -120,6 +138,7 @@ describe("paredeDeLinha", () => {
       elementos: null,
       itens: null,
       overrides_juncao: null,
+      alturas_override: null,
     };
     const resultado = paredeDeLinha(row);
     expect(resultado.parede.elementos).toEqual([]);
@@ -148,7 +167,28 @@ describe("linhaDeParede", () => {
       elementos: [],
       itens: [],
       overrides_juncao: overrides,
+      alturas_override: null,
     });
+  });
+
+  it("grava alturas_override a partir de parede.alturasOverride quando preenchido (Task 2.3-2.6)", () => {
+    const parede = {
+      id: "parede-1",
+      altura: 2700,
+      largura: 3000,
+      elementos: [],
+      itens: [],
+      alturasOverride: { peDireito: 2600 },
+    };
+
+    const linha = linhaDeParede({
+      organizacaoId: "org-1",
+      ambienteId: "ambiente-1",
+      parede,
+      overrides: [],
+    });
+
+    expect(linha.alturas_override).toEqual({ peDireito: 2600 });
   });
 });
 
