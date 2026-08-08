@@ -23,6 +23,7 @@ import type { ConfiguracaoPrecificacaoCarregada } from "@/lib/precificacao/carre
 import { idDoItem, nomeDoItem, type ModuloOrcamento } from "@/lib/orcamento";
 import type { ItemDoConjunto } from "@/app/components/BoxCanvas";
 import { gerarDescricaoLinha } from "@/lib/linha-proposta/descricao";
+import { ambientesDaLinha } from "@/lib/linha-proposta/ambientes";
 import { valorAtualDaLinha as calcularValorAtualDaLinha } from "@/lib/linha-proposta/valorAtual";
 import { gerarProposta } from "@/lib/linha-proposta/gerarProposta";
 import type {
@@ -175,6 +176,13 @@ export function PropostaLab({
         return item ? { itemId, nome: nomeDoItem(item) } : null;
       })
       .filter((v): v is ItemDisponivel => v !== null);
+  }
+
+  // Task 2.32 — caption "Ambiente: X" (vínculo visual da linha com o(s)
+  // ambiente(s) de origem, derivado sempre dos itens ATUAIS da linha, nunca
+  // rastreado — ver `lib/linha-proposta/ambientes.ts`).
+  function nomesAmbientesDaLinha(linha: LinhaProposta): string[] {
+    return ambientesDaLinha(linha.itens, estadoInicial.ambientes);
   }
 
   // Wiring real do rateio (contrato: "fecha a Dívida B2 de vez") — um
@@ -436,6 +444,7 @@ export function PropostaLab({
                 itensDoConjunto={itensDoConjuntoDaLinha(linha)}
                 itensDisponiveis={itensDisponiveisDaLinha(linha)}
                 valorAtual={valorAtualDaLinha(linha)}
+                nomesAmbientes={nomesAmbientesDaLinha(linha)}
                 mostrarSelecaoMesclar={linhas.length > 1}
                 selecionadaParaMesclar={selecionadasParaMesclar.has(linha.id)}
                 onToggleSelecaoMesclar={() => toggleSelecaoMesclar(linha.id)}
