@@ -45,6 +45,10 @@ export interface LinhaPropostaCardProps {
   itensDoConjunto: ItemDoConjunto[];
   itensDisponiveis: ItemDisponivel[];
   valorAtual: number;
+  /** Nomes distintos dos ambientes de origem dos itens da linha (Task
+   * 2.32 — `lib/linha-proposta/ambientes.ts`). Vazio = nenhum item resolve
+   * pra ambiente nenhum (não deveria acontecer). */
+  nomesAmbientes: string[];
   mostrarSelecaoMesclar: boolean;
   selecionadaParaMesclar: boolean;
   onToggleSelecaoMesclar: () => void;
@@ -63,6 +67,7 @@ export function LinhaPropostaCard({
   itensDoConjunto,
   itensDisponiveis,
   valorAtual,
+  nomesAmbientes,
   mostrarSelecaoMesclar,
   selecionadaParaMesclar,
   onToggleSelecaoMesclar,
@@ -228,6 +233,11 @@ export function LinhaPropostaCard({
             <div className="min-w-0 flex-1 basis-64">
               <Label htmlFor={`titulo-${linha.id}`}>Título da linha</Label>
               <Input id={`titulo-${linha.id}`} value={tituloLocal} onChange={(e) => setTituloLocal(e.target.value)} />
+              {nomesAmbientes.length > 0 && (
+                <p className="mt-xs text-corpo-pequeno text-cinza-500">
+                  Ambiente: {nomesAmbientes.join(" + ")}
+                </p>
+              )}
             </div>
             {mostrarSelecaoMesclar && (
               <label className="flex items-center gap-sm pt-5 text-corpo-pequeno text-cinza-600">
