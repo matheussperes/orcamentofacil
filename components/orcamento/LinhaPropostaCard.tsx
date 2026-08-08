@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Image as ImageIcon, RefreshCw, Split } from "lucide-react";
+import { Image as ImageIcon, RefreshCw, Split, Undo2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -53,6 +53,8 @@ export interface LinhaPropostaCardProps {
   onDividir: (itemIdsSelecionados: string[]) => Promise<{ ok: boolean; erro?: string }>;
   onRegenerarImagem: (blob: Blob) => Promise<{ ok: boolean; erro?: string }>;
   onResolverUrlImagem: (imagemUrl: string) => Promise<string | null>;
+  /** Presente só na linha nascida de um split ainda revertível; ausente nas demais. */
+  onReverterDivisao?: () => void;
 }
 
 export function LinhaPropostaCard({
@@ -69,6 +71,7 @@ export function LinhaPropostaCard({
   onDividir,
   onRegenerarImagem,
   onResolverUrlImagem,
+  onReverterDivisao,
 }: LinhaPropostaCardProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const registrarCanvas = useCallback((el: HTMLCanvasElement | null) => {
@@ -251,6 +254,12 @@ export function LinhaPropostaCard({
               <Split className="h-4 w-4" aria-hidden="true" />
               Dividir linha
             </Button>
+            {onReverterDivisao && (
+              <Button variant="ghost" size="sm" onClick={onReverterDivisao}>
+                <Undo2 className="h-4 w-4" aria-hidden="true" />
+                Cancelar divisão
+              </Button>
+            )}
           </div>
           {erroTextos && (
             <Alert variant="erro">
