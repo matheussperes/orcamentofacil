@@ -131,6 +131,11 @@ export function PropostaLab({
   // sentido matemático.
   const [valoresOverride, setValoresOverride] = useState<Record<string, number> | null>(null);
   const [selecionadasParaMesclar, setSelecionadasParaMesclar] = useState<Set<string>>(new Set());
+  // Rastro efêmero (só nesta sessão do componente, não persistido — ver
+  // contrato Task 2.31: schema não tem `linha_mae_id`) de qual linha nova
+  // nasceu de qual linha mãe via "Dividir linha", pra habilitar "Cancelar
+  // divisão" sem exigir seleção manual + "Mesclar".
+  const [origemSplit, setOrigemSplit] = useState<Record<string, string>>({});
   const [erroGeral, setErroGeral] = useState<string | null>(null);
   const [criandoLinhaInicial, setCriandoLinhaInicial] = useState(false);
 
@@ -238,8 +243,41 @@ export function PropostaLab({
       ...atuais.map((l) => (l.id === linha.id ? { ...l, itens: restantes } : l)),
       resultadoCriar.linha,
     ]);
+    setOrigemSplit((atuais) => ({ ...atuais, [resultadoCriar.linha.id]: linha.id }));
     setValoresOverride(null);
     return { ok: true as const };
+  }
+
+  async function handleReverterDivisao(novaLinhaId: string) {
+    const linhaMaeId = origemSplit[novaLinhaId];
+    if (!linhaMaeId) return;
+    const nova = linhas.find((l) => l.id === novaLinhaId);
+    const mae = linhas.find((l) => l.id === linhaMaeId);
+    if (!nova || !mae) {
+      setErroGeral("A linha mãe desta divisão não existe mais. Use \"Mesclar\" se quiser unir linhas manualmente.");
+      return;
+    }
+    const itensUnidos = Array.from(new Set([...mae.itens, ...nova.itens]));
+    const resultadoAtualizar = await onAtualizarLinha(linhaMaeId, { itens: itensUnidos });
+    if (!resultadoAtualizar.ok) {
+      setErroGeral(resultadoAtualizar.erro ?? "Não foi possível reverter a divisão desta linha.");
+      return;
+    }
+    const resultadoExcluir = await onExcluirLinha(novaLinhaId);
+    if (!resultadoExcluir.ok) {
+      setErroGeral(resultadoExcluir.erro ?? "Não foi possível remover a linha nova ao reverter a divisão.");
+      return;
+    }
+    setLinhas((atuais) =>
+      atuais
+        .filter((l) => l.id !== novaLinhaId)
+        .map((l) => (l.id === linhaMaeId ? { ...l, itens: itensUnidos } : l))
+    );
+    setOrigemSplit((atuais) => {
+      const { [novaLinhaId]: _removida, ...resto } = atuais;
+      return resto;
+    });
+    setValoresOverride(null);
   }
 
   async function handleMesclarSelecionadas() {
@@ -406,6 +444,11 @@ export function PropostaLab({
                 onDividir={(itemIds) => handleDividirLinha(linha, itemIds)}
                 onRegenerarImagem={(blob) => handleRegenerarImagem(linha.id, blob)}
                 onResolverUrlImagem={onResolverUrlImagem}
+                onReverterDivisao={
+                  origemSplit[linha.id] && linhas.some((l) => l.id === origemSplit[linha.id])
+                    ? () => handleReverterDivisao(linha.id)
+                    : undefined
+                }
               />
             ))}
           </div>
