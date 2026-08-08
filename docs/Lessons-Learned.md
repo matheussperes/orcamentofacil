@@ -152,3 +152,63 @@ Nenhuma ação corretiva necessária além da já tomada — o padrão de "corri
 
 **Escopo**
 Somente este projeto (achado específico de `app/globals.css`; o princípio de auditoria visual ao vivo pegando bugs que os gates automatizados não pegam já está registrado como Padrão 2 do Pipeline Stage 13, acima).
+
+---
+
+## 2026-08-08 — Pipeline Stage Lote 2 (Lacunas funcionais)
+
+**Métricas do período**
+- Tasks concluídas: 17/17 (Lote 2 fechado)
+- Vetos de UX: 1 (`ux-auditor` reprovou Task 2.3-2.6, tentativa 1) | Segurança: 1 (`security-auditor` reprovou Task 2.3-2.6, tentativa 1, corrigido e aprovado na tentativa 2) | Build/Lint: 0 reprovações formais | Testes: 0 reprovações formais
+- Circuit Breakers: 0
+- Tasks com ≥1 rodada de correção: 1 de 17 (2.3-2.6, mesma task acumulando os dois vetos) — ~6%
+- Convocações de gate com bug de transporte conhecido (auditoria completa rodada, veredito não gravado na 1ª chamada, reconvocada sem contar como reprovação): 1 ocorrência confirmada nesta sessão (Task 2.24-2.26, `ux-auditor`) — evidência em `docs/Backlog.md`, entrada da Task 2.24-2.26 ("1ª chamada rodou auditoria completa com 18 screenshots mas arquivo de veredito não gravou por bug de transporte known")
+
+**Padrão 1 — Reaproveitar dado já derivável em vez de criar mecanismo de rastreio/schema novo**
+Três tasks resolveram o requisito lendo/derivando de estado já existente em vez de adicionar coluna, Server Action ou segunda estrutura de rastreio:
+- Task 2.31 ("Cancelar divisão"): rastro de origem guardado como estado React efêmero (`origemSplit` em `PropostaLab.tsx`), sem coluna nova de linhagem no schema.
+- Task 2.32 (caption de ambiente na Linha de Proposta): função pura `ambientesDaLinha` deriva os nomes a partir de `estadoInicial.ambientes` + `linha.itens` (cadeia item→parede→ambiente já existente nos dados) — sem campo novo, sem Server Action nova.
+- Task 2.24-2.26 (elevação com módulos posicionados): reaproveita `itensDoConjunto` já calculado em `AmbientesLab.tsx` em vez de uma segunda derivação, e usa `derivarY`/`larguraDoItem`/`alturaDoItem` já existentes em `lib/engine/parede/*` sem tocar no motor.
+Todas as três passaram nos 3 gates (`code-auditor`, `qa-engineer`, `ux-auditor`) na 1ª tentativa.
+
+**Causa estrutural provável**: não é um documento ambíguo — é a maneira como esses contratos de task foram redigidos (provavelmente pelo Maestro nesta sessão), citando explicitamente onde o dado de origem já existe (ex.: "sem schema novo", "reutiliza X já calculado") antes do executor escrever código. O padrão é evidência de que essa prática de contrato funciona, não de uma lacuna a corrigir.
+
+**Ação proposta**: manter a prática de o contrato de execução apontar explicitamente, quando aplicável, de onde o dado-fonte já vem antes do executor escrever qualquer mecanismo novo de persistência — reforçar isso como item padrão de redação de contrato do Maestro, não só para tasks de derivação.
+
+**Escopo**: Candidata a melhoria do framework (item de checklist do `Task-Execution-Contract`: "se o dado já é derivável de estado/relação existente, apontar a origem no contrato antes de autorizar schema/mecanismo novo").
+
+---
+
+**Padrão 2 — Escopo declarado no contrato já estava parcialmente implementado por task anterior**
+Duas tasks descobriram, na fase de investigação do executor, que parte dos itens do documento-fonte já estava pronta:
+- Task 2.14-2.17: itens 2.16 ("torre ocupa as três faixas") e 2.17 ("módulo inferior assenta sobre o rodapé") já implementados desde a Task 2.18-motor (`faixasCandidatas`) e a Task 0.4 (`derivarY`/invariante A-08) — confirmados por teste existente, sem reimplementação.
+- Task 2.24-2.26: item 2.25 (rótulo "Meio" na faixa) já estava pronto desde a Task 2.14-2.17 — confirmado, não retrabalhado.
+Nos dois casos o `code-auditor` registrou explicitamente a confirmação de "não retrabalhado" como parte da checagem, e a task foi aprovada na 1ª tentativa mesmo assim.
+
+**Causa estrutural provável**: as tasks-macro deste lote (ex. "2.14-2.17", "2.24-2.26") agrupam vários itens do documento-fonte sob um único número de task, e a numeração de itens (2.16, 2.17, 2.25) foi fixada no discovery antes de saber que tasks anteriores do mesmo lote já cobririam parte deles como efeito colateral do motor. Isso não gerou retrabalho nem custo — o executor investigou antes de implementar — mas indica que o agrupamento original de itens em tasks-macro carregava alguma sobreposição não antecipada.
+
+**Ação proposta**: nenhuma correção necessária — é evidência de que o passo "investigar o que já existe antes de implementar" (regra já vigente para executores) está sendo seguido e evitando retrabalho. Registrado como confirmação, não como gap.
+
+**Escopo**: Somente este projeto (a sobreposição é específica da decomposição de itens 2.x deste Backlog).
+
+---
+
+**Padrão 3 — Falha de gravação de veredito do `ux-auditor` na 1ª chamada, sem contar como reprovação**
+1 ocorrência confirmada neste lote: Task 2.24-2.26, `ux-auditor` executou a auditoria visual completa (18 screenshots) mas o arquivo de veredito não foi gravado em disco na 1ª chamada; a reconvocação não contou como tentativa reprovada. Mesmo sintoma já registrado e investigado na proposta `.maestro/proposals/2026-08-04-gates-estouram-maxturns-sem-veredito.md` — este registro só quantifica a incidência real neste lote (1 de 17 tasks, ~6%), não repete a investigação de causa.
+
+**Causa estrutural provável**: já documentada na proposta existente — não repetida aqui.
+
+**Ação proposta**: nenhuma ação nova — a proposta já existe e aguarda decisão humana. Este registro serve de dado adicional de frequência (1 ocorrência/17 tasks) para quem decidir sobre a proposta.
+
+**Escopo**: Candidata a melhoria do framework — já coberta por `.maestro/proposals/2026-08-04-gates-estouram-maxturns-sem-veredito.md`.
+
+---
+
+**Padrão 4 — Regra de posse (`organizacao_id`/`orcamento_id`) aplicada em algumas Server Actions e não em outras do mesmo módulo**
+Task 2.3-2.6: `security-auditor` reprovou na 1ª tentativa porque `salvarEstadoAmbiente` (`lib/ambiente/salvar.ts`) inseria `ambiente`/`elemento_continuo` referenciando o `orcamentoId` recebido do client sem antes confirmar que esse `orcamentoId` pertence à organização do usuário autenticado — enquanto `criarAmbiente` (`lib/ambiente/acoes.ts`, mesmo módulo) já fazia exatamente essa checagem (`select id from orcamento where id = orcamentoId and organizacao_id = organizacaoId`). A correção (tentativa 2, aprovada) replicou o mesmo padrão de `criarAmbiente` em `salvarEstadoAmbiente`, com teste de regressão confirmando zero INSERT/UPDATE antes do erro.
+
+**Causa estrutural provável**: a checagem de posse do `orcamentoId` recebido via parâmetro de Server Action existe como padrão em uma função do módulo (`criarAmbiente`), mas não está formalizada como regra obrigatória para toda nova Server Action que recebe `orcamentoId`/`ambienteId`/`paredeId` do client — cada função replica (ou não) o padrão por imitação de código vizinho, não por checklist. A mesma classe de bug (mutação cross-tenant via ID de client não validado) já teria sido pega mais cedo se houvesse uma checagem obrigatória de contrato.
+
+**Ação proposta**: neste projeto, ao redigir contratos de tasks que criam Server Actions com parâmetros de ID recebidos do client (`orcamentoId`, `ambienteId`, `paredeId`, etc.), incluir como critério de aceitação explícito "toda escrita (INSERT/UPDATE/DELETE) que referencia esse ID deve ser precedida de confirmação de posse via `organizacao_id`, no mesmo padrão de funções irmãs do módulo" — não deixar implícito que o executor vai replicar o padrão por conta própria.
+
+**Escopo**: Candidata a melhoria do framework (item de checklist do contrato de `backend-engineer`/`frontend-engineer` para qualquer Server Action que recebe IDs de entidade do client — regra geral de segurança multi-tenant, não peculiar deste projeto).
