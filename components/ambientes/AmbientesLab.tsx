@@ -56,7 +56,7 @@ import {
   type ModuloOrcamento,
 } from "@/lib/orcamento";
 import { MATERIAIS_PADRAO, PARAMETROS_FABRICA_PADRAO } from "@/lib/engine/defaults";
-import type { BoxMaterial } from "@/lib/engine/box/types";
+import type { BoxMaterial, BoxModule, TipoPuxador } from "@/lib/engine/box/types";
 import {
   POSICOES_VALIDAS,
   type AlvoElementoContinuo,
@@ -439,6 +439,19 @@ export function AmbientesLab({
   const [refVaoItem, setRefVaoItem] = useState<ReferenciaVao>("esquerda");
   const [erroVaoItem, setErroVaoItem] = useState<string | null>(null);
 
+  // Task 2.19-2.23 (front) — personalização de instância no momento da
+  // inserção: copia os valores do preset pro estado local, editável, sem
+  // nunca tocar o preset da biblioteca (mesmo espírito da Task 2.12).
+  const [larguraItem, setLarguraItem] = useState(0);
+  const [alturaItem, setAlturaItem] = useState(0);
+  const [profundidadeItem, setProfundidadeItem] = useState(0);
+  const [corCaixaItem, setCorCaixaItem] = useState("");
+  const [espessuraCaixaItem, setEspessuraCaixaItem] = useState(18);
+  const [corPortasItem, setCorPortasItem] = useState("");
+  const [espessuraPortasItem, setEspessuraPortasItem] = useState(18);
+  const [temFundoItem, setTemFundoItem] = useState(true);
+  const [puxadorItem, setPuxadorItem] = useState<TipoPuxador>("haste");
+
   // Task 13.2b — overrides do handle de junção.
   const [overrides, setOverrides] = useState<OverrideJuncao[]>(() => estadoInicial.overrides);
 
@@ -717,6 +730,29 @@ export function AmbientesLab({
     }
   }
 
+  // Task 2.19-2.23 (front) — repopula os campos de personalização a partir
+  // do preset sempre que a seleção muda, pra nunca vazar valor customizado
+  // do módulo anterior pro novo. Cor/espessura de porta seguem a cadeia de
+  // fallback: override de instância do preset > material do 1º grupo de
+  // porta > cor/espessura da caixa (só usado como default de exibição —
+  // fica oculto se o preset não tem nenhum grupo de porta).
+  useEffect(() => {
+    const preset = presets.find((p) => p.id === presetSelecionado);
+    if (!preset) return;
+    const box = preset.box;
+    const materialPortas = box.overridePortas ?? box.portas[0]?.material ?? box.caixa;
+    setLarguraItem(box.largura);
+    setAlturaItem(box.altura);
+    setProfundidadeItem(box.profundidade);
+    setCorCaixaItem(box.caixa.cor);
+    setEspessuraCaixaItem(box.caixa.espessura);
+    setCorPortasItem(materialPortas.cor);
+    setEspessuraPortasItem(materialPortas.espessura);
+    setTemFundoItem(box.temFundo);
+    setPuxadorItem(box.puxador);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [presetSelecionado]);
+
   // Ao posicionar: COPIA o box do preset pra um módulo de instância novo (id
   // de instância, não o id do preset — mesma decisão da Task 13.3c, agora
   // persistida de verdade em `orcamento.itens`) e guarda só a POSIÇÃO em
@@ -727,7 +763,7 @@ export function AmbientesLab({
     const preset = presets.find((p) => p.id === presetSelecionado);
     if (!preset) return;
 
-    const largura = preset.box.largura;
+    const largura = larguraItem;
     // Item ainda não posicionado: `x` provisório "encostado na borda direita
     // da parede" — a convenção que `calcularVizinhos` documenta como a que
     // produz os vizinhos corretos pra entrada (Seção 3.1.1).
@@ -743,7 +779,20 @@ export function AmbientesLab({
     }
 
     const itemId = novoItemId();
-    const modulo: ModuloOrcamento = { origem: "custom_box", box: { ...preset.box, id: itemId } };
+    const box: BoxModule = {
+      ...preset.box,
+      id: itemId,
+      largura: larguraItem,
+      altura: alturaItem,
+      profundidade: profundidadeItem,
+      caixa: { cor: corCaixaItem, espessura: espessuraCaixaItem },
+      ...(preset.box.portas.length > 0
+        ? { overridePortas: { cor: corPortasItem, espessura: espessuraPortasItem } }
+        : {}),
+      temFundo: temFundoItem,
+      puxador: puxadorItem,
+    };
+    const modulo: ModuloOrcamento = { origem: "custom_box", box };
     const posicao: ItemPosicionado = {
       itemId,
       x: resultado.x,
@@ -1038,6 +1087,9 @@ export function AmbientesLab({
       }
     }
   }
+
+  const presetItemAtual = presets.find((p) => p.id === presetSelecionado);
+  const temPortasNoPresetAtual = (presetItemAtual?.box.portas.length ?? 0) > 0;
 
   return (
     <div className="flex flex-col gap-lg">
@@ -1497,6 +1549,145 @@ export function AmbientesLab({
               <Button variant="primary" onClick={adicionarItem}>
                 Adicionar
               </Button>
+            </div>
+
+            <div className="mb-3 rounded-md border border-cinza-200 bg-cinza-50 p-3">
+              <h3 className="mb-2 text-corpo-pequeno font-medium text-cinza-700">Personalizar módulo</h3>
+              <div className="flex flex-wrap items-end gap-sm">
+                <div>
+                  <Label htmlFor="item-largura">Largura (mm)</Label>
+                  <Input
+                    id="item-largura"
+                    type="number"
+                    className="w-24"
+                    value={larguraItem}
+                    onChange={(e) => setLarguraItem(numero(e.target.value))}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="item-altura">Altura (mm)</Label>
+                  <Input
+                    id="item-altura"
+                    type="number"
+                    className="w-24"
+                    value={alturaItem}
+                    onChange={(e) => setAlturaItem(numero(e.target.value))}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="item-profundidade">Profundidade (mm)</Label>
+                  <Input
+                    id="item-profundidade"
+                    type="number"
+                    className="w-24"
+                    value={profundidadeItem}
+                    onChange={(e) => setProfundidadeItem(numero(e.target.value))}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="item-cor-caixa">Cor da caixa</Label>
+                  <Select value={corCaixaItem} onValueChange={setCorCaixaItem}>
+                    <SelectTrigger id="item-cor-caixa" className="w-36">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {(catalogo ? coresDisponiveis(catalogo) : ["Branco TX", "Madeirado"]).map((c) => (
+                        <SelectItem key={c} value={c}>
+                          {c}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="item-espessura-caixa">Espessura da caixa</Label>
+                  <Select
+                    value={String(espessuraCaixaItem)}
+                    onValueChange={(v) => setEspessuraCaixaItem(numero(v))}
+                  >
+                    <SelectTrigger id="item-espessura-caixa" className="w-24">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {(catalogo && corCaixaItem ? espessurasDaCor(catalogo, corCaixaItem) : [15, 18, 25]).map(
+                        (esp) => (
+                          <SelectItem key={esp} value={String(esp)}>
+                            {esp} mm
+                          </SelectItem>
+                        )
+                      )}
+                    </SelectContent>
+                  </Select>
+                </div>
+                {temPortasNoPresetAtual && (
+                  <>
+                    <div>
+                      <Label htmlFor="item-cor-portas">Cor das portas</Label>
+                      <Select value={corPortasItem} onValueChange={setCorPortasItem}>
+                        <SelectTrigger id="item-cor-portas" className="w-36">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {(catalogo ? coresDisponiveis(catalogo) : ["Branco TX", "Madeirado"]).map((c) => (
+                            <SelectItem key={c} value={c}>
+                              {c}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label htmlFor="item-espessura-portas">Espessura das portas</Label>
+                      <Select
+                        value={String(espessuraPortasItem)}
+                        onValueChange={(v) => setEspessuraPortasItem(numero(v))}
+                      >
+                        <SelectTrigger id="item-espessura-portas" className="w-24">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {(catalogo && corPortasItem
+                            ? espessurasDaCor(catalogo, corPortasItem)
+                            : [15, 18, 25]
+                          ).map((esp) => (
+                            <SelectItem key={esp} value={String(esp)}>
+                              {esp} mm
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </>
+                )}
+                <div>
+                  <Label htmlFor="item-fundo">Fundo</Label>
+                  <Select
+                    value={temFundoItem ? "sim" : "nao"}
+                    onValueChange={(v) => setTemFundoItem(v === "sim")}
+                  >
+                    <SelectTrigger id="item-fundo" className="w-24">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="sim">Sim</SelectItem>
+                      <SelectItem value="nao">Não</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="item-puxador">Puxador</Label>
+                  <Select value={puxadorItem} onValueChange={(v) => setPuxadorItem(v as TipoPuxador)}>
+                    <SelectTrigger id="item-puxador" className="w-32">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="haste">Haste</SelectItem>
+                      <SelectItem value="perfil">Perfil</SelectItem>
+                      <SelectItem value="sem_puxador">Sem puxador</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
             </div>
 
             {erroVaoItem && (
