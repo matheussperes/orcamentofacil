@@ -1,6 +1,6 @@
 # Status Atual
 
-> Atualizado em 2026-08-07 (Task 2.3-2.6 fechada). Este arquivo é o ponto de partida de qualquer
+> Atualizado em 2026-08-08 (Task 2.18-front fechada). Este arquivo é o ponto de partida de qualquer
 > sessão nova. Histórico task-a-task (auditorias, tentativas, decisões)
 > não vive mais aqui — está no `git log` e nos commits de merge de cada
 > branch `feature/<task-id>`. Este arquivo mantém só o essencial.
@@ -18,7 +18,7 @@ Fase D (Pré-Lançamento) — Lote 0 (Fundação de dados) ✅ fechado:
 
 **Lote 1 (Confiança e estado) ✅ fechado por completo** — 7/7 tasks concluídas (5/5 back + 2/2 front).
 
-**Lote 2 (Lacunas funcionais) ▶️ em execução** — 11/~17 tasks concluídas:
+**Lote 2 (Lacunas funcionais) ▶️ em execução** — 12/~17 tasks concluídas:
 - **Task 2.1** ✅ (2026-08-06) — Investigação: caminho de "criar módulo do zero" já existe e funciona ponta a ponta (`/biblioteca` → botão "Novo módulo" → `/modulo` sem `?preset=` → salvar chama `criarGabarito` já existente → volta e aparece na listagem). Sidebar deliberadamente exclui `/modulo` do menu principal (Task 13.3b). Sem mudança de código necessária. Nenhuma branch de merge.
 - **Task 2.1 (dedup)** ✅ (2026-08-06) — `deduplicarPromovidos()` em `lib/gabarito/listar.ts`: filtro derivado em memória escondendo gabaritosglobais promovidos da própria organização. 3 testes novos em `lib/gabarito/listar.test.ts`. `code-auditor` APROVADO (veredito em arquivo, build/lint/typecheck limpos), `qa-engineer` APROVADO (veredito em arquivo, 370 testes, 3 critérios). Sem RLS nova. Merge `--no-ff` em `main`.
 - **Task 2.13** ✅ (2026-08-06) — Rename "Preset" → "Módulo" em toda a UI. Identificadores de código mantidos intactos. `code-auditor` APROVADO, `qa-engineer` APROVADO. Impacto Visual: Nenhum.
@@ -30,6 +30,7 @@ Fase D (Pré-Lançamento) — Lote 0 (Fundação de dados) ✅ fechado:
 - **Task 2.18 (motor)** ✅ (2026-08-06) — Posicionamento por vão até o vizinho: funções `calcularVizinhos`, `converterVaoParaX`, `converterXParaVao` em `lib/engine/parede/posicionamento.ts` (novo, 13 testes). Campo `refEntrada` em `ItemPosicionado`. Todos os 4 exemplos do Modelo 3.1.1 reproduzidos com valores exatos. Torre como vizinha cross-faixa. `code-auditor` APROVADO, `qa-engineer` APROVADO. Desbloqueia Task 2.18 (front).
 - **Task 2.3–2.6** ✅ (2026-08-07) — Cadastro/edição/ordenação de múltiplos ambientes e paredes, seletor com indicação visual permanente de qual ambiente/parede está em edição (não depende de hover). `code-auditor` APROVADO (1ª tentativa, 425/425 testes), `security-auditor` APROVADO (2ª tentativa, cross-tenant corrigido), `qa-engineer` APROVADO (1ª tentativa, 426/426 testes, 8 critérios), `ux-auditor` NÃO EXECUTADO (autorizado pelo operador em 2026-08-07 — 1ª tentativa reprovou por bug CSS legado, corrigido; reconvocações posteriores rodaram com screenshots reais mas arquivo de veredito não gravou por bug de transporte, operador aprovouvisualmente). Impacto Visual: Completo.
 - **Task 2.3–2.6 (alturas)** ✅ (2026-08-07) — UI de override de altura por parede em `AmbientesLab.tsx`: indicador "herdado"/"customizado" derivado, botão "Voltar ao herdado" que remove override. Aviso de propagação em `/perfil`. Funções puras `definirAlturaOverride`/`removerAlturaOverride` exportadas e testadas. `code-auditor` APROVADO (2ª tentativa), `qa-engineer` APROVADO (2ª tentativa, 445/445 testes), `ux-auditor` APROVADO (1ª tentativa, checklist §15.4, Impacto Visual Leve). Impacto Visual: Leve.
+- **Task 2.18 (front)** ✅ (2026-08-08) — UI de inserção com campo de vão: substitui "X (mm)" por "Vão (mm)" com Select "Referência", conversão vão↔X via `converterVaoParaX`/`converterXParaVao`. Tabela "Itens posicionados" com colunas "Vão esq."/"Vão dir." recalculadas a cada render. `code-auditor` APROVADO (1ª tentativa), `qa-engineer` APROVADO (1ª tentativa, 445/445 testes), `ux-auditor` APROVADO (1ª tentativa, checklist §15.4, Impacto Visual Leve, 2 observações não bloqueantes para product-designer em task futura). Impacto Visual: Leve.
 
 **Lote 1 (Confiança e estado) — Histórico (7/7 tasks concluídas):**
 - **Task 1.1–1.3** ✅ (2026-08-04) — Invalidação de cache após mutação + aba persistida na URL + "atualizar render" sem F5. `code-auditor` indisponível (2x sem veredito, estouro técnico) — revisão assumida pelo Maestro. `qa-engineer` aprovou com veredito próprio (verificação real: aba sobrevive a F5, `forceMount` e `router.refresh()` validados). Sem impacto visual.

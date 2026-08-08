@@ -1,23 +1,27 @@
 # UX Decline Payload
 
-**Task**: 1.9-front
-**Branch**: feature/1.9-front-reabrir-orcamento
+**Task**: 2.3-2.6
+**Branch**: feature/2.3-2.6
 **Data**: 2026-08-06
 **Veredicto**: REPROVADO
 
-## 1. Dialog "Reabrir orçamento?" renderiza em 2 colunas quebradas no desktop — título/rodapé à esquerda, corpo colado no botão de fechar à direita
+## 1. Seletor de ambiente/parede não renderiza o estilo "Tabs underline" documentado — herda CSS legado global de `<button>`
 
-- **Componente**: `components/orcamento/PropostaLab.tsx` (linhas 444-465, `DialogContent`/`DialogHeader`/`DialogFooter`) — causa raiz em `components/ui/dialog.tsx` (`DialogContent` usa a classe utilitária Tailwind `grid` sem `grid-cols-1`) colidindo com a regra global não-escopada em `app/globals.css:114-118` (`.grid { grid-template-columns: 1.3fr 1fr; }`, resíduo de CSS legado com variáveis `--legacy-*`)
-- **Regra violada**: Design-System §7.11 — "Painel: `bg-cinza-0 rounded-xl shadow-lg p-xl`... Título `text-titulo-secao`. Rodapé com ações: `flex justify-end gap-sm`" (implica conteúdo empilhado em coluna única: título → corpo → rodapé, rodapé com os dois botões lado a lado à direita). O painel observado divide o conteúdo em duas colunas (231px + 178px), com o corpo do texto ("Os valores desta proposta voltam a ser recalculados...") espremido numa coluna estreita colada no botão de fechar (X), e os botões "Cancelar"/"Reabrir orçamento" do rodapé empilhados verticalmente e centralizados em vez de lado a lado alinhados à direita
-- **Breakpoint**: Desktop (1440px, viewport ≥ 861px — a regra `@media (max-width: 860px) { .grid { grid-template-columns: 1fr } }` em `globals.css:119-123` faz o mesmo bug desaparecer abaixo de 861px, coincidentemente)
-- **Esperado**: Diálogo com título "Reabrir orçamento?" no topo, corpo do texto abaixo ocupando a largura toda do painel, rodapé abaixo do corpo com "Cancelar" e "Reabrir orçamento" lado a lado alinhados à direita (`flex justify-end gap-sm`)
-- **Encontrado**: `getComputedStyle` do `[role="dialog"]` confirma `display: grid`, `grid-template-columns: 231.734px 178.266px` (2 colunas reais, não 1). Título+rodapé caem na coluna 1; o parágrafo de corpo cai na coluna 2, ao lado do botão de fechar
-- **Evidência**: `.maestro/tmp/screenshots/1.9-front-desktop-dialog-reabrir-QUEBRADO.png` e `.maestro/tmp/screenshots/1.9-front-desktop-dialog-reabrir-crop.png` (zoom)
-
-**Nota de root cause (contexto para o fix, não é achado separado)**: este bug é sistêmico e pré-existente — o mesmo padrão de 2 colunas já aparece no Dialog "Editar cliente" da Task 0.5b, já mergeada (`.maestro/tmp/screenshots/0.5b-desktop-dialog-aberto.png`). A causa raiz não foi introduzida pelo diff de 1.9-front (nem `app/globals.css` nem `components/ui/dialog.tsx` aparecem no `git status` da branch), mas o critério de aceitação desta task ("Clicar no botão abre o Dialog com título/corpo/rodapé exatos da especificação") não está satisfeito visualmente enquanto essa colisão de nome de classe (`.grid` legado global vs. utilitário Tailwind `grid`) não for corrigida. A correção correta é em `app/globals.css` (renomear/escopar a regra legada, ex. `.legacy-grid`), não em `PropostaLab.tsx` — mas o Dialog desta task não pode ser aprovado renderizando assim. Se o frontend-engineer entender que o fix sistêmico é escopo maior que esta task, reportar ao Maestro para decidir entre corrigir aqui ou abrir task dedicada — o gate não pode aprovar visualmente enquanto o bug estiver visível no fluxo desta task.
+- **Componente**: `components/ambientes/SeletorLista.tsx` linhas 94-109 (o `<button>` nativo que renderiza cada item do seletor de ambiente/parede)
+- **Causa raiz**: `app/globals.css` linhas 147-158 define uma regra genérica `button { background: var(--legacy-panel-2); border: 1px solid var(--legacy-border); border-radius: 8px; padding: 8px 12px; }` e `button:hover { border-color: var(--legacy-accent); }` sem escopo — qualquer `<button>` nativo sem classe própria de override herda esse estilo. O `<button>` de `SeletorLista.tsx` só define `border-b-2 border-accent`/`border-b-2 border-transparent` + cor de texto, e não neutraliza (`bg-transparent`, `border-0`/`p-0`, `rounded-none`) as propriedades do seletor global — então a regra legada vence nas propriedades que o componente não sobrescreve (background, border lateral, radius, padding).
+- **Regra violada**: Design-System §7.8 (Tabs underline: "trigger inativo `text-corpo font-medium text-cinza-500 border-b-2 border-transparent`; trigger ativo `text-accent border-b-2 border-accent`"), o próprio padrão que o comentário do arquivo (linhas 33-35) declara estar seguindo. Também viola §15.4 item 12 ("Nenhum componente introduz cor, raio, sombra ou espaçamento fora dos tokens das Seções 2–5") — o CSS legado usa hex hardcoded fora do sistema de tokens Tailwind.
+- **Breakpoint**: todos (desktop, tablet 768, mobile 480) — é uma colisão de CSS global, não um problema responsivo
+- **Esperado**: item do seletor com apenas `border-b-2` (sublinhado) — transparente quando inativo, `accent` quando ativo; sem fundo, sem borda lateral, sem padding em caixa, sem raio (visual "Tabs", igual às abas do orçamento acima)
+- **Encontrado**: cada item ("Ambiente 1", "Cozinha", "Parede 1", "Parede 2") renderiza como uma pílula com borda em todo o contorno, fundo `cinza-50`, `border-radius: 8px`, `padding: 8px 12px`. O hover reforça a borda completa em accent (regra `button:hover` legada), em vez de sublinhar.
+- **Evidência**: `.maestro/tmp/screenshots/2.3-2.6-02-multi-ambiente-parede.png` e `.maestro/tmp/screenshots/2.3-2.6-05-hover-cozinha-nao-selecionada.png`
+- **Correção sugerida** (não vinculante — decisão do frontend-engineer): adicionar classes que neutralizem a regra `button {}` legada no `<button>` de `SeletorLista.tsx` (ex.: `bg-transparent border-0 border-b-2 rounded-none p-0`), preservando só `border-b-2` + cor de texto conforme §7.8.
 
 ## Capturas realizadas
-- `.maestro/tmp/screenshots/1.9-front-desktop-nao-congelado.png` — aba Proposta, `congeladoEm = null`, sem Alert (estado base, papel admin do harness)
-- `.maestro/tmp/screenshots/1.9-front-desktop-congelado-alert-admin.png` — `congeladoEm` forçado em runtime (React state via devtools, sem alteração de código-fonte) para validar o Alert: variante `aviso`, ícone `AlertTriangle`, texto W-C1 "Esta proposta está congelada desde 06/08/2026, 11:30. Suas alterações não mudam os valores até você reabrir o orçamento." e botão "Reabrir orçamento" visível — CONFORME
-- `.maestro/tmp/screenshots/1.9-front-desktop-dialog-reabrir-QUEBRADO.png` — Dialog aberto ao clicar no botão — achado acima
-- `.maestro/tmp/screenshots/1.9-front-desktop-dialog-reabrir-crop.png` — zoom do mesmo Dialog
+- `.maestro/tmp/screenshots/2.3-2.6-01-inicial.png`
+- `.maestro/tmp/screenshots/2.3-2.6-02-multi-ambiente-parede.png`
+- `.maestro/tmp/screenshots/2.3-2.6-03-parede2-largura1800.png`
+- `.maestro/tmp/screenshots/2.3-2.6-04-volta-parede1.png`
+- `.maestro/tmp/screenshots/2.3-2.6-05-hover-cozinha-nao-selecionada.png`
+- `.maestro/tmp/screenshots/2.3-2.6-06-tablet-768.png`
+- `.maestro/tmp/screenshots/2.3-2.6-07-mobile-480.png`
+- `.maestro/tmp/screenshots/2.3-2.6-08-dialog-exclusao.png`
