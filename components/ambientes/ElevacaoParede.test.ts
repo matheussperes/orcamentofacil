@@ -4,8 +4,29 @@
 // `bandasFaixas`, `retanguloParaPx`) é exercitada aqui — o SVG em si é
 // verificado visualmente no browser (breakpoints 375/768/1440px).
 import { describe, expect, it } from "vitest";
-import { bandasFaixas, layoutElevacao, retanguloParaPx } from "./ElevacaoParede";
+import { bandasFaixas, layoutElevacao, retanguloParaPx, retangulosDosItens } from "./ElevacaoParede";
 import type { AlturasFaixas } from "@/lib/engine/parede";
+import type { ItemDoConjunto } from "@/app/components/BoxCanvas";
+import type { ModuloOrcamento } from "@/lib/orcamento";
+import { vaoVazio, type BoxModule } from "@/lib/engine/box/types";
+
+function box(overrides: Partial<BoxModule> = {}): BoxModule {
+  return {
+    id: "box-1",
+    nome: "Módulo",
+    tipo: "inferior",
+    parede: "A",
+    largura: 800,
+    altura: 720,
+    profundidade: 550,
+    caixa: { cor: "Madeirado", espessura: 15 },
+    raiz: vaoVazio("r"),
+    portas: [],
+    temFundo: false,
+    puxador: "haste",
+    ...overrides,
+  };
+}
 
 const alturas: AlturasFaixas = {
   alturaRodape: 100,
@@ -82,5 +103,32 @@ describe("retanguloParaPx", () => {
   it("altura em px é a altura em mm multiplicada pela escala", () => {
     const r = retanguloParaPx(0, 200, 50, 300, layout);
     expect(r.h).toBeCloseTo(300 * 0.2, 6);
+  });
+});
+
+describe("retangulosDosItens", () => {
+  it("deriva Y da faixa 'inferior' via derivarY (alturaRodape) e w/h do próprio box", () => {
+    const b = box({ id: "b1", largura: 800, altura: 720 });
+    const item: ModuloOrcamento = { origem: "custom_box", box: b };
+    const itens: ItemDoConjunto[] = [{ item, posicao: { itemId: "b1", x: 300, faixa: "inferior" } }];
+
+    const [d] = retangulosDosItens(itens, alturas);
+
+    expect(d.rect).toEqual({ x: 300, y: alturas.alturaRodape, w: 800, h: 720 });
+  });
+
+  it("deriva Y da faixa 'torre' como alturaRodape (mesma origem no chão, invariante A-08)", () => {
+    const b = box({ id: "b2", largura: 600, altura: 2400 });
+    const item: ModuloOrcamento = { origem: "custom_box", box: b };
+    const itens: ItemDoConjunto[] = [{ item, posicao: { itemId: "b2", x: 0, faixa: "torre" } }];
+
+    const [d] = retangulosDosItens(itens, alturas);
+
+    expect(d.rect.y).toBe(alturas.alturaRodape);
+    expect(d.rect).toEqual({ x: 0, y: alturas.alturaRodape, w: 600, h: 2400 });
+  });
+
+  it("devolve lista vazia para lista de itens vazia (nenhum item a resolver)", () => {
+    expect(retangulosDosItens([], alturas)).toEqual([]);
   });
 });

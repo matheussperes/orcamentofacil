@@ -1,6 +1,9 @@
 "use client";
 
 import type { AlturasFaixas, ElementoParede, Faixa, Parede } from "@/lib/engine/parede";
+import { derivarY } from "@/lib/engine/parede";
+import type { ItemDoConjunto } from "@/app/components/BoxCanvas";
+import { alturaDoItem, larguraDoItem, nomeDoItem } from "@/lib/orcamento";
 
 // Task 13.2a — elevação 2D da parede: régua de largura + as 4 faixas
 // (inferior/bancada/aéreo/torre) + elementos de parede (janela/porta/tomada/
@@ -35,6 +38,26 @@ export function bandasFaixas(alturas: AlturasFaixas): FaixaBanda[] {
     { faixa: "bancada", y0: alturas.alturaBancada, y1: alturas.alturaInstalacaoAereo },
     { faixa: "aereo", y0: alturas.alturaInstalacaoAereo, y1: alturas.peDireito },
   ];
+}
+
+export interface ItemDesenhado {
+  item: ItemDoConjunto;
+  rect: { x: number; y: number; w: number; h: number }; // em mm, coords de DADOS
+}
+
+/** Geometria pura dos módulos posicionados (`parede.itens`), mesma fonte de
+ * verdade do resto do motor (`derivarY`/`larguraDoItem`/`alturaDoItem`) — sem
+ * fórmula nova, só empacota o retângulo em mm pra `retanguloParaPx` desenhar. */
+export function retangulosDosItens(itens: ItemDoConjunto[], alturas: AlturasFaixas): ItemDesenhado[] {
+  return itens.map((it) => ({
+    item: it,
+    rect: {
+      x: it.posicao.x,
+      y: derivarY(it.posicao.faixa, alturas),
+      w: larguraDoItem(it.item),
+      h: alturaDoItem(it.item),
+    },
+  }));
 }
 
 export interface LayoutElevacao {
@@ -126,6 +149,10 @@ const CINZA_0 = "#FFFFFF";
 export interface ElevacaoParedeProps {
   parede: Parede;
   alturas: AlturasFaixas;
+  /** Task 2.24-2.26 — módulos/placas já posicionados na parede (mesma
+   * derivação `itensDoConjunto` que alimenta o `BoxCanvas` modo conjunto em
+   * AmbientesLab.tsx, não recalculada aqui). */
+  itens: ItemDoConjunto[];
   /** Task 2.7-2.11 (front) — clicar num elemento desenhado entra no mesmo
    * modo de edição inline do botão de lápis na lista (convergem no mesmo
    * estado, ver AmbientesLab.tsx). Opcional: sem handler, o elemento
@@ -133,7 +160,7 @@ export interface ElevacaoParedeProps {
   onClicarElemento?: (elemento: ElementoParede, indice: number) => void;
 }
 
-export function ElevacaoParede({ parede, alturas, onClicarElemento }: ElevacaoParedeProps) {
+export function ElevacaoParede({ parede, alturas, itens, onClicarElemento }: ElevacaoParedeProps) {
   const layout = layoutElevacao(parede, alturas, AREA_W, AREA_H);
   const x0 = MARGIN_LEFT + (AREA_W - layout.larguraPx) / 2;
   const y0 = MARGIN_TOP + (AREA_H - layout.alturaPx); // alinhado ao chão
@@ -154,7 +181,7 @@ export function ElevacaoParede({ parede, alturas, onClicarElemento }: ElevacaoPa
       viewBox={`0 0 ${SVG_W} ${SVG_H}`}
       className="w-full max-w-full"
       role="img"
-      aria-label="Elevação da parede com faixas e elementos"
+      aria-label="Elevação da parede com faixas, módulos posicionados e elementos"
     >
       {/* Régua de largura (topo) */}
       <line x1={x0} y1={MARGIN_TOP - 14} x2={x0 + layout.larguraPx} y2={MARGIN_TOP - 14} stroke={CINZA_400} />
@@ -242,6 +269,75 @@ export function ElevacaoParede({ parede, alturas, onClicarElemento }: ElevacaoPa
           {ROTULO_FAIXA.torre}
         </text>
       </g>
+
+      {/* Módulos posicionados (parede.itens): torre desenhada PRIMEIRO (para
+          trás na ordem de pintura SVG) — ocupa fisicamente o mesmo X que
+          módulos das outras 3 faixas podem ocupar (Modelo-de-Dominio A-09) —
+          com estilo tracejado/discreto sinalizando "estrutura de fundo".
+          Módulos não-torre desenhados depois, por cima, com retângulo cheio
+          e borda mais forte. */}
+      {retangulosDosItens(itens, alturas)
+        .filter((d) => d.item.posicao.faixa === "torre")
+        .map((d) => {
+          const rect = retanguloParaPx(d.rect.x, d.rect.y, d.rect.w, d.rect.h, layout);
+          const svgY = y0 + rect.y;
+          return (
+            <g key={`torre-${d.item.posicao.itemId}`}>
+              <rect
+                x={x0 + rect.x}
+                y={svgY}
+                width={rect.w}
+                height={rect.h}
+                fill={CINZA_50}
+                fillOpacity={0.5}
+                stroke={CINZA_400}
+                strokeDasharray="2 2"
+              />
+              {rect.w > 30 && rect.h > 14 && (
+                <text
+                  x={x0 + rect.x + rect.w / 2}
+                  y={svgY + rect.h / 2 + 4}
+                  textAnchor="middle"
+                  fontSize={11}
+                  fill={CINZA_900}
+                >
+                  {nomeDoItem(d.item.item)}
+                </text>
+              )}
+            </g>
+          );
+        })}
+
+      {retangulosDosItens(itens, alturas)
+        .filter((d) => d.item.posicao.faixa !== "torre")
+        .map((d) => {
+          const rect = retanguloParaPx(d.rect.x, d.rect.y, d.rect.w, d.rect.h, layout);
+          const svgY = y0 + rect.y;
+          return (
+            <g key={`modulo-${d.item.posicao.itemId}`}>
+              <rect
+                x={x0 + rect.x}
+                y={svgY}
+                width={rect.w}
+                height={rect.h}
+                fill={CINZA_0}
+                stroke={CINZA_400}
+                strokeWidth={1.5}
+              />
+              {rect.w > 30 && rect.h > 14 && (
+                <text
+                  x={x0 + rect.x + rect.w / 2}
+                  y={svgY + rect.h / 2 + 4}
+                  textAnchor="middle"
+                  fontSize={11}
+                  fill={CINZA_900}
+                >
+                  {nomeDoItem(d.item.item)}
+                </text>
+              )}
+            </g>
+          );
+        })}
 
       {/* Elementos de parede: retângulo técnico (tracejado) + rótulo. Sem
           paleta por tipo — Design System não define cores por categoria de
