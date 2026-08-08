@@ -38,6 +38,20 @@
   (`admin`/`vendedor`/`projetista`), sem granularidade — um vendedor pode
   editar CNPJ/endereço/padrões financeiros da empresa. Achado na Task 13.7a.
 
+### Gaps de lógica/design registrados, sem task própria ainda
+
+- `lib/linha-proposta/carregar.ts::criarLinhaPropostaDefault`: cria uma única
+  Linha de Proposta default cobrindo TODOS os ambientes do orçamento, titulada
+  com o nome do primeiro ambiente encontrado — simplificação pré-V2.1 nunca
+  atualizada para suportar N ambientes (Lote 0). Achado incidental durante a
+  Task 2.32 (2026-08-08) — a função `ambientesDaLinha` (nova, Task 2.32) corrige
+  a exibição do vínculo, não a geração, mas a geração segue criando apenas uma
+  linha de proposta bem fora da intenção da tarefa (em um projeto com 3 ambientes,
+  usuário vê "Ambiente: Quarto, Cozinha, Banheiro" — esperado é ter linhas de
+  proposta por ambiente, ou ao menos permitir split simples). Candidato a task
+  futura, decisão de produto pendente se quer N linhas por padrão ou 1 linha
+  compartilhada (como hoje).
+
 ### Gaps de rótulo/UI registrados, sem task própria ainda
 
 - Mensagem de validação Tier 1/2 (elementos de parede, validação de posicionamento)
@@ -199,7 +213,7 @@ Lote 1). Nenhuma task desta lista deve iniciar antes das Tasks do Lote 1
 | 2.27 | Cotas à direita na elevação: altura total da parede + altura de cada faixa | 🟡 LACUNA | 2.24–2.26, Lote 1 | frontend-engineer (web) | Sonnet | Modelo 11.5; PRD RF-27 |
 | 2.28–2.30 | Agrupamento comercial cross-faixa/parede (`LinhaProposta`) com afordância visual distinta do bloco físico (`Conjunto`) na mesma elevação; botão de tag de conjunto disponível também nos módulos superiores; garantir que os dois **nunca colapsem no mesmo botão** (2.30 é critério de aceite desta task, não task separada) | 🟡 LACUNA / 🔴 BLOQ (2.30) | 2.24–2.26, Lote 1 | frontend-engineer (web) | Sonnet | Modelo 3.3, 6; PRD RF-37, Q-3 |
 | 2.31 | Cancelar/reverter divisão de linha de proposta — item volta para a linha mãe | ✅ Completo | Lote 0, Lote 1 | frontend-engineer (web) | Sonnet | PRD RF-16 |
-| 2.32 | Subdividir dentro do ambiente mantendo o vínculo (quarto → cabeceira, penteadeira, gaveteiro, guarda-roupa, todos sob "Quarto") | 🟡 LACUNA | Lote 0, Lote 1 | frontend-engineer (web) | Sonnet | PRD RF-16 |
+| 2.32 | Subdividir dentro do ambiente mantendo o vínculo (quarto → cabeceira, penteadeira, gaveteiro, guarda-roupa, todos sob "Quarto") | ✅ Completo | Lote 0, Lote 1 | frontend-engineer (web) | Sonnet | PRD RF-16 |
 
 *Nota: item 2.2 (manter filtro por ambiente na listagem da biblioteca) já
 está bom hoje — sem task.*
@@ -220,8 +234,9 @@ está bom hoje — sem task.*
 - **Task 2.19–2.23** ✅ (2026-08-08) — Bloco "Personalizar módulo" no formulário de inserção em `components/ambientes/AmbientesLab.tsx`: 9 campos editáveis (largura/altura/profundidade, cor+espessura da caixa, cor+espessura das portas —ocultos para módulo sem `GrupoPortas`—, fundo sim/não, puxador), repopulados via `useEffect` a cada seleção de módulo (fallback de portas: `overridePortas ?? portas[0].material ?? caixa`). `adicionarItem()` usa largura editada no cálculo de vão/posicionamento. Spread não-mutativo de `BoxModule` sobre `preset.box` — preset da biblioteca nunca alterado. Motor não tocado (já suportava `overridePortas`). `code-auditor` APROVADO (1ª tentativa), `qa-engineer` APROVADO (1ª tentativa, 445/445 testes, não-mutação verificada por leitura de diff), `ux-auditor` APROVADO (1ª tentativa, checklist §15.4 completo, Impacto Visual Leve, confirmado com módulo com/sem porta). Impacto Visual: Leve.
 - **Task 2.14–2.17** ✅ (2026-08-08) — Seleção em cascata ambiente → faixa → módulo: dos 4 itens do documento-fonte, 2 já estavam implementados (2.16 "torre ocupa as três faixas" — Task 2.18-motor via `faixasCandidatas`; 2.17 "módulo inferior assenta sobre rodapé" — Task 0.4 via `derivarY`/invariante A-08), confirmados por teste existente sem reimplementação. Itens novos: 2.14 (cascata real — campo Módulo desabilitado até Faixa escolhida, reset de seleção de módulo ao trocar de faixa) em `AmbientesLab.tsx`, 2.15 (rótulo "Bancada" → "Meio" em `AmbientesLab.tsx` e `ElevacaoParede.tsx`, identificador `bancada` intocado). `code-auditor` APROVADO (1ª tentativa), `qa-engineer` APROVADO (1ª tentativa, 445/445 testes), `ux-auditor` APROVADO (1ª tentativa, checklist Design-System §15.4, Impacto Visual Leve, verificação real de DOM/interação — disabled/enabled, reset de cascata, guard-clause, rótulo "Meio" nos 3 pontos de uso). Achado incidental registrado: mensagem de validação Tier 1/2 ainda cita `"bancada"` — candidato a task futura de rename. Impacto Visual: Leve.
 - **Task 2.31** ✅ (2026-08-08) — Botão "Cancelar divisão" em `LinhaPropostaCard.tsx` (visível só na linha nascida de "Dividir linha"), reverte divisão devolvendo itens para a linha mãe. Rastro de origem efêmero (estado React `origemSplit` em `PropostaLab.tsx`, sem coluna new schema). Trata caso de linha mãe já excluída/mesclada sem quebrar a tela. Reutiliza `onAtualizarLinha`/`onExcluirLinha` já existentes. `code-auditor` APROVADO (1ª tentativa), `qa-engineer` APROVADO (1ª tentativa, 445/445 testes), `ux-auditor` APROVADO (1ª tentativa, fluxo completo automatizado: dividir → botão visível → cancelar → valor mãe idêntico). Impacto Visual: Leve.
+- **Task 2.32** ✅ (2026-08-08) — Função pura `ambientesDaLinha` em `lib/linha-proposta/ambientes.ts` (novo, 4 testes) deriva nomes dos ambientes cujas paredes contêm os itens de uma Linha de Proposta, a partir de `estadoInicial.ambientes` + `linha.itens` — sem schema novo, sem Server Action, sem rastreio persistido. Caption "Ambiente: {nome(s)}" exibida em `LinhaPropostaCard.tsx`, recalculada do estado atual em cada render — o vínculo nunca se perdeu nos dados (item→parede→ambiente), só nunca tinha sido exibido; por isso sobrevive a dividir/mesclar/renomear sem trabalho extra. `code-auditor` APROVADO (1ª tentativa), `qa-engineer` APROVADO (1ª tentativa, 449/449 testes), `ux-auditor` APROVADO (1ª tentativa, fluxo real de dividir e mesclar com Playwright validado; caso de mesclagem cross-ambiente coberto por teste unitário, harness mock com 1 ambiente). Achado incidental registrado (não corrigido, decisão de produto pendente): `lib/linha-proposta/carregar.ts` cria linha de proposta default cobrindo TODOS os ambientes, titulada com nome do primeiro — simplificação pré-V2.1 nunca atualizada para N ambientes. Impacto Visual: Leve.
 
-**Lote 2 — 15/~17 tasks concluídas** (2026-08-08)
+**Lote 2 — 16/~17 tasks concluídas** (2026-08-08)
 
 #### Lote 3 — Precisão do motor
 
