@@ -86,7 +86,7 @@ export function retanguloParaPx(
 
 const ROTULO_FAIXA: Record<Faixa, string> = {
   inferior: "Inferior",
-  bancada: "Bancada",
+  bancada: "Meio",
   aereo: "Aéreo",
   torre: "Torre",
 };

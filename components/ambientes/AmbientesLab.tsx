@@ -201,7 +201,7 @@ export function removerAlturaOverride(
 const FAIXAS: Faixa[] = ["inferior", "bancada", "aereo", "torre"];
 const ROTULO_FAIXA: Record<Faixa, string> = {
   inferior: "Inferior",
-  bancada: "Bancada",
+  bancada: "Meio",
   aereo: "Aéreo",
   torre: "Torre",
 };
@@ -431,7 +431,7 @@ export function AmbientesLab({
   const [elementoEditandoIndice, setElementoEditandoIndice] = useState<number | null>(null);
 
   const [presetSelecionado, setPresetSelecionado] = useState<string>("");
-  const [faixaSelecionada, setFaixaSelecionada] = useState<Faixa>("inferior");
+  const [faixaSelecionada, setFaixaSelecionada] = useState<Faixa | undefined>(undefined);
   // Task 2.18 (front) — entrada em VÃO até o vizinho, não X absoluto (Modelo
   // de Domínio 3.1.1). `vaoItem`/`refVaoItem` são só o valor digitado; o `x`
   // absoluto gravado em `ItemPosicionado` vem de `converterVaoParaX`.
@@ -482,7 +482,6 @@ export function AmbientesLab({
     seedPresetsPadrao();
     const lista = listarPresets();
     setPresets(lista);
-    if (lista[0]) setPresetSelecionado(lista[0].id);
     setCatalogo(carregarCatalogo());
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -759,16 +758,18 @@ export function AmbientesLab({
   // `parede.itens` (contrato: "orcamento.itens = módulos; parede.itens =
   // posições referenciando esses itemIds").
   function adicionarItem() {
+    if (!faixaSelecionada) return;
     if (!presetSelecionado) return;
     const preset = presets.find((p) => p.id === presetSelecionado);
     if (!preset) return;
+    const faixa = faixaSelecionada;
 
     const largura = larguraItem;
     // Item ainda não posicionado: `x` provisório "encostado na borda direita
     // da parede" — a convenção que `calcularVizinhos` documenta como a que
     // produz os vizinhos corretos pra entrada (Seção 3.1.1).
     const vizinhos = calcularVizinhos(parede, resolvedor, {
-      faixa: faixaSelecionada,
+      faixa,
       x: parede.largura - largura,
       largura,
     });
@@ -796,7 +797,7 @@ export function AmbientesLab({
     const posicao: ItemPosicionado = {
       itemId,
       x: resultado.x,
-      faixa: faixaSelecionada,
+      faixa,
       refEntrada: refVaoItem,
     };
 
@@ -1495,30 +1496,40 @@ export function AmbientesLab({
           <>
             <div className="mb-3 flex flex-wrap items-end gap-sm">
               <div>
-                <Label htmlFor="item-preset">Módulo</Label>
-                <Select value={presetSelecionado} onValueChange={setPresetSelecionado}>
-                  <SelectTrigger id="item-preset" className="w-48">
-                    <SelectValue />
+                <Label htmlFor="item-faixa">Faixa</Label>
+                <Select
+                  value={faixaSelecionada ?? ""}
+                  onValueChange={(v) => {
+                    setFaixaSelecionada(v as Faixa);
+                    setPresetSelecionado("");
+                  }}
+                >
+                  <SelectTrigger id="item-faixa" className="w-32">
+                    <SelectValue placeholder="Selecione a faixa" />
                   </SelectTrigger>
                   <SelectContent>
-                    {presets.map((p) => (
-                      <SelectItem key={p.id} value={p.id}>
-                        {p.nome}
+                    {FAIXAS.map((f) => (
+                      <SelectItem key={f} value={f}>
+                        {ROTULO_FAIXA[f]}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
               <div>
-                <Label htmlFor="item-faixa">Faixa</Label>
-                <Select value={faixaSelecionada} onValueChange={(v) => setFaixaSelecionada(v as Faixa)}>
-                  <SelectTrigger id="item-faixa" className="w-32">
-                    <SelectValue />
+                <Label htmlFor="item-preset">Módulo</Label>
+                <Select
+                  value={presetSelecionado}
+                  onValueChange={setPresetSelecionado}
+                  disabled={!faixaSelecionada}
+                >
+                  <SelectTrigger id="item-preset" className="w-48">
+                    <SelectValue placeholder="Selecione a faixa primeiro" />
                   </SelectTrigger>
                   <SelectContent>
-                    {FAIXAS.map((f) => (
-                      <SelectItem key={f} value={f}>
-                        {ROTULO_FAIXA[f]}
+                    {presets.map((p) => (
+                      <SelectItem key={p.id} value={p.id}>
+                        {p.nome}
                       </SelectItem>
                     ))}
                   </SelectContent>
