@@ -27,6 +27,9 @@ import { BoxCanvas, type ItemDoConjunto } from "@/app/components/BoxCanvas";
 import { ElevacaoParede } from "./ElevacaoParede";
 import { SeletorLista } from "./SeletorLista";
 import {
+  calcularVizinhos,
+  converterVaoParaX,
+  converterXParaVao,
   validarParedeTier1,
   validarParedeTier2,
   type AlturasFaixas,
@@ -34,6 +37,7 @@ import {
   type Faixa,
   type ItemPosicionado,
   type Parede,
+  type ReferenciaVao,
   type ResolvedorItens,
 } from "@/lib/engine/parede";
 import { aplicarOverrides, detectarConjuntos, type Conjunto, type OverrideJuncao } from "@/lib/engine/conjunto";
@@ -117,6 +121,13 @@ const ROTULO_REF_X: Record<ReferenciaX, string> = {
 const ROTULO_REF_Y: Record<ReferenciaY, string> = {
   chao: "Altura do chão",
   teto: "Distância do teto",
+};
+
+// Task 2.18 (front) — mesmo espírito de nomenclatura acima, mas para o vão
+// até o vizinho (Modelo de Domínio 3.1.1), não a distância até a parede.
+const ROTULO_REF_VAO: Record<ReferenciaVao, string> = {
+  esquerda: "Distância do vizinho à esquerda",
+  direita: "Distância do vizinho à direita",
 };
 
 /** Recalcula o valor EXIBIDO ao trocar refX/refY, preservando o canônico —
@@ -421,7 +432,12 @@ export function AmbientesLab({
 
   const [presetSelecionado, setPresetSelecionado] = useState<string>("");
   const [faixaSelecionada, setFaixaSelecionada] = useState<Faixa>("inferior");
-  const [xItem, setXItem] = useState(0);
+  // Task 2.18 (front) — entrada em VÃO até o vizinho, não X absoluto (Modelo
+  // de Domínio 3.1.1). `vaoItem`/`refVaoItem` são só o valor digitado; o `x`
+  // absoluto gravado em `ItemPosicionado` vem de `converterVaoParaX`.
+  const [vaoItem, setVaoItem] = useState(0);
+  const [refVaoItem, setRefVaoItem] = useState<ReferenciaVao>("esquerda");
+  const [erroVaoItem, setErroVaoItem] = useState<string | null>(null);
 
   // Task 13.2b — overrides do handle de junção.
   const [overrides, setOverrides] = useState<OverrideJuncao[]>(() => estadoInicial.overrides);
@@ -711,13 +727,35 @@ export function AmbientesLab({
     const preset = presets.find((p) => p.id === presetSelecionado);
     if (!preset) return;
 
+    const largura = preset.box.largura;
+    // Item ainda não posicionado: `x` provisório "encostado na borda direita
+    // da parede" — a convenção que `calcularVizinhos` documenta como a que
+    // produz os vizinhos corretos pra entrada (Seção 3.1.1).
+    const vizinhos = calcularVizinhos(parede, resolvedor, {
+      faixa: faixaSelecionada,
+      x: parede.largura - largura,
+      largura,
+    });
+    const resultado = converterVaoParaX(vaoItem, refVaoItem, largura, vizinhos);
+    if (!resultado.ok) {
+      setErroVaoItem(resultado.mensagem);
+      return;
+    }
+
     const itemId = novoItemId();
     const modulo: ModuloOrcamento = { origem: "custom_box", box: { ...preset.box, id: itemId } };
-    const posicao: ItemPosicionado = { itemId, x: xItem, faixa: faixaSelecionada };
+    const posicao: ItemPosicionado = {
+      itemId,
+      x: resultado.x,
+      faixa: faixaSelecionada,
+      refEntrada: refVaoItem,
+    };
 
     setModulos((ms) => [...ms, modulo]);
     setParede((p) => ({ ...p, itens: [...p.itens, posicao] }));
     setResultadoSalvar(null);
+    setVaoItem(0);
+    setErroVaoItem(null);
   }
   function removerItem(itemId: string) {
     setModulos((ms) => ms.filter((m) => idDoItem(m) !== itemId));
@@ -1435,19 +1473,37 @@ export function AmbientesLab({
                 </Select>
               </div>
               <div>
-                <Label htmlFor="item-x">X (mm)</Label>
+                <Label htmlFor="item-ref-vao">Referência</Label>
+                <Select value={refVaoItem} onValueChange={(v) => setRefVaoItem(v as ReferenciaVao)}>
+                  <SelectTrigger id="item-ref-vao" className="w-56">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="esquerda">{ROTULO_REF_VAO.esquerda}</SelectItem>
+                    <SelectItem value="direita">{ROTULO_REF_VAO.direita}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label htmlFor="item-vao">Vão (mm)</Label>
                 <Input
-                  id="item-x"
+                  id="item-vao"
                   type="number"
                   className="w-24"
-                  value={xItem}
-                  onChange={(e) => setXItem(numero(e.target.value))}
+                  value={vaoItem}
+                  onChange={(e) => setVaoItem(numero(e.target.value))}
                 />
               </div>
               <Button variant="primary" onClick={adicionarItem}>
                 Adicionar
               </Button>
             </div>
+
+            {erroVaoItem && (
+              <Alert variant="erro" className="mb-3">
+                <AlertDescription>{erroVaoItem}</AlertDescription>
+              </Alert>
+            )}
 
             {parede.itens.length === 0 ? (
               <p className="text-corpo-pequeno text-cinza-500">Nenhum item posicionado ainda.</p>
@@ -1458,7 +1514,8 @@ export function AmbientesLab({
                     <TableRow>
                       <TableHead>Item</TableHead>
                       <TableHead>Faixa</TableHead>
-                      <TableHead className="text-right">X</TableHead>
+                      <TableHead className="text-right">Vão esq.</TableHead>
+                      <TableHead className="text-right">Vão dir.</TableHead>
                       <TableHead className="text-right">Largura</TableHead>
                       <TableHead className="w-10" />
                     </TableRow>
@@ -1467,6 +1524,9 @@ export function AmbientesLab({
                     {parede.itens.map((pos) => {
                       const modulo = resolvedor.get(pos.itemId);
                       const severidade = itensComAviso.get(pos.itemId);
+                      // Recalculado a cada render a partir do `x` absoluto —
+                      // nunca lido de campo armazenado (Seção 3.1.1).
+                      const vao = converterXParaVao(parede, resolvedor, pos);
                       return (
                         <TableRow
                           key={pos.itemId}
@@ -1480,7 +1540,12 @@ export function AmbientesLab({
                         >
                           <TableCell>{nomeDoItem(pos.itemId)}</TableCell>
                           <TableCell>{ROTULO_FAIXA[pos.faixa]}</TableCell>
-                          <TableCell className="text-right tabular-nums">{pos.x}</TableCell>
+                          <TableCell className="text-right tabular-nums">
+                            {vao ? vao.esquerda : "—"}
+                          </TableCell>
+                          <TableCell className="text-right tabular-nums">
+                            {vao ? vao.direita : "—"}
+                          </TableCell>
                           <TableCell className="text-right tabular-nums">
                             {modulo ? larguraDoItem(modulo) : "—"}
                           </TableCell>
