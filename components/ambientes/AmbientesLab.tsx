@@ -1793,6 +1793,7 @@ export function AmbientesLab({
             <ElevacaoParede
               parede={parede}
               alturas={alturas}
+              itens={itensDoConjunto}
               onClicarElemento={(_, indice) => editarElemento(indice)}
             />
           </div>
