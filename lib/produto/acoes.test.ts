@@ -122,4 +122,32 @@ describe("validarDados — especificacao.texturaUrl (chapa)", () => {
     expect(resultado.ok).toBe(false);
     expect(supabaseMock.inserts).toHaveLength(0);
   });
+
+  // Achado security-auditor (Security-Decline-Payload tentativa 1): `trim()`
+  // só remove espaço nas pontas — o parser WHATWG remove controles C0
+  // (tab/LF/CR) em QUALQUER posição, então "htt\tps://" resolve para
+  // "https://" no navegador mesmo sem espaço nas pontas.
+  it("rejeita tab no meio do esquema (parser do navegador ignora o tab)", async () => {
+    const resultado = await criarProduto({
+      tipo: "chapa",
+      nome: "MDF Branco",
+      preco: 100,
+      especificacao: { cor: "Branco", espessura: 15, texturaUrl: "htt\tps://evil.com/x.png" },
+    });
+
+    expect(resultado.ok).toBe(false);
+    expect(supabaseMock.inserts).toHaveLength(0);
+  });
+
+  it("rejeita byte nulo (controle C0) antes do esquema", async () => {
+    const resultado = await criarProduto({
+      tipo: "chapa",
+      nome: "MDF Branco",
+      preco: 100,
+      especificacao: { cor: "Branco", espessura: 15, texturaUrl: "\u0000https://evil.com/x.png" },
+    });
+
+    expect(resultado.ok).toBe(false);
+    expect(supabaseMock.inserts).toHaveLength(0);
+  });
 });
