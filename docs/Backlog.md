@@ -241,11 +241,10 @@ está bom hoje — sem task.*
 #### Lote 3 — Precisão do motor
 
 *Independente e paralelo ao Lote 0 e aos demais lotes — **como regra geral**.
-Exceção pontual: a Task 3.1/3.3 (motor) não pode começar antes da Task 4.16
-(back) (coluna `espessura_serra_padrao_mm` no perfil) estar mesclada, mesmo
-que o Lote 3 inteiro seja puxado para frente do Lote 0. Essa dependência já
-está declarada na linha das duas tasks, nos dois sentidos — o "independente
-e paralelo" do parágrafo acima não a anula.*
+Exceção pontual (agora resolvida): a Task 3.1/3.3 (motor) dependia da Task 4.16
+(back) (coluna `espessura_serra_padrao_mm` no perfil), que foi mesclada em 2026-08-11. A dependência já
+estava declarada na linha das duas tasks, nos dois sentidos — **a Task 3.1/3.3
+está agora desbloqueada e pode começar a qualquer momento**.*
 
 | Task | O que é | Tag | Depende de | Executor | Modelo | Referências |
 |---|---|---|---|---|---|---|
@@ -330,7 +329,7 @@ essencial e funcionando — sem task.*
       disparar a exclusão — texto exato é nota para o `product-designer`
 - [ ] `security-auditor` revisou a task antes do merge — pré-requisito de
       execução, não follow-up
-| 4.16 (back) | Migration: coluna `espessura_serra_padrao_mm numeric` em `organizacao` (default `3`, `0` é valor válido) + atualizar tipos/leitura do perfil. **Pré-requisito da Task 3.1/3.3 (motor)** — o bin-packing melhorado lê este campo como kerf | 🟡 LACUNA | nenhuma | backend-engineer | Sonnet | Modelo 8.2 (A-13, A-14); PRD RF-02, RF-34, risco 12 |
+| 4.16 (back) | Migration: coluna `espessura_serra_padrao_mm numeric` em `organizacao` (default `3`, `0` é valor válido) + atualizar tipos/leitura do perfil. **Pré-requisito da Task 3.1/3.3 (motor)** — o bin-packing melhorado lê este campo como kerf | ✅ Completo | nenhuma | backend-engineer | Sonnet | Modelo 8.2 (A-13, A-14); PRD RF-02, RF-34, risco 12 |
 | 4.16 (front) | Campo "Espessura de serra (kerf)" no formulário de `/perfil`, editável, com aviso de retroatividade: mudar o valor altera o plano de corte de todo orçamento **não congelado** (mesma disciplina das alturas de faixa) | 🟡 LACUNA | 4.16 (back) | frontend-engineer (web) | Sonnet | Modelo 8.2; PRD RF-02, RF-34, risco 12 |
 
 **Task 4.15 desbloqueada — Q-17 respondida em 2026-08-03** (`docs/PRD.md`
@@ -345,6 +344,9 @@ não no banco: **não** se cria política de `delete` em `organizacao` para
 única operação destrutiva multi-tabela do produto e a única que toca
 `auth.users`/Storage fora do padrão RLS do resto do schema. A task está
 pronta para execução.
+
+**Histórico de execução:**
+- **Task 4.16 (back)** ✅ (2026-08-11) — Migration `organizacao.espessura_serra_padrao_mm numeric not null default 3` (check `>= 0`), leitura em `lib/perfil/carregar.ts` (fallback 3 via nullish coalescing), escrita em `lib/organizacao/salvar.ts`. Round-trip mínimo em `components/perfil/PerfilLab.tsx`/`PerfilMock.tsx`, sem UI nova (campo de formulário é a Task 4.16 (front), separada). `code-auditor` APROVADO (1ª tentativa), `qa-engineer` APROVADO (1ª tentativa, 452/452 testes, default/valor customizado/zero-como-válido). Sem `security-auditor` (sem RLS nova). Sem impacto visual (backend puro). **Migration real NÃO aplicada no Supabase** — mesmo bloqueio de permissão de conta CLI já documentado; pendente do operador via MCP/Dashboard. **Desbloqueia a Task 3.1/3.3 (motor), Lote 3.**
 
 #### Lote 5 — Limpeza visual
 
@@ -494,7 +496,7 @@ dentro das tasks reais da Stage 13. Detalhe completo, se precisar, no
 | Lote 0 — Fundação de dados | Ambiente/Parede como entidade real (N×N), alturas por parede, snapshot congelado (dividido em 0.7a/0.7b) | Bloqueia Lote 1 e 2 | 5 | 4 de 6 ✅ (0.1–0.3, 0.4, 0.5a, 0.7a mesclados) — 0.5b/0.7b com código pronto em worktree, gate interrompido por limite de gasto (ver `docs/STATUS.md` §1) |
 | Lote 1 — Confiança e estado | Cache, URL de aba, paridade financeiro↔proposta, reabrir orçamento | Depende do Lote 0; bloqueia Lote 2 — exceção: Task 1.9 (back) também depende da Task 5.10 (back), Lote 5 (ver nota de dependência cruzada no cabeçalho do Lote 1) | 6 | ⏱️ Planejado |
 | Lote 2 — Lacunas funcionais | Criação de módulo, elementos de parede, posicionamento por vão, elevação com módulos, agrupamento comercial | Depende do Lote 0 **e** do Lote 1 fecharem, em sequência | 19 | ⏱️ Planejado |
-| Lote 3 — Precisão do motor | Bin-packing melhorado (kerf + guilhotina + meta-heurística), `ModuleViewer` + textura real (catálogo-back/front), contagem de cortes, fita por cor, tampo 3 modelos | Paralelo, independente **como regra geral** — exceção: Task 3.1/3.3 (motor) depende de 4.16 (back), Lote 4 | 16 | ⏱️ Planejado (exceção: 3.1/3.3 (motor) aguarda 4.16) |
+| Lote 3 — Precisão do motor | Bin-packing melhorado (kerf + guilhotina + meta-heurística), `ModuleViewer` + textura real (catálogo-back/front), contagem de cortes, fita por cor, tampo 3 modelos | Paralelo, independente **como regra geral** — exceção: Task 3.1/3.3 (motor) depende de 4.16 (back), Lote 4 — **agora desbloqueada (4.16 mesclada)** | 16 | ⏱️ Planejado |
 | Lote 4 — Cadastros e identidade | Catálogo unificado, upload de logo/foto, segurança de conta, kerf do perfil | Paralelo, independente | 13 | ⏱️ Planejado |
 | Lote 5 — Limpeza visual | Shell v3 em Biblioteca/Editor, vocabulário, dashboard, etapa de esteira | Paralelo, independente — exceção: Task 5.10 (back) depende da Task 0.7b, Lote 0 (ver nota de dependência cruzada no cabeçalho do Lote 5) | 5 | ⏱️ Planejado (exceção: 5.10 (back) aguarda 0.7b) |
 | **Total** | | | **65** | |

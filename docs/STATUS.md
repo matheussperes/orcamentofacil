@@ -1,6 +1,6 @@
 # Status Atual
 
-> Atualizado em 2026-08-08 (Task 2.24-2.26 fechada). Este arquivo é o ponto de partida de qualquer
+> Atualizado em 2026-08-11 (Task 4.16-back mesclada — Lote 4 iniciado). Este arquivo é o ponto de partida de qualquer
 > sessão nova. Histórico task-a-task (auditorias, tentativas, decisões)
 > não vive mais aqui — está no `git log` e nos commits de merge de cada
 > branch `feature/<task-id>`. Este arquivo mantém só o essencial.
@@ -18,7 +18,12 @@ Fase D (Pré-Lançamento) — Lote 0 (Fundação de dados) ✅ fechado:
 
 **Lote 1 (Confiança e estado) ✅ fechado por completo** — 7/7 tasks concluídas (5/5 back + 2/2 front).
 
-**Lote 2 (Lacunas funcionais) ✅ fechado por completo — 17/17 tasks concluídas**:
+**Lote 2 (Lacunas funcionais) ✅ fechado por completo — 17/17 tasks concluídas**.
+
+**Lote 4 — Primeira task mesclada (1/13)**:
+- **Task 4.16 (back)** ✅ (2026-08-11) — Coluna `espessura_serra_padrao_mm numeric` em `organizacao` (default `3`, check `>= 0`), leitura/escrita no perfil. Round-trip mínimo, sem UI. `code-auditor` APROVADO (1ª), `qa-engineer` APROVADO (1ª, 452/452 testes). Sem impacto visual. Migration real não aplicada em Supabase (bloqueio CLI); pendente operador. **Desbloqueia a Task 3.1/3.3 (motor), Lote 3 — bin-packing melhorado já pode começar.**
+
+Histórico das demais tarefas do Lote 2 (17/17 concluídas):
 - **Task 2.1** ✅ (2026-08-06) — Investigação: caminho de "criar módulo do zero" já existe e funciona ponta a ponta (`/biblioteca` → botão "Novo módulo" → `/modulo` sem `?preset=` → salvar chama `criarGabarito` já existente → volta e aparece na listagem). Sidebar deliberadamente exclui `/modulo` do menu principal (Task 13.3b). Sem mudança de código necessária. Nenhuma branch de merge.
 - **Task 2.1 (dedup)** ✅ (2026-08-06) — `deduplicarPromovidos()` em `lib/gabarito/listar.ts`: filtro derivado em memória escondendo gabaritosglobais promovidos da própria organização. 3 testes novos em `lib/gabarito/listar.test.ts`. `code-auditor` APROVADO (veredito em arquivo, build/lint/typecheck limpos), `qa-engineer` APROVADO (veredito em arquivo, 370 testes, 3 critérios). Sem RLS nova. Merge `--no-ff` em `main`.
 - **Task 2.13** ✅ (2026-08-06) — Rename "Preset" → "Módulo" em toda a UI. Identificadores de código mantidos intactos. `code-auditor` APROVADO, `qa-engineer` APROVADO. Impacto Visual: Nenhum.
