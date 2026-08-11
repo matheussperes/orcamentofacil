@@ -36,6 +36,23 @@ export interface ResultadoProduto {
   produto?: ProdutoRow;
 }
 
+// [Q-14] Task 3.13 (catálogo-back) — anti-hotlink de `texturaUrl`: só aceita
+// caminho relativo dentro do bucket `texturas`, nunca URL absoluta/externa.
+// Remove controles C0 (0x00-0x20, inclusive tab/LF/CR) e 0x7f em QUALQUER
+// posição da string antes de comparar — o parser WHATWG do navegador remove
+// esses caracteres em qualquer lugar (não só nas pontas), então
+// "htt\tps://evil.com" ou "\u0000https://evil.com" resolvem para uma URL
+// absoluta mesmo sem `trim()` os detectar (achado security-auditor, Security-
+// Decline-Payload tentativa 1). Bloqueia qualquer esquema de URL (`http:`,
+// `https:`, `javascript:`, ...) e protocolo-relativo (`//`).
+function ehCaminhoRelativoValido(valor: string): boolean {
+  const normalizado = valor.replace(/[\u0000-\u0020\u007f]/g, "").toLowerCase();
+  if (!normalizado) return true;
+  if (normalizado.startsWith("//")) return false;
+  if (/^[a-z][a-z0-9+.-]*:/.test(normalizado)) return false;
+  return true;
+}
+
 function validarDados(dados: DadosProduto): string | null {
   if (!dados.nome.trim()) {
     return "Informe o nome do produto.";
@@ -48,6 +65,12 @@ function validarDados(dados: DadosProduto): string | null {
     const espessura = Number(dados.especificacao.espessura ?? 0);
     if (!cor || espessura <= 0) {
       return "Informe a cor e a espessura da chapa.";
+    }
+    const texturaUrl = dados.especificacao.texturaUrl;
+    if (texturaUrl !== undefined && texturaUrl !== null) {
+      if (typeof texturaUrl !== "string" || !ehCaminhoRelativoValido(texturaUrl)) {
+        return "Textura inválida: use apenas um caminho relativo dentro do bucket, nunca uma URL externa.";
+      }
     }
   }
   if (dados.tipo === "ferragem") {
