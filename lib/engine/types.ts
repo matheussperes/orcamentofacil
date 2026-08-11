@@ -164,6 +164,16 @@ export interface GrupoMdf {
   chapas: number;
 }
 
+// Fita de borda agregada por cor (Task 3.5) — cada cor de fita é um produto
+// distinto no catálogo, por isso a saída discrimina também por
+// `larguraFitaMm` quando a mesma cor cruza mais de uma largura (mesma
+// espessura final -> larguras diferentes de fita não se somam no mesmo SKU).
+export interface GrupoFita {
+  cor: string;
+  larguraFitaMm: number;
+  metros: number;
+}
+
 // Elemento contínuo agregado por parede (etapa global — doc 04): tampo/rodapé
 // que atravessam vários módulos formando uma única peça.
 export interface PecaLinear {
@@ -191,6 +201,7 @@ export interface EngineOutput {
   consolidado: {
     mdf: GrupoMdf[];
     fitaTotalM: number;
+    fitaPorCor: GrupoFita[];
     ferragens: ItemQtd[];
   };
   warnings: EngineWarning[];
