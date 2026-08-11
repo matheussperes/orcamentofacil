@@ -6,7 +6,7 @@
 // removido nesta task, Seção 3.6).
 
 import type { BoxMaterial } from "../box/types";
-import type { Engrossamento } from "../placa/types";
+import type { Engrossamento, LadoPlaca, NivelEngrossamento } from "../placa/types";
 
 export type TipoElementoContinuo = "tampo" | "rodape" | "tamponamento" | "fechamento";
 
@@ -97,3 +97,68 @@ export interface ModuloResolvido {
 export type AlvoResolvido =
   | { itens: ModuloResolvido[] }
   | { moduloExtremidade: ModuloResolvido };
+
+// ---- Tampo: modelo antes da espessura (Modelo de Domínio, Seção 3.4.1; Task 3.10–3.11) ----
+
+export type ModeloTampo = "simples" | "engrossado" | "dobrado";
+
+/**
+ * `modelo` é 100% derivável de `ElementoContinuo.engrossamento` (a tabela de
+ * compatibilidade da Seção 3.4.1 é uma bijeção: undefined→simples,
+ * "engrossada"→engrossado, "dobrada"→dobrado). Decisão de design: em vez de
+ * guardar `modelo` como um SEGUNDO campo opcional em `ElementoContinuo` (que
+ * poderia divergir de `engrossamento` por engano — só "por convenção" — e
+ * quebraria os testes/campo já existentes se `engrossamento` mudasse de
+ * forma), `modelo` é sempre uma PROJEÇÃO pura de `engrossamento`, nunca
+ * armazenado à parte. Isso torna a divergência impossível pelo próprio tipo
+ * (não existe um segundo valor pra divergir) e resolve de graça "nunca existe
+ * estado sem modelo escolhido": a projeção sempre devolve um dos 3 literais,
+ * nunca `undefined`. Ver `modeloDoTampo` em `explode.ts`.
+ */
+export function modeloDoTampo(engrossamento: Engrossamento | undefined): ModeloTampo {
+  if (!engrossamento) return "simples";
+  return engrossamento.tecnica === "engrossada" ? "engrossado" : "dobrado";
+}
+
+// ConfigTampo (Seção 3.4.1) — shape de referência da spec: modelo escolhido
+// ANTES da espessura, uma árvore discriminada por `modelo`. Usado pela
+// validação de espessura por modelo (`validarEspessuraTampo`/
+// `espessuraFinalDoConfigTampo` em explode.ts) — não substitui
+// `ElementoContinuo.engrossamento` (que continua sendo o formato persistido,
+// ver `modeloDoTampo` acima).
+export type ConfigTampo =
+  | { modelo: "simples"; espessura: 15 | 18 | 25 }
+  | {
+      modelo: "engrossado";
+      espessuraBase: 15 | 18;
+      nivel: NivelEngrossamento;
+      lados: LadoPlaca[];
+      larguraSarrafo?: number;
+    }
+  | { modelo: "dobrado"; espessuraBase: 15 | 18; nivel: NivelEngrossamento };
+
+// Espessuras finais válidas por modelo (Seção 3.4.1, constraint — não
+// sugestão). 6mm nunca aparece (regra própria, ver `ESPESSURA_6MM_EM_TAMPO`
+// em `validarEspessuraTampo`); 25mm só existe em "simples"; 30/36/45/54/60mm
+// nunca aparecem em "simples".
+export const ESPESSURAS_VALIDAS_POR_MODELO_TAMPO: Record<ModeloTampo, readonly number[]> = {
+  simples: [15, 18, 25],
+  engrossado: [30, 36, 45, 54, 60], // base15→30/45/60 ∪ base18→36/54 (nível 3 base18 não existe, Seção 2.1)
+  dobrado: [30, 36, 45, 54, 60],
+};
+
+export type CodigoErroTampo = "ESPESSURA_INVALIDA_PARA_MODELO" | "ESPESSURA_6MM_EM_TAMPO";
+
+export type ResultadoValidacaoEspessuraTampo =
+  | { ok: true }
+  | { ok: false; codigo: CodigoErroTampo; mensagem: string };
+
+// Estado mínimo do seletor de UI (modelo → espessura): `espessuraFinal`
+// ausente = ainda não escolhida (ou foi limpa por `trocarModeloTampo`, ver
+// explode.ts). Não é `ConfigTampo` porque o seletor pode estar "no meio do
+// caminho" (modelo já escolhido, espessura ainda não) — `ConfigTampo` acima
+// descreve só o estado FINAL/válido.
+export interface SelecaoTampo {
+  modelo: ModeloTampo;
+  espessuraFinal?: number;
+}

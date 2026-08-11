@@ -4,9 +4,14 @@ import type { Placa } from "../placa/types";
 import { explodePlaca } from "../placa/explode";
 import {
   POSICOES_VALIDAS,
+  ESPESSURAS_VALIDAS_POR_MODELO_TAMPO,
   type AlvoResolvido,
+  type ConfigTampo,
   type ElementoContinuo,
+  type ModeloTampo,
   type ModuloResolvido,
+  type ResultadoValidacaoEspessuraTampo,
+  type SelecaoTampo,
 } from "./types";
 
 // Explosão geométrica do Elemento Contínuo unificado (Modelo de Domínio,
@@ -64,6 +69,60 @@ export function validarPosicao(elemento: ElementoContinuo): void {
   }
 }
 
+// ---- Tampo: validação modelo × espessura (Seção 3.4.1) ----
+
+/**
+ * Valida a espessura FINAL escolhida contra a tabela de espessuras válidas do
+ * modelo (Seção 3.4.1). Mesmo padrão "Resultado" de `converterVaoParaX`
+ * (lib/engine/parede/posicionamento.ts) — `{ ok, codigo, mensagem }` — porque
+ * é validação de UM valor pontual pra UI reportar em tempo real (diferente de
+ * `EngineWarning[]`, que agrega vários problemas de um cálculo completo, ex.
+ * `TAMPO_SOBRE_PEDRA`). 6mm é checado ANTES da tabela: é rejeitado com um
+ * código próprio (`ESPESSURA_6MM_EM_TAMPO`) mesmo que já esteja implicitamente
+ * fora de qualquer tabela — os 3 exemplos de rejeição da spec pedem o código
+ * específico, não o genérico.
+ */
+export function validarEspessuraTampo(modelo: ModeloTampo, espessuraFinal: number): ResultadoValidacaoEspessuraTampo {
+  if (espessuraFinal === 6) {
+    return {
+      ok: false,
+      codigo: "ESPESSURA_6MM_EM_TAMPO",
+      mensagem: `Tampo não aceita espessura de 6mm em nenhum modelo (recebido: modelo "${modelo}").`,
+    };
+  }
+  if (!ESPESSURAS_VALIDAS_POR_MODELO_TAMPO[modelo].includes(espessuraFinal)) {
+    return {
+      ok: false,
+      codigo: "ESPESSURA_INVALIDA_PARA_MODELO",
+      mensagem:
+        `Espessura ${espessuraFinal}mm não é válida para o modelo "${modelo}" ` +
+        `(válidas: ${ESPESSURAS_VALIDAS_POR_MODELO_TAMPO[modelo].join("/")}mm).`,
+    };
+  }
+  return { ok: true };
+}
+
+/** `espessuraFinal = espessura` (simples) ou `espessuraBase × (1 + nivel)` (engrossado/dobrado — Seção 2.1). */
+export function espessuraFinalDoConfigTampo(config: ConfigTampo): number {
+  return config.modelo === "simples" ? config.espessura : config.espessuraBase * (1 + config.nivel);
+}
+
+/** Valida um `ConfigTampo` completo (deriva a espessura final e reusa `validarEspessuraTampo`). */
+export function validarConfigTampo(config: ConfigTampo): ResultadoValidacaoEspessuraTampo {
+  return validarEspessuraTampo(config.modelo, espessuraFinalDoConfigTampo(config));
+}
+
+/**
+ * Trocar o modelo com uma espessura já escolhida (Seção 3.4.1, regra 4):
+ * se a espessura atual não for válida no modelo novo, LIMPA o campo (força
+ * nova escolha) em vez de coagir pro valor mais próximo válido.
+ */
+export function trocarModeloTampo(atual: SelecaoTampo, modeloNovo: ModeloTampo): SelecaoTampo {
+  const continuaValida =
+    atual.espessuraFinal !== undefined && validarEspessuraTampo(modeloNovo, atual.espessuraFinal).ok;
+  return { modelo: modeloNovo, espessuraFinal: continuaValida ? atual.espessuraFinal : undefined };
+}
+
 function larguraTotal(itens: ModuloResolvido[]): number {
   return itens.reduce((s, i) => s + i.largura, 0);
 }
@@ -119,7 +178,16 @@ function explodeTampo(elemento: ElementoContinuo, itens: ModuloResolvido[]): Ele
   };
 
   const r = explodePlaca(placa);
-  return { pecas: r.pecas, ferragens: [], areaMdfM2: r.areaMdfM2, fitaM: r.fitaM };
+  // Fita de borda do Tampo (Seção 3.4.1/BOM simples + confirmado nos 3
+  // exemplos trabalhados): 3 bordas APARENTES — frente + duas laterais, nunca
+  // a de trás (encosta na parede). Independe do modelo/técnica (Seção 2.1: "a
+  // técnica não muda a fita, quem manda é a espessura final") — os 3 exemplos
+  // (simples/engrossado/dobrado) do MESMO tampo 1800×610 dão o mesmo
+  // 3020mm/3,02m. `explodePlaca` não computa isso (fita por espessura final é
+  // regra de catálogo, fora do escopo dela — ver comentário lá); calculado
+  // aqui, no nível do Tampo, não por peça individual.
+  const fitaM = round4((largura + 2 * profundidade) / 1000);
+  return { pecas: r.pecas, ferragens: [], areaMdfM2: r.areaMdfM2, fitaM };
 }
 
 // ---- Rodapé (Seção 3.4) ----

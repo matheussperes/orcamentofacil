@@ -6,6 +6,10 @@ export {
   derivarDimensoesFechamento,
   derivarDimensoesTamponamento,
   explodeElementoContinuo,
+  validarEspessuraTampo,
+  espessuraFinalDoConfigTampo,
+  validarConfigTampo,
+  trocarModeloTampo,
 } from "./explode";
 export type {
   ElementoContinuoResult,
