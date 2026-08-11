@@ -36,6 +36,20 @@ export interface ResultadoProduto {
   produto?: ProdutoRow;
 }
 
+// [Q-14] Task 3.13 (catálogo-back) — anti-hotlink de `texturaUrl`: só aceita
+// caminho relativo dentro do bucket `texturas`, nunca URL absoluta/externa.
+// Normaliza (trim + lowercase) antes de comparar para não ser contornável com
+// variação de formatação (`HTTPS://`, espaço/tab antes do protocolo, etc.) —
+// bloqueia qualquer esquema de URL (`http:`, `https:`, `javascript:`, ...) e
+// protocolo-relativo (`//`).
+function ehCaminhoRelativoValido(valor: string): boolean {
+  const normalizado = valor.trim().toLowerCase();
+  if (!normalizado) return true;
+  if (normalizado.startsWith("//")) return false;
+  if (/^[a-z][a-z0-9+.-]*:/.test(normalizado)) return false;
+  return true;
+}
+
 function validarDados(dados: DadosProduto): string | null {
   if (!dados.nome.trim()) {
     return "Informe o nome do produto.";
@@ -48,6 +62,12 @@ function validarDados(dados: DadosProduto): string | null {
     const espessura = Number(dados.especificacao.espessura ?? 0);
     if (!cor || espessura <= 0) {
       return "Informe a cor e a espessura da chapa.";
+    }
+    const texturaUrl = dados.especificacao.texturaUrl;
+    if (texturaUrl !== undefined && texturaUrl !== null) {
+      if (typeof texturaUrl !== "string" || !ehCaminhoRelativoValido(texturaUrl)) {
+        return "Textura inválida: use apenas um caminho relativo dentro do bucket, nunca uma URL externa.";
+      }
     }
   }
   if (dados.tipo === "ferragem") {

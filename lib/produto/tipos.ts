@@ -4,7 +4,9 @@
 // `especificacao` por `tipo` documentado na migration de seed
 // (`supabase/migrations/20260727140000_seed_produtos_padrao.sql`), fonte da
 // verdade — NÃO inventar campos fora dela:
-//   - "chapa":     { cor: string; espessura: number }
+//   - "chapa":     { cor: string; espessura: number; texturaUrl?: string }
+//     (`texturaUrl` — Task 3.13 catálogo-back — caminho relativo no bucket
+//     `texturas`, ver `EspecificacaoChapa` abaixo)
 //   - "ferragem":  { codigo: string; unidade: string } — `codigo` precisa
 //     bater com um dos códigos fixos emitidos pelo motor de caixa
 //     (`lib/engine/box/explode.ts`), ver `CODIGOS_FERRAGEM_FIXOS` abaixo.
@@ -18,6 +20,11 @@ export type TipoProduto = "chapa" | "ferragem" | "fita" | "led" | "acessorio";
 export interface EspecificacaoChapa {
   cor: string;
   espessura: number;
+  /** [Q-14] Caminho relativo dentro do bucket `texturas` (Supabase Storage,
+   * supabase/migrations/20260811110000_storage_texturas.sql) — nunca URL
+   * absoluta/externa (validado em `lib/produto/acoes.ts::validarDados`, evita
+   * hotlink dentro do canvas do usuário). Ausente ⇒ cor sólida. */
+  texturaUrl?: string;
 }
 
 export interface EspecificacaoFerragem {
