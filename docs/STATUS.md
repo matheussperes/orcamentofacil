@@ -20,8 +20,11 @@ Fase D (Pré-Lançamento) — Lote 0 (Fundação de dados) ✅ fechado:
 
 **Lote 2 (Lacunas funcionais) ✅ fechado por completo — 17/17 tasks concluídas**.
 
+**Lote 3 — Primeira task mesclada (1/~14)**:
+- **Task 3.1/3.3 (motor)** ✅ (2026-08-11) — Bin-packing melhorado: guilhotina com lista de retângulos livres + simulated annealing (PRNG semeado, `MAX_ITERACOES=5000` fixo). Reescrito em `lib/engine/box/cutting.ts`. Kerf como parâmetro opcional em `GrupoChapas.meta?`, integração em Web Worker será na Task 3.1/3.3 (front). Todas as 7 invariantes V1–V7 (Modelo 8.5) com teste dedicado; 3 exemplos numéricos reproduzidos com valores exatos. `code-auditor` APROVADO (1ª real), `qa-engineer` APROVADO (1ª, 466 testes, verificação aritmética manual). **Desbloqueia Task 3.1/3.3 (front).**
+
 **Lote 4 — Primeira task mesclada (1/13)**:
-- **Task 4.16 (back)** ✅ (2026-08-11) — Coluna `espessura_serra_padrao_mm numeric` em `organizacao` (default `3`, check `>= 0`), leitura/escrita no perfil. Round-trip mínimo, sem UI. `code-auditor` APROVADO (1ª), `qa-engineer` APROVADO (1ª, 452/452 testes). Sem impacto visual. Migration real não aplicada em Supabase (bloqueio CLI); pendente operador. **Desbloqueia a Task 3.1/3.3 (motor), Lote 3 — bin-packing melhorado já pode começar.**
+- **Task 4.16 (back)** ✅ (2026-08-11) — Coluna `espessura_serra_padrao_mm numeric` em `organizacao` (default `3`, check `>= 0`), leitura/escrita no perfil. Round-trip mínimo, sem UI. `code-auditor` APROVADO (1ª), `qa-engineer` APROVADO (1ª, 452/452 testes). Sem impacto visual. Migration real não aplicada em Supabase (bloqueio CLI); pendente operador. **Desbloqueou a Task 3.1/3.3 (motor), Lote 3.**
 
 Histórico das demais tarefas do Lote 2 (17/17 concluídas):
 - **Task 2.1** ✅ (2026-08-06) — Investigação: caminho de "criar módulo do zero" já existe e funciona ponta a ponta (`/biblioteca` → botão "Novo módulo" → `/modulo` sem `?preset=` → salvar chama `criarGabarito` já existente → volta e aparece na listagem). Sidebar deliberadamente exclui `/modulo` do menu principal (Task 13.3b). Sem mudança de código necessária. Nenhuma branch de merge.
