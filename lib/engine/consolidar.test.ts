@@ -40,12 +40,22 @@ function modulo(pecas: Peca[]): ResultadoModulo {
 
 describe("consolidarResultados — chapas via bin-packing real", () => {
   it("conta 2 chapas (real) onde a fórmula de área antiga daria 1", () => {
-    // 2× peça 1400×950mm (área total 2,66 m² com perda 12% = 2,9792 m²):
-    // Math.ceil(2,9792 / 5,06) = 1 chapa pela fórmula de área antiga.
-    // Na chapa real (2750×1840mm), duas dessas peças NÃO cabem lado a lado
-    // (1400+1400 = 2800 > 2750) nem empilhadas (950+950 = 1900 > 1840) —
-    // o bin-packing real usa 2 chapas.
-    const mod = modulo([peca({ quantidade: 2, area_m2: 2.66 })]);
+    // 2× peça 1850×1000mm (área total 3,70 m² com perda 12% = 4,144 m²):
+    // Math.ceil(4,144 / 5,06) = 1 chapa pela fórmula de área antiga.
+    // Na chapa real (2750×1840mm) a peça só cabe numa orientação (1850
+    // largura × 1000 altura — rotacionada, 1000×1850, não cabe: 1850>1840):
+    // duas delas NÃO cabem lado a lado (1850+1850=3700>2750) nem empilhadas
+    // (1000+1000=2000>1840), em NENHUMA combinação de orientação — o
+    // bin-packing real (guilhotina + busca, Task 3.1/3.3) usa 2 chapas.
+    //
+    // Dimensões trocadas nesta rodada (Task 3.1/3.3-motor): as 1400×950mm
+    // originais deste teste NÃO forçam mais 2 chapas com o algoritmo novo —
+    // ele encontra uma combinação (uma peça rotacionada) que encaixa as
+    // duas numa chapa só, o que é a correção esperada (empacota melhor, não
+    // pior). 1850×1000mm é geometricamente impossível de unir em qualquer
+    // combinação de orientação, então continua provando a divergência com a
+    // fórmula de área independente de quão bom o algoritmo fique.
+    const mod = modulo([peca({ quantidade: 2, largura_mm: 1850, altura_mm: 1000, area_m2: 3.7 })]);
     const out = consolidarResultados([mod], [], 0.12);
 
     expect(out.mdf).toHaveLength(1);
@@ -59,22 +69,23 @@ describe("consolidarResultados — chapas via bin-packing real", () => {
     const tampo: PecaLinear = {
       tipo: "tampo",
       parede: "p1",
-      comprimento_mm: 1400,
-      largura_mm: 950,
+      comprimento_mm: 1850,
+      largura_mm: 1000,
       cor: "Branco TX",
       espessura_mm: 15,
-      area_m2: 1.33,
+      area_m2: 1.85,
       fita_m: 0,
       modulos: 1,
     };
-    const mod = modulo([peca({ area_m2: 1.33 })]);
+    const mod = modulo([peca({ largura_mm: 1850, altura_mm: 1000, area_m2: 1.85 })]);
     const out = consolidarResultados([mod], [tampo], 0.12);
 
     expect(out.mdf).toHaveLength(1);
     // Mesma divergência do teste anterior, agora com uma peça vinda de
-    // `globais`: 2 peças 1400×950 não cabem numa chapa só.
+    // `globais`: 2 peças 1850×1000 não cabem numa chapa só (mesmo raciocínio
+    // geométrico do teste acima).
     expect(out.mdf[0].chapas).toBe(2);
-    expect(out.mdf[0].area_m2).toBeCloseTo(2.66, 4);
+    expect(out.mdf[0].area_m2).toBeCloseTo(3.7, 4);
   });
 
   it("pecaLinearParaPeca converte tampo/rodapé com as dimensões trocadas (comprimento→largura_mm da Peca)", () => {
