@@ -29,6 +29,7 @@ export interface DadosOrganizacao {
   unidade: "mm" | "cm";
   modoPrecificacaoPadrao: ModoPrecificacao;
   modoMontagemPadrao: ModoMontagem;
+  espessuraSerraPadraoMm: number;
 }
 
 export interface ResultadoSalvarOrganizacao {
@@ -65,6 +66,7 @@ export async function salvarOrganizacao(
       unidade: dados.unidade,
       modo_precificacao_padrao: dados.modoPrecificacaoPadrao,
       modo_montagem_padrao: dados.modoMontagemPadrao,
+      espessura_serra_padrao_mm: dados.espessuraSerraPadraoMm,
     })
     .eq("id", organizacaoId);
 

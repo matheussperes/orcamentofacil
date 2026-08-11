@@ -26,6 +26,7 @@ export interface OrganizacaoCarregada {
   unidade: "mm" | "cm";
   modoPrecificacaoPadrao: ModoPrecificacao;
   modoMontagemPadrao: ModoMontagem;
+  espessuraSerraPadraoMm: number;
 }
 
 export interface PerfilCarregado {
@@ -42,6 +43,7 @@ export interface PerfilOrganizacaoCarregados {
 
 const PRECIFICACAO_FALLBACK: ModoPrecificacao = { modo: "multiplicador", fator: 2 };
 const MONTAGEM_FALLBACK: ModoMontagem = { modo: "percentual_material", percentual: 0.1 };
+const ESPESSURA_SERRA_PADRAO_MM_FALLBACK = 3;
 
 /** `null` quando não há sessão — não deveria acontecer atrás do gate de
  * `middleware.ts`, mas a função permanece defensiva (mesmo padrão de outras
@@ -75,7 +77,9 @@ export async function carregarPerfilOrganizacao(): Promise<PerfilOrganizacaoCarr
   if (organizacaoId) {
     const { data: orgRow } = await supabase
       .from("organizacao")
-      .select("id, nome, cnpj, endereco, telefone, logo_url, unidade, modo_precificacao_padrao, modo_montagem_padrao")
+      .select(
+        "id, nome, cnpj, endereco, telefone, logo_url, unidade, modo_precificacao_padrao, modo_montagem_padrao, espessura_serra_padrao_mm"
+      )
       .eq("id", organizacaoId)
       .maybeSingle();
 
@@ -90,6 +94,8 @@ export async function carregarPerfilOrganizacao(): Promise<PerfilOrganizacaoCarr
         unidade: (orgRow.unidade as string | null) === "cm" ? "cm" : "mm",
         modoPrecificacaoPadrao: (orgRow.modo_precificacao_padrao as ModoPrecificacao | null) ?? PRECIFICACAO_FALLBACK,
         modoMontagemPadrao: (orgRow.modo_montagem_padrao as ModoMontagem | null) ?? MONTAGEM_FALLBACK,
+        espessuraSerraPadraoMm:
+          (orgRow.espessura_serra_padrao_mm as number | null) ?? ESPESSURA_SERRA_PADRAO_MM_FALLBACK,
       };
     }
   }

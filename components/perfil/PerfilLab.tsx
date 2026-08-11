@@ -105,6 +105,10 @@ function SecaoOrganizacao({
     organizacaoInicial.modoPrecificacaoPadrao ?? PRECIFICACAO_FALLBACK
   );
   const [montagem, setMontagem] = useState<ModoMontagem>(organizacaoInicial.modoMontagemPadrao ?? MONTAGEM_FALLBACK);
+  // Task 4.16-back: kerf (`espessuraSerraPadraoMm`) não tem campo nesta tela
+  // ainda (Task 4.16-front, fora de escopo aqui) — só precisa sobreviver ao
+  // round-trip do "Salvar alterações" desta seção sem ser zerado.
+  const espessuraSerraPadraoMm = organizacaoInicial.espessuraSerraPadraoMm;
 
   const [salvando, setSalvando] = useState(false);
   const [resultado, setResultado] = useState<ResultadoSalvarOrganizacao | null>(null);
@@ -121,6 +125,7 @@ function SecaoOrganizacao({
       unidade,
       modoPrecificacaoPadrao: precificacao,
       modoMontagemPadrao: montagem,
+      espessuraSerraPadraoMm,
     });
     setSalvando(false);
     setResultado(resposta);
