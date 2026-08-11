@@ -78,6 +78,7 @@ function engine(
     consolidado: {
       mdf,
       fitaTotalM: extras.fitaTotalM ?? 0,
+      fitaPorCor: [],
       ferragens: extras.ferragens ?? [],
     },
     warnings: [],

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { consolidarResultados, pecaLinearParaPeca } from "./consolidar";
+import { consolidarResultados, larguraFitaMm, pecaLinearParaPeca } from "./consolidar";
 import type { Peca, PecaLinear, ResultadoModulo } from "./types";
 
 // Task 1.7 — regressão: nº de chapas vem do bin-packing REAL
@@ -110,5 +110,100 @@ describe("consolidarResultados — chapas via bin-packing real", () => {
   it("grupo sem peça alguma (defensivo) não deixa chapas undefined", () => {
     const out = consolidarResultados([], [], 0.1);
     expect(out.mdf).toEqual([]);
+  });
+});
+
+// Task 3.5 — fita de borda discriminada por cor (Modelo-de-Dominio.md Seção
+// 2.1, tabela "menor fita ≥ espessura final"). Cada caso confere também a
+// invariante: soma dos grupos discriminados == fitaTotalM.
+describe("larguraFitaMm — regra de catálogo (menor fita ≥ espessura final)", () => {
+  it("cobre todas as espessuras válidas do domínio", () => {
+    expect(larguraFitaMm(6)).toBe(22);
+    expect(larguraFitaMm(15)).toBe(22);
+    expect(larguraFitaMm(18)).toBe(22);
+    expect(larguraFitaMm(25)).toBe(35);
+    expect(larguraFitaMm(30)).toBe(35);
+    expect(larguraFitaMm(36)).toBe(65);
+    expect(larguraFitaMm(45)).toBe(65);
+    expect(larguraFitaMm(54)).toBe(65);
+    expect(larguraFitaMm(60)).toBe(65);
+  });
+
+  it("espessura acima do catálogo (>65mm) não tem fita — erro explícito, não valor mágico", () => {
+    expect(() => larguraFitaMm(72)).toThrow();
+  });
+});
+
+describe("consolidarResultados — fita de borda por cor (Task 3.5)", () => {
+  it("(a) um único material/cor: um grupo só, metros == fitaTotalM", () => {
+    const mod = modulo([
+      peca({ cor: "Branco TX", espessura_mm: 15, fita_m: 3 }),
+      peca({ cor: "Branco TX", espessura_mm: 15, fita_m: 2 }),
+    ]);
+    const out = consolidarResultados([{ ...mod, fitaM: 5 }], [], 0.12);
+
+    expect(out.fitaTotalM).toBe(5);
+    expect(out.fitaPorCor).toEqual([{ cor: "Branco TX", larguraFitaMm: 22, metros: 5 }]);
+    // invariante: soma dos grupos discriminados == fitaTotalM
+    const soma = out.fitaPorCor.reduce((s, g) => s + g.metros, 0);
+    expect(soma).toBe(out.fitaTotalM);
+  });
+
+  it("(b) duas cores diferentes: dois grupos, ordenados por cor", () => {
+    const mod = modulo([
+      peca({ cor: "Preto Fosco", espessura_mm: 18, fita_m: 4 }),
+      peca({ cor: "Branco TX", espessura_mm: 15, fita_m: 6 }),
+    ]);
+    const out = consolidarResultados([{ ...mod, fitaM: 10 }], [], 0.12);
+
+    expect(out.fitaTotalM).toBe(10);
+    expect(out.fitaPorCor).toEqual([
+      { cor: "Branco TX", larguraFitaMm: 22, metros: 6 },
+      { cor: "Preto Fosco", larguraFitaMm: 22, metros: 4 },
+    ]);
+    const soma = out.fitaPorCor.reduce((s, g) => s + g.metros, 0);
+    expect(soma).toBe(out.fitaTotalM);
+  });
+
+  it("(c) mesma cor em duas espessuras que caem em larguras de fita diferentes: discrimina por (cor, larguraFitaMm)", () => {
+    // Branco TX em 18mm (fita 22mm) e em 30mm (fita 35mm — tampo simples,
+    // Seção 3.4.1) são produtos de fita distintos, mesma cor.
+    const mod = modulo([
+      peca({ cor: "Branco TX", espessura_mm: 18, fita_m: 3 }),
+      peca({ cor: "Branco TX", espessura_mm: 30, fita_m: 2 }),
+    ]);
+    const out = consolidarResultados([{ ...mod, fitaM: 5 }], [], 0.12);
+
+    expect(out.fitaTotalM).toBe(5);
+    expect(out.fitaPorCor).toEqual([
+      { cor: "Branco TX", larguraFitaMm: 22, metros: 3 },
+      { cor: "Branco TX", larguraFitaMm: 35, metros: 2 },
+    ]);
+    const soma = out.fitaPorCor.reduce((s, g) => s + g.metros, 0);
+    expect(soma).toBe(out.fitaTotalM);
+  });
+
+  it("elementos contínuos (globais) entram na discriminação por cor junto com peças de módulo", () => {
+    const tampo: PecaLinear = {
+      tipo: "tampo",
+      parede: "p1",
+      comprimento_mm: 1800,
+      largura_mm: 600,
+      cor: "Branco TX",
+      espessura_mm: 30,
+      area_m2: 1.08,
+      fita_m: 3.02,
+      modulos: 1,
+    };
+    const mod = modulo([peca({ cor: "Branco TX", espessura_mm: 15, fita_m: 4 })]);
+    const out = consolidarResultados([{ ...mod, fitaM: 4 }], [tampo], 0.12);
+
+    expect(out.fitaTotalM).toBeCloseTo(7.02, 4);
+    expect(out.fitaPorCor).toEqual([
+      { cor: "Branco TX", larguraFitaMm: 22, metros: 4 },
+      { cor: "Branco TX", larguraFitaMm: 35, metros: 3.02 },
+    ]);
+    const soma = out.fitaPorCor.reduce((s, g) => s + g.metros, 0);
+    expect(soma).toBeCloseTo(out.fitaTotalM, 4);
   });
 });

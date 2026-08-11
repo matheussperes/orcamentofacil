@@ -1,5 +1,5 @@
 import { planoDeCorte } from "./box/cutting";
-import type { EngineOutput, GrupoMdf, ItemQtd, Peca, PecaLinear, ResultadoModulo } from "./types";
+import type { EngineOutput, GrupoFita, GrupoMdf, ItemQtd, Peca, PecaLinear, ResultadoModulo } from "./types";
 
 interface EntradaMdf {
   cor: string;
@@ -9,6 +9,23 @@ interface EntradaMdf {
 
 function round4(n: number): number {
   return Math.round(n * 1e4) / 1e4;
+}
+
+// Fita de borda por espessura final — regra de catálogo (Modelo-de-Dominio.md
+// Seção 2.1): a menor fita disponível ≥ espessura final. Larguras diferentes
+// são produtos distintos, por isso a lista fica ordenada crescente e a busca
+// pega a primeira que cobre. Nenhum outro ponto do motor tem essa regra
+// (grep confirmado antes da implementação) — nasce aqui, exportada e testada.
+const LARGURAS_FITA_MM = [22, 35, 65] as const;
+
+export function larguraFitaMm(espessura_mm: number): number {
+  const largura = LARGURAS_FITA_MM.find((l) => l >= espessura_mm);
+  if (largura === undefined) {
+    throw new Error(
+      `Nenhuma fita de catálogo cobre espessura final ${espessura_mm}mm (máx ${LARGURAS_FITA_MM.at(-1)}mm)`
+    );
+  }
+  return largura;
 }
 
 /**
@@ -48,6 +65,7 @@ export function consolidarResultados(
   perdaMdf: number
 ): EngineOutput["consolidado"] {
   const mdfMap = new Map<string, GrupoMdf>();
+  const fitaMap = new Map<string, GrupoFita>();
   const ferragensMap = new Map<string, number>();
   let fitaTotalM = 0;
 
@@ -60,9 +78,24 @@ export function consolidarResultados(
     mdfMap.set(chave, g);
   };
 
+  // Discriminação por (cor, larguraFitaMm) — não só cor: mesma cor em duas
+  // espessuras que caem em faixas de fita diferentes compram produtos de fita
+  // diferentes (contrato Task 3.5).
+  const somaFita = (cor: string, espessura_mm: number, fita_m: number) => {
+    if (fita_m === 0) return;
+    const largura = larguraFitaMm(espessura_mm);
+    const chave = `${cor}|${largura}`;
+    const g = fitaMap.get(chave) ?? { cor, larguraFitaMm: largura, metros: 0 };
+    g.metros += fita_m;
+    fitaMap.set(chave, g);
+  };
+
   for (const mod of modulos) {
     fitaTotalM += mod.fitaM;
-    for (const peca of mod.pecas) somaMdf(peca);
+    for (const peca of mod.pecas) {
+      somaMdf(peca);
+      somaFita(peca.cor, peca.espessura_mm, peca.fita_m);
+    }
     for (const f of mod.ferragens) {
       ferragensMap.set(f.item, (ferragensMap.get(f.item) ?? 0) + f.quantidade);
     }
@@ -71,6 +104,7 @@ export function consolidarResultados(
   for (const g of globais) {
     fitaTotalM += g.fita_m;
     somaMdf(g);
+    somaFita(g.cor, g.espessura_mm, g.fita_m);
   }
 
   // Nº de chapas por material: contagem REAL do bin-packing (`planoDeCorte`),
@@ -103,5 +137,13 @@ export function consolidarResultados(
     .map(([item, quantidade]) => ({ item, quantidade }))
     .sort((a, b) => a.item.localeCompare(b.item));
 
-  return { mdf, fitaTotalM: round4(fitaTotalM), ferragens };
+  const fitaPorCor: GrupoFita[] = [...fitaMap.values()].map((g) => ({
+    ...g,
+    metros: round4(g.metros),
+  }));
+  fitaPorCor.sort((a, b) =>
+    a.cor === b.cor ? a.larguraFitaMm - b.larguraFitaMm : a.cor.localeCompare(b.cor)
+  );
+
+  return { mdf, fitaTotalM: round4(fitaTotalM), fitaPorCor, ferragens };
 }
