@@ -19,6 +19,8 @@ export interface CorteMaterialTabConectadaProps {
   estadoInicial: EstadoAmbiente;
   frete: number | null;
   ultimaCongeladaEmInicial: string | null;
+  /** `organizacao.espessuraSerraPadraoMm` — ver comentário completo em `CorteMaterialLab`. */
+  kerfMm: number;
 }
 
 export function CorteMaterialTabConectada({
@@ -26,6 +28,7 @@ export function CorteMaterialTabConectada({
   estadoInicial,
   frete,
   ultimaCongeladaEmInicial,
+  kerfMm,
 }: CorteMaterialTabConectadaProps) {
   async function onCongelar(snapshot: SnapshotListaMaterial): Promise<ResultadoCongelarListaMaterial> {
     return congelarListaMaterial(orcamentoId, snapshot);
@@ -37,6 +40,7 @@ export function CorteMaterialTabConectada({
       estadoInicial={estadoInicial}
       frete={frete}
       ultimaCongeladaEmInicial={ultimaCongeladaEmInicial}
+      kerfMm={kerfMm}
       onCongelar={onCongelar}
     />
   );

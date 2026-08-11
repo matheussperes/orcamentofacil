@@ -25,6 +25,7 @@ import {
   type Catalogo,
 } from "@/lib/catalog";
 import { buscarCatalogoReal } from "@/lib/produto/buscar";
+import { buscarEspessuraSerraReal } from "@/lib/organizacao/buscarKerf";
 import { montarLinhasInsumos } from "@/lib/insumos";
 import { calcularPreco } from "@/lib/engine/pricing";
 import {
@@ -33,7 +34,7 @@ import {
   PARAMETROS_FABRICA_PADRAO,
 } from "@/lib/engine/defaults";
 import { listarCategorias } from "@/lib/categorias";
-import { planoDeCorte } from "@/lib/engine/box/cutting";
+import { usePlanoDeCorte } from "@/lib/engine/box/usarPlanoDeCorte";
 import { PlanoCorteCanvas } from "../components/PlanoCorteCanvas";
 import { Stepper } from "@/components/ui/stepper";
 import { CaixaCard } from "./CaixaCard";
@@ -175,6 +176,16 @@ export function EditorItemNucleo({
 
   const [catalogo, setCatalogo] = useState<Catalogo | null>(null);
   const [categorias, setCategorias] = useState<string[]>([]);
+  // Task 3.1/3.3 (front) — kerf real (`organizacao.espessuraSerraPadraoMm`,
+  // Modelo-de-Dominio §8.2) lido CLIENT-SIDE (`buscarEspessuraSerraReal`,
+  // mesmo padrão de `buscarCatalogoReal` logo abaixo): este componente é
+  // compartilhado por `/modulo` (sem Server Component pai) e por
+  // `/orcamento/[id]/item/[itemId]` (Server Component pai que ainda NÃO
+  // carrega `organizacao` — nenhuma outra prop desta rota traz esse dado
+  // hoje), então os dois lados leem aqui, sem duplicar a leitura em dois
+  // lugares diferentes. Default `3` (mesmo fallback do banco) até o efeito
+  // resolver.
+  const [kerfMm, setKerfMm] = useState(3);
   const [box, setBox] = useState<BoxModule>(() =>
     estadoInicial.origem === "custom_box" ? estadoInicial.box : caixaInicial("Branco TX", "Cozinha")
   );
@@ -211,6 +222,9 @@ export function EditorItemNucleo({
     let cancelado = false;
     buscarCatalogoReal().then((c) => {
       if (!cancelado) setCatalogo(c);
+    });
+    buscarEspessuraSerraReal().then((kerf) => {
+      if (!cancelado) setKerfMm(kerf);
     });
     setCategorias(listarCategorias());
     return () => {
@@ -259,7 +273,7 @@ export function EditorItemNucleo({
     : ordemPlaca.length - 1;
 
   const pecas = useMemo(() => resultado.engine.porModulo[0]?.pecas ?? [], [resultado]);
-  const grupos = useMemo(() => planoDeCorte(pecas), [pecas]);
+  const { grupos, calculando: calculandoPlanoDeCorte } = usePlanoDeCorte(pecas, kerfMm);
 
   // Grupo de porta / vão com gaveta atualmente selecionado no canvas, pra
   // carregar no formulário de edição (ver PortasCard/GavetasCard).
@@ -679,7 +693,15 @@ export function EditorItemNucleo({
         )}
 
         <div className="card">
-          <h2>Plano de corte</h2>
+          <div className="flex flex-wrap items-center gap-sm">
+            <h2>Plano de corte</h2>
+            {calculandoPlanoDeCorte && (
+              <span className="flex items-center gap-xs text-legenda text-cinza-500">
+                <span className="h-1.5 w-1.5 rounded-full bg-cinza-300 animate-pulse" aria-hidden="true" />
+                Otimizando plano de corte…
+              </span>
+            )}
+          </div>
           <p className="muted" style={{ fontSize: 12, marginTop: -6 }}>
             Chapas de {grupos[0]?.larguraChapa ?? 2750}×{grupos[0]?.alturaChapa ?? 1840}mm,
             escala 1:10. Empacotamento heurístico (prateleiras) — apenas para validação
