@@ -19,6 +19,7 @@ const ORGANIZACAO_MOCK: OrganizacaoCarregada = {
   unidade: "mm",
   modoPrecificacaoPadrao: { modo: "multiplicador", fator: 2 },
   modoMontagemPadrao: { modo: "percentual_material", percentual: 0.1 },
+  espessuraSerraPadraoMm: 3,
 };
 
 const PERFIL_MOCK: PerfilCarregado = {
