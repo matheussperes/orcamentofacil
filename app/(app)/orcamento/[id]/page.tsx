@@ -6,6 +6,7 @@ import { buscarUltimaListaMaterial } from "@/lib/lista-material/buscarUltima";
 import { carregarConfiguracaoPrecificacao } from "@/lib/precificacao/carregarConfiguracao";
 import { carregarOuCriarLinhasProposta } from "@/lib/linha-proposta/carregar";
 import { papelAtual } from "@/lib/perfil/papelAtual";
+import { carregarPerfilOrganizacao } from "@/lib/perfil/carregar";
 import { OrcamentoAbas } from "@/components/orcamento/OrcamentoAbas";
 import { AmbientesTabConectada } from "@/components/ambientes/AmbientesTabConectada";
 import { CorteMaterialTabConectada } from "@/components/orcamento/CorteMaterialTabConectada";
@@ -55,6 +56,14 @@ import { PropostaTabConectada } from "@/components/orcamento/PropostaTabConectad
 // (nova leitura pequena, `lib/perfil/papelAtual.ts`) e passa `papel` como
 // prop nova até `PropostaLab`: decide se o botão "Reabrir orçamento" do
 // `Alert` de orçamento congelado aparece (só para `admin`).
+//
+// Task 3.1/3.3 (front) — soma `carregarPerfilOrganizacao()` (já existe,
+// Task 13.7a) só para ler `organizacao.espessuraSerraPadraoMm` (kerf real,
+// Modelo-de-Dominio §8.2) e passar pra `CorteMaterialTabConectada` como
+// `kerfMm`. Fallback `3` (mesmo default do banco) no cenário de borda em que
+// `organizacao` vem `null` (ver comentário de `carregarPerfilOrganizacao`).
+const ESPESSURA_SERRA_PADRAO_MM_FALLBACK = 3;
+
 export default async function OrcamentoPage({ params }: { params: { id: string } }) {
   const orcamento = await buscarOrcamentoPorId(params.id);
 
@@ -69,6 +78,8 @@ export default async function OrcamentoPage({ params }: { params: { id: string }
   const linhasProposta = await carregarOuCriarLinhasProposta(orcamento.id, estadoAmbiente);
   const papel = await papelAtual();
   const { presets: presetsElementoParede } = await listarElementoParedePresets();
+  const perfilOrganizacao = await carregarPerfilOrganizacao();
+  const kerfMm = perfilOrganizacao?.organizacao?.espessuraSerraPadraoMm ?? ESPESSURA_SERRA_PADRAO_MM_FALLBACK;
 
   return (
     <OrcamentoAbas
@@ -90,6 +101,7 @@ export default async function OrcamentoPage({ params }: { params: { id: string }
           estadoInicial={estadoAmbiente}
           frete={orcamento.frete}
           ultimaCongeladaEmInicial={ultimaCongeladaEm}
+          kerfMm={kerfMm}
         />
       }
       abaFinanceiro={

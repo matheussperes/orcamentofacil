@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/table";
 import { PlanoCorteCanvas } from "@/app/components/PlanoCorteCanvas";
 import { todasAsPecas, montarLinhasInsumos } from "@/lib/insumos";
-import { planoDeCorte } from "@/lib/engine/box/cutting";
+import { usarPlanoDeCorte } from "@/lib/engine/box/usarPlanoDeCorte";
 import { catalogoParaPrecos, type Catalogo } from "@/lib/catalog";
 import { buscarCatalogoReal } from "@/lib/produto/buscar";
 import { PRECOS_REFERENCIA } from "@/lib/engine/prices";
@@ -62,6 +62,11 @@ export interface CorteMaterialLabProps {
    * orçamento, já lido no servidor (`buscarUltimaListaMaterial`) — garante
    * que "recarregar a página não perde a intenção" mesmo sem estado de UI. */
   ultimaCongeladaEmInicial: string | null;
+  /** `organizacao.espessuraSerraPadraoMm` (Task 4.16-back, já mesclada) — lido
+   * no Server Component de `/orcamento/[id]/page.tsx` (`carregarPerfilOrganizacao`)
+   * e passado como `kerf` real para `planoDeCorte` (Modelo-de-Dominio §8.2).
+   * Editar esse valor é a Task 4.16-front (`/perfil`), fora de escopo aqui. */
+  kerfMm: number;
   onCongelar: (snapshot: SnapshotListaMaterial) => Promise<ResultadoCongelarListaMaterial>;
 }
 
@@ -83,6 +88,7 @@ export function CorteMaterialLab({
   estadoInicial,
   frete,
   ultimaCongeladaEmInicial,
+  kerfMm,
   onCongelar,
 }: CorteMaterialLabProps) {
   const irParaAba = useIrParaAba();
@@ -116,7 +122,7 @@ export function CorteMaterialLab({
     () => (resultadoEngine.ok ? todasAsPecas(resultadoEngine.engine) : []),
     [resultadoEngine]
   );
-  const grupos = useMemo(() => planoDeCorte(pecas), [pecas]);
+  const { grupos, calculando } = usarPlanoDeCorte(pecas, kerfMm);
 
   // `incluirServicos: false` — só o BOM de material (Chapas/Acabamento/
   // Ferragens). Montagem/frete de catálogo (`precos.montagemPorM2`/
@@ -237,7 +243,15 @@ export function CorteMaterialLab({
   return (
     <div className="flex flex-col gap-lg">
       <section className="rounded-lg border border-cinza-200 bg-cinza-0 p-xl shadow-xs">
-        <h2 className="mb-xs text-titulo-secao text-cinza-900">Plano de corte</h2>
+        <div className="mb-xs flex flex-wrap items-center gap-sm">
+          <h2 className="text-titulo-secao text-cinza-900">Plano de corte</h2>
+          {calculando && (
+            <span className="flex items-center gap-xs text-legenda text-cinza-500">
+              <span className="h-1.5 w-1.5 rounded-full bg-cinza-300 animate-pulse" aria-hidden="true" />
+              Otimizando plano de corte…
+            </span>
+          )}
+        </div>
         <p className="mb-md text-corpo-pequeno text-cinza-500">
           Chapas de {grupos[0]?.larguraChapa ?? 2750}×{grupos[0]?.alturaChapa ?? 1840}mm, escala 1:10.
           Empacotamento heurístico (prateleiras) — validação visual, não substitui um otimizador de

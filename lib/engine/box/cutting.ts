@@ -432,12 +432,20 @@ export function empacotarChapas(
   };
 }
 
-/** Agrupa peças por material (cor×espessura) e empacota cada grupo. `kerf` (§8.2) opcional, default `0`. */
-export function planoDeCorte(
+type FuncaoEmpacotar = (
+  entrada: PecaRetangular[],
+  larguraChapa: number,
+  alturaChapa: number,
+  kerf: number
+) => { chapas: Chapa[]; foraDaChapa: PecaRetangular[]; meta: MetaBuscaCorte };
+
+/** Agrupa peças por material (cor×espessura) e empacota cada grupo com a função de empacotamento dada. */
+function agruparEEmpacotar(
   pecas: Peca[],
-  larguraChapa = CHAPA_LARGURA_MM,
-  alturaChapa = CHAPA_ALTURA_MM,
-  kerf = 0
+  larguraChapa: number,
+  alturaChapa: number,
+  kerf: number,
+  empacotar: FuncaoEmpacotar
 ): GrupoChapas[] {
   const grupos = new Map<string, { cor: string; espessura_mm: number; pecas: Peca[] }>();
   for (const p of pecas) {
@@ -452,7 +460,7 @@ export function planoDeCorte(
       a.cor === b.cor ? a.espessura_mm - b.espessura_mm : a.cor.localeCompare(b.cor)
     )
     .map((g) => {
-      const { chapas, foraDaChapa, meta } = empacotarChapas(
+      const { chapas, foraDaChapa, meta } = empacotar(
         expandirPecas(g.pecas),
         larguraChapa,
         alturaChapa,
@@ -468,4 +476,65 @@ export function planoDeCorte(
         meta,
       };
     });
+}
+
+/** Agrupa peças por material (cor×espessura) e empacota cada grupo. `kerf` (§8.2) opcional, default `0`. */
+export function planoDeCorte(
+  pecas: Peca[],
+  larguraChapa = CHAPA_LARGURA_MM,
+  alturaChapa = CHAPA_ALTURA_MM,
+  kerf = 0
+): GrupoChapas[] {
+  return agruparEEmpacotar(pecas, larguraChapa, alturaChapa, kerf, empacotarChapas);
+}
+
+/**
+ * Estimativa imediata (Task 3.1/3.3 front, Modelo-de-Dominio.md §8.3 "Web
+ * Worker — o que muda"): só a passada determinística (candidato inicial da
+ * busca, barata em ms), SEM a busca por permutação completa. Usada como
+ * conteúdo provisório enquanto o Web Worker calcula `planoDeCorte` (busca
+ * completa) em paralelo — nunca existe estado "sem plano de corte". Não
+ * altera o algoritmo: reusa exatamente os mesmos passos (`ordenarBase` +
+ * `executarPassada` com `escolherEixoPadrao`) que `buscar()` já usa como
+ * primeiro candidato.
+ */
+export function empacotarChapasEstimativa(
+  entrada: PecaRetangular[],
+  larguraChapa = CHAPA_LARGURA_MM,
+  alturaChapa = CHAPA_ALTURA_MM,
+  kerf = 0
+): { chapas: Chapa[]; foraDaChapa: PecaRetangular[]; meta: MetaBuscaCorte } {
+  const cabeSemGirar = (p: PecaRetangular) => p.w <= larguraChapa && p.h <= alturaChapa;
+  const cabeGirada = (p: PecaRetangular) => p.h <= larguraChapa && p.w <= alturaChapa;
+  const cabe = (p: PecaRetangular) => (p.temVeio ? cabeSemGirar(p) : cabeSemGirar(p) || cabeGirada(p));
+
+  const foraDaChapa = entrada.filter((p) => !cabe(p));
+  const validas = entrada.filter(cabe);
+
+  if (validas.length === 0) {
+    return { chapas: [], foraDaChapa, meta: { iteracoes: 0, tempoMs: 0, chapasDeterministico: 0, chapasFinal: 0 } };
+  }
+
+  const passada = executarPassada(ordenarBase(validas), larguraChapa, alturaChapa, kerf, escolherEixoPadrao);
+
+  return {
+    chapas: passada.chapas,
+    foraDaChapa,
+    meta: {
+      iteracoes: 0,
+      tempoMs: 0,
+      chapasDeterministico: passada.chapas.length,
+      chapasFinal: passada.chapas.length,
+    },
+  };
+}
+
+/** Versão `planoDeCorte` que só roda a passada determinística — ver `empacotarChapasEstimativa`. */
+export function planoDeCorteEstimativa(
+  pecas: Peca[],
+  larguraChapa = CHAPA_LARGURA_MM,
+  alturaChapa = CHAPA_ALTURA_MM,
+  kerf = 0
+): GrupoChapas[] {
+  return agruparEEmpacotar(pecas, larguraChapa, alturaChapa, kerf, empacotarChapasEstimativa);
 }
