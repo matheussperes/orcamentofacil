@@ -30,6 +30,7 @@ export function CorteMaterialTabMock() {
       orcamentoId="preview-orcamento"
       estadoInicial={estadoMockPreenchido()}
       frete={200}
+      kerfMm={3}
       ultimaCongeladaEmInicial={null}
       onCongelar={onCongelarMock}
     />

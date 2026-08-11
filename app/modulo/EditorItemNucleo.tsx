@@ -34,7 +34,7 @@ import {
   PARAMETROS_FABRICA_PADRAO,
 } from "@/lib/engine/defaults";
 import { listarCategorias } from "@/lib/categorias";
-import { usarPlanoDeCorte } from "@/lib/engine/box/usarPlanoDeCorte";
+import { usePlanoDeCorte } from "@/lib/engine/box/usarPlanoDeCorte";
 import { PlanoCorteCanvas } from "../components/PlanoCorteCanvas";
 import { Stepper } from "@/components/ui/stepper";
 import { CaixaCard } from "./CaixaCard";
@@ -273,7 +273,7 @@ export function EditorItemNucleo({
     : ordemPlaca.length - 1;
 
   const pecas = useMemo(() => resultado.engine.porModulo[0]?.pecas ?? [], [resultado]);
-  const { grupos, calculando: calculandoPlanoDeCorte } = usarPlanoDeCorte(pecas, kerfMm);
+  const { grupos, calculando: calculandoPlanoDeCorte } = usePlanoDeCorte(pecas, kerfMm);
 
   // Grupo de porta / vão com gaveta atualmente selecionado no canvas, pra
   // carregar no formulário de edição (ver PortasCard/GavetasCard).

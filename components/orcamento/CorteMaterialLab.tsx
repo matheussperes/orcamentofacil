@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/table";
 import { PlanoCorteCanvas } from "@/app/components/PlanoCorteCanvas";
 import { todasAsPecas, montarLinhasInsumos } from "@/lib/insumos";
-import { usarPlanoDeCorte } from "@/lib/engine/box/usarPlanoDeCorte";
+import { usePlanoDeCorte } from "@/lib/engine/box/usarPlanoDeCorte";
 import { catalogoParaPrecos, type Catalogo } from "@/lib/catalog";
 import { buscarCatalogoReal } from "@/lib/produto/buscar";
 import { PRECOS_REFERENCIA } from "@/lib/engine/prices";
@@ -122,7 +122,7 @@ export function CorteMaterialLab({
     () => (resultadoEngine.ok ? todasAsPecas(resultadoEngine.engine) : []),
     [resultadoEngine]
   );
-  const { grupos, calculando } = usarPlanoDeCorte(pecas, kerfMm);
+  const { grupos, calculando } = usePlanoDeCorte(pecas, kerfMm);
 
   // `incluirServicos: false` — só o BOM de material (Chapas/Acabamento/
   // Ferragens). Montagem/frete de catálogo (`precos.montagemPorM2`/

@@ -91,7 +91,7 @@ export function calcularPlanoDeCorteAssincrono(
  * job, fila, hash de entrada, cache entre chamadas) — cada mudança de
  * `pecas`/`kerf` recalcula do zero.
  */
-export function usarPlanoDeCorte(pecas: Peca[], kerf = 0): ResultadoPlanoDeCorte {
+export function usePlanoDeCorte(pecas: Peca[], kerf = 0): ResultadoPlanoDeCorte {
   const [grupos, setGrupos] = useState<GrupoChapas[]>(() =>
     planoDeCorteEstimativa(pecas, undefined, undefined, kerf)
   );
