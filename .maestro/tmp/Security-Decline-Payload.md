@@ -1,39 +1,79 @@
 # Security Decline Payload
 
-**Task**: 2.3-2.6
-**Branch**: feature/2.3-2.6
-**Data**: 2026-08-06
+**Task**: 3.13-catalogo-back
+**Branch**: feature/3.13-catalogo-back (commit 5e86dea)
+**Data**: 2026-08-11
 **Veredicto**: REPROVADO
 
-## 1. Mutação cross-tenant via `salvarEstadoAmbiente` — `orcamentoId` do client nunca validado antes de INSERT
+## 1. Anti-hotlink contornável por caractere de controle no meio do esquema
 
-- **Severidade**: Crítico
-- **Categoria**: OWASP: Controle de acesso (IDOR / cross-tenant write)
-- **Arquivo e linha**: `lib/ambiente/salvar.ts:94-112` (insert de `ambiente`) e `lib/ambiente/salvar.ts:182-191` (insert de `elemento_continuo`)
+- **Severidade**: Alto
+- **Categoria**: OWASP:Validação de entrada (bypass de filtro de URL)
+- **Arquivo e linha**: `lib/produto/acoes.ts:39-50` (`ehCaminhoRelativoValido`), aplicado em `lib/produto/acoes.ts:66-71`
 - **Trecho**:
   ```ts
-  let ambienteId = ambiente.id;
-  if (!ambienteExistente) {
-    const { data: novoAmbiente, error: erroCriarAmbiente } = await supabase
-      .from("ambiente")
-      .insert({
-        organizacao_id: organizacaoId,
-        orcamento_id: orcamentoId,       // <- vem do parâmetro da Server Action, nunca verificado contra organizacaoId
-        nome: ambiente.nome,
-        ordem: ambiente.ordem,
-      })
-      ...
+  function ehCaminhoRelativoValido(valor: string): boolean {
+    const normalizado = valor.trim().toLowerCase();
+    if (!normalizado) return true;
+    if (normalizado.startsWith("//")) return false;
+    if (/^[a-z][a-z0-9+.-]*:/.test(normalizado)) return false;
+    return true;
+  }
   ```
+- **Risco concreto**: `trim()` só remove espaço em branco nas **pontas**. O parser
+  de URL do navegador (WHATWG) remove tab/LF/CR em **qualquer posição** da
+  string e descarta controles C0 no início. Consequência verificada por
+  execução (Node, parser WHATWG, mesma regra dos navegadores):
+
+  | valor gravado no banco (escapes JS) | `ehCaminhoRelativoValido` | resolvido pelo navegador |
+  |---|---|---|
+  | `"htt\tps://evil.com/x.png"` | **ACEITA** | `https://evil.com/x.png` |
+  | `"http\ns://evil.com/x.png"` | **ACEITA** | `https://evil.com/x.png` |
+  | `"h\rttps://evil.com/x.png"` | **ACEITA** | `https://evil.com/x.png` |
+  | `"\u0000https://evil.com/x.png"` | **ACEITA** | `https://evil.com/x.png` |
+  | `"ja\tvascript:alert(1)"` | **ACEITA** | `javascript:alert(1)` |
+
+  Um usuário autenticado de qualquer organização chama `criarProduto` /
+  `atualizarProduto` (server actions; `especificacao` é `Record<string,
+  unknown>` vindo do cliente) com `texturaUrl = "htt\tps://evil.com/x.png"`.
+  O valor **passa** pela validação e é persistido como se fosse um caminho
+  relativo confiável. Quando a Task 3.13 (catálogo-front) entregar esse valor a
+  um sink de URL — `<img src>`, `TextureLoader.load`, `new URL(valor, base)` —
+  o navegador resolve para o domínio de terceiro: hotlink de conteúdo externo
+  dentro do canvas de todos os usuários da organização, exatamente o cenário que
+  Modelo-de-Dominio.md 4.1.1 regra 2 manda bloquear. Também vaza referer/IP dos
+  visualizadores para o domínio do atacante e permite trocar a imagem servida a
+  posteriori.
+
+  O achado é bloqueante mesmo sem o consumidor existir hoje: o dado envenenado
+  fica gravado *agora*, com o carimbo de "validado", e a task de front vai
+  confiar nesse contrato. Corrigir depois exige limpar a base, não só o código.
+  O comentário acima da função afirma cobrir "espaço/tab antes do protocolo" —
+  a afirmação vale só para o tab no início, e o teste
+  `lib/produto/acoes.test.ts:113-125` exercita apenas essa variante fácil.
+- **Correção esperada**: normalizar removendo **todos** os controles C0 e o
+  espaço em toda a string, não só nas pontas. Uma linha:
   ```ts
-  if (estado.elementosContinuos.length > 0) {
-    const linhas = estado.elementosContinuos.map((elemento) =>
-      linhaDeElementoContinuo({ organizacaoId, orcamentoId, elemento })  // mesmo orcamentoId não verificado
-    );
-    const { error: erroInsert } = await supabase.from("elemento_continuo").insert(linhas);
+  const normalizado = valor.replace(/[\u0000-\u0020\u007f]/g, "").toLowerCase();
   ```
-- **Risco concreto**: `salvarEstadoAmbiente` é uma Server Action (`"use server"`) — um endpoint HTTP invocável diretamente por qualquer usuário autenticado, com qualquer payload, independente do que a UI (`AmbientesTabConectada`) manda. Um usuário da organização A que obtenha (URL compartilhada, histórico do navegador, print, suporte) o `orcamentoId` de um orçamento da organização B pode chamar `salvarEstadoAmbiente(orcamentoIdDeB, estadoComAmbienteNovo)`. A função resolve corretamente `organizacaoId = A`, mas insere uma linha em `ambiente` com `organizacao_id = A` e `orcamento_id = <orçamento de B>` — a checagem de posse feita antes (`.eq("id", ambiente.id).eq("organizacao_id", organizacaoId)`) só decide UPDATE vs INSERT, nunca valida que o `orcamento_id` de destino pertence a A. Mesmo problema para `elemento_continuo`. Resultado: a organização A consegue pendurar dados em um orçamento que não é dela — escrita cross-tenant real, sem precisar ler nenhum dado de B (leitura continua corretamente isolada por RLS). Quando B excluir esse orçamento, o `on delete cascade` da FK apaga também as linhas plantadas por A, sem que B saiba que existiam nem que eram de outra organização. Esta task expandiu o mesmo gap (que já existia de forma restrita no caso de bootstrap de 1 ambiente) para rodar em laço a cada "Salvar alterações", cobrindo N ambientes/N paredes.
-- **Correção esperada**: antes do laço `for (const ambiente of estado.ambientes)` em `salvarEstadoAmbiente`, confirmar que `orcamentoId` pertence a `organizacaoId` (mesmo padrão de `criarAmbiente` em `lib/ambiente/acoes.ts`: `select id from orcamento where id = orcamentoId and organizacao_id = organizacaoId`, aborta com erro "Este orçamento não existe mais." se não encontrar) antes de qualquer INSERT que referencie esse `orcamentoId`.
-- **Responsável**: frontend-engineer
+  (os dois testes seguintes da função ficam iguais). Acrescentar caso de teste
+  com `"htt\tps://evil.com/x.png"` e `"\u0000https://evil.com/x.png"` — os dois
+  passam hoje. Ajustar o comentário da função para descrever o que ele de fato
+  cobre. Barato e na mesma linha: rejeitar segmento `..` (ver observação 1).
+- **Responsável**: backend-engineer
 
 ## Observações fora do escopo da task
-- `linhaDeParede` (chamada em `salvar.ts`) grava `altura`/`largura`/`elementos`/`itens` vindos do client sem validar `altura > 0`/`largura > 0`, ao contrário de `criarParede`/`atualizarParede` em `acoes.ts`. Gap pré-existente (mesmo padrão já presente no código de 1 parede antes desta task) — registrar como possível task futura, não bloqueia esta.
+
+1. **Path traversal em `texturaUrl` (Observação, não bloqueia)** —
+   `"../../../object/public/outro/x.png"` é aceito e, concatenado por
+   `getPublicUrl`, o navegador normaliza para
+   `https://<proj>.supabase.co/storage/v1/object/public/outro/x.png`, saindo do
+   prefixo do bucket `texturas`. Não é explorável hoje: `texturas` é o único
+   bucket público e `linha-proposta-renders` é privado (o endpoint `/public/`
+   não o serve). Vira risco real no dia em que existir um segundo bucket público
+   com conteúdo por-tenant. Custa nada blindar junto com o achado 1.
+2. **`create policy` sem `drop policy if exists`** em
+   `supabase/migrations/20260811110000_storage_texturas.sql:52` — o `insert into
+   storage.buckets` é idempotente (`on conflict do update`), a policy não é.
+   Re-execução da migration falha. Convenção/DX, não segurança; mesmo padrão do
+   bucket irmão. Registro só para o Maestro decidir.
