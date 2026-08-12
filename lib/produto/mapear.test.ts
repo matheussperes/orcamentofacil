@@ -87,6 +87,33 @@ describe("produtosParaCatalogo", () => {
     expect(catalogo.fitaMetro).toBe(PRECOS_REFERENCIA.fitaMetro);
   });
 
+  it("tipo fita: deriva tamanhoRoloFitaM do produto ativo mais antigo (criado_em), mesmo critério de fitaMetro", () => {
+    const catalogo = produtosParaCatalogo([
+      produto({ id: "fita-novo", tipo: "fita", especificacao: { unidade: "m", tamanhoRoloM: 25 }, criadoEm: "2026-02-01T00:00:00.000Z" }),
+      produto({ id: "fita-antigo", tipo: "fita", especificacao: { unidade: "m", tamanhoRoloM: 50 }, criadoEm: "2026-01-01T00:00:00.000Z" }),
+    ]);
+    expect(catalogo.tamanhoRoloFitaM).toBe(50);
+  });
+
+  it("sem tamanhoRoloM cadastrado em nenhum produto tipo fita -> tamanhoRoloFitaM fica undefined (sem fallback inventado)", () => {
+    const catalogo = produtosParaCatalogo([
+      produto({ tipo: "fita", especificacao: { unidade: "m" } }),
+    ]);
+    expect(catalogo.tamanhoRoloFitaM).toBeUndefined();
+  });
+
+  it("sem produto tipo fita nenhum -> tamanhoRoloFitaM fica undefined", () => {
+    const catalogo = produtosParaCatalogo([]);
+    expect(catalogo.tamanhoRoloFitaM).toBeUndefined();
+  });
+
+  it("tamanhoRoloM inválido (<= 0) no produto -> tamanhoRoloFitaM fica undefined", () => {
+    const catalogo = produtosParaCatalogo([
+      produto({ tipo: "fita", especificacao: { unidade: "m", tamanhoRoloM: 0 } }),
+    ]);
+    expect(catalogo.tamanhoRoloFitaM).toBeUndefined();
+  });
+
   it("led/acessorio não afetam o Catalogo (sem campo correspondente)", () => {
     const catalogo = produtosParaCatalogo([
       produto({ id: "led1", tipo: "led", especificacao: {}, preco: 40 }),

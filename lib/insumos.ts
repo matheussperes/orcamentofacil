@@ -1,6 +1,6 @@
 import { pecaLinearParaPeca } from "./engine/consolidar";
 import { precoChapa, type PrecosReferencia } from "./engine/prices";
-import type { EngineOutput, Peca } from "./engine/types";
+import type { EngineOutput, GrupoFita, Peca } from "./engine/types";
 
 // V2-5 — Lista unificada de insumos (BOM + custo) no formato de pré-orçamento
 // de fornecedor. Fonte única de verdade usada pela tela de resultado e pela
@@ -97,4 +97,33 @@ export function montarLinhasInsumos(
 
 function round2(n: number): number {
   return Math.round(n * 100) / 100;
+}
+
+// Task 3.6 (RF-03/RF-29) — "quantos rolos comprar" a partir do tamanho de
+// rolo cadastrado no catálogo (`Catalogo.tamanhoRoloFitaM`), nunca hardcoded.
+export interface RoloFitaCalculado {
+  cor: string;
+  larguraFitaMm: number;
+  metros: number;
+  tamanhoRoloM: number;
+  rolos: number;
+}
+
+/** Rolos de fita a comprar por grupo de `fitaPorCor` (Task 3.5 motor). Só
+ * existe UM `tamanhoRoloM` conhecido hoje (mesma simplificação de
+ * `fitaMetro` — o catálogo ainda não distingue fita por cor/largura),
+ * aplicado a todos os grupos. Sem `tamanhoRoloM` cadastrado (`undefined`
+ * ou `<= 0`), devolve array vazio — nunca inventa um tamanho de rolo. */
+export function calcularRolosDeFita(
+  fitaPorCor: GrupoFita[],
+  tamanhoRoloM: number | undefined
+): RoloFitaCalculado[] {
+  if (typeof tamanhoRoloM !== "number" || tamanhoRoloM <= 0) return [];
+  return fitaPorCor.map((f) => ({
+    cor: f.cor,
+    larguraFitaMm: f.larguraFitaMm,
+    metros: f.metros,
+    tamanhoRoloM,
+    rolos: Math.ceil(f.metros / tamanhoRoloM),
+  }));
 }

@@ -27,6 +27,12 @@ export interface Catalogo {
   mdf: AcabamentoMdf[];
   ferragens: FerragemCatalogo[];
   fitaMetro: number;
+  /** Task 3.6 — tamanho do rolo de fita (metros), derivado do produto tipo
+   * `fita` ativo (`lib/produto/mapear.ts::produtosParaCatalogo`). Sem
+   * fallback: `undefined` quando nenhum produto tem o valor cadastrado
+   * (diferente de `fitaMetro`, que sempre tem `PRECOS_REFERENCIA` como
+   * último recurso). */
+  tamanhoRoloFitaM?: number;
   montagemPorM2: number;
   freteFixo: number;
 }

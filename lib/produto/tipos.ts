@@ -10,7 +10,9 @@
 //   - "ferragem":  { codigo: string; unidade: string } — `codigo` precisa
 //     bater com um dos códigos fixos emitidos pelo motor de caixa
 //     (`lib/engine/box/explode.ts`), ver `CODIGOS_FERRAGEM_FIXOS` abaixo.
-//   - "fita":      { unidade: "m" }
+//   - "fita":      { unidade: "m"; tamanhoRoloM?: number } — Task 3.6,
+//     tamanho do rolo (metros) usado para calcular quantos rolos comprar
+//     (`lib/insumos.ts::calcularRolosDeFita`); sem fallback quando ausente.
 //   - "led"/"acessorio": sem especificação obrigatória (nascem vazios).
 
 import { NOMES_FERRAGENS } from "@/lib/catalog";
@@ -34,6 +36,11 @@ export interface EspecificacaoFerragem {
 
 export interface EspecificacaoFita {
   unidade: "m";
+  /** Task 3.6 — tamanho do rolo, em metros, cadastrado no catálogo. Opcional
+   * de propósito: ao contrário do preço (`ProdutoRow.preco`, sempre presente
+   * com fallback via `PRECOS_REFERENCIA`), não existe tamanho de rolo padrão
+   * inventável — ausente aqui, o cálculo de rolos simplesmente não roda. */
+  tamanhoRoloM?: number;
 }
 
 /** Linha normalizada de `produto` (camelCase, tipada) — usada tanto pela
