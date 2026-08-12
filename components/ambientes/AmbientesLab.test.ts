@@ -9,6 +9,7 @@ import { describe, expect, it } from "vitest";
 import {
   aplicarPresetElementoParede,
   definirAlturaOverride,
+  montarEngrossamentoTampo,
   moverIdNaLista,
   recalcularValorAoTrocarRef,
   remapearIdsAmbientes,
@@ -233,5 +234,41 @@ describe("remapearIdsAmbientes", () => {
 
     expect(resultado[0].id).toBe("ambiente-x");
     expect(resultado[0].paredes[0].id).toBe("parede-x");
+  });
+});
+
+// Task 3.10-3.11 (front) — construção de `engrossamento` a partir da seleção
+// de modelo/espessura do tampo.
+describe("montarEngrossamentoTampo", () => {
+  it("modelo simples: nunca grava engrossamento, mesmo com espessuraFinal setada", () => {
+    expect(montarEngrossamentoTampo({ modelo: "simples", espessuraFinal: 18 })).toBeUndefined();
+    expect(montarEngrossamentoTampo({ modelo: "simples" })).toBeUndefined();
+  });
+
+  it("modelo engrossado: monta tecnica/nivel/lados(4)/larguraSarrafo a partir da espessura final", () => {
+    expect(montarEngrossamentoTampo({ modelo: "engrossado", espessuraFinal: 30 })).toEqual({
+      tecnica: "engrossada",
+      nivel: 1,
+      lados: ["superior", "inferior", "esquerda", "direita"],
+      larguraSarrafo: 70,
+    });
+    expect(montarEngrossamentoTampo({ modelo: "engrossado", espessuraFinal: 54 })).toEqual({
+      tecnica: "engrossada",
+      nivel: 2,
+      lados: ["superior", "inferior", "esquerda", "direita"],
+      larguraSarrafo: 70,
+    });
+  });
+
+  it("modelo dobrado: monta tecnica/nivel, sem lados/larguraSarrafo", () => {
+    expect(montarEngrossamentoTampo({ modelo: "dobrado", espessuraFinal: 60 })).toEqual({
+      tecnica: "dobrada",
+      nivel: 3,
+    });
+  });
+
+  it("modelo engrossado/dobrado sem espessuraFinal escolhida: undefined (nada pra montar)", () => {
+    expect(montarEngrossamentoTampo({ modelo: "engrossado" })).toBeUndefined();
+    expect(montarEngrossamentoTampo({ modelo: "dobrado" })).toBeUndefined();
   });
 });

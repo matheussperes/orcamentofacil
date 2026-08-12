@@ -162,3 +162,19 @@ export interface SelecaoTampo {
   modelo: ModeloTampo;
   espessuraFinal?: number;
 }
+
+// Opções de espessura pro Select de UI quando modelo é "engrossado"/"dobrado"
+// (Task 3.10–3.11 front): não é catálogo-driven (espessura final = composição
+// base+nível, não chapa comprada direto — ver `ESPESSURAS_VALIDAS_POR_MODELO_TAMPO`
+// acima, mesma union de valores). As 5 combinações válidas, Seção 2.1.
+export const OPCOES_ESPESSURA_ENGROSSAMENTO: ReadonlyArray<{
+  espessuraFinal: number;
+  espessuraBase: 15 | 18;
+  nivel: NivelEngrossamento;
+}> = [
+  { espessuraFinal: 30, espessuraBase: 15, nivel: 1 },
+  { espessuraFinal: 45, espessuraBase: 15, nivel: 2 },
+  { espessuraFinal: 60, espessuraBase: 15, nivel: 3 },
+  { espessuraFinal: 36, espessuraBase: 18, nivel: 1 },
+  { espessuraFinal: 54, espessuraBase: 18, nivel: 2 },
+];
