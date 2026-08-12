@@ -3,6 +3,7 @@ import {
   empacotarChapas,
   planoDeCorte,
   guilhotinavel,
+  calcularNumCortes,
   CHAPA_LARGURA_MM,
   CHAPA_ALTURA_MM,
   type PecaPosicionada,
@@ -394,3 +395,85 @@ function pecasDeTeste(): Peca[] {
     { nome: "Fundo", quantidade: 2, material_tipo: "caixa", cor: "Branco TX", espessura_mm: 15, altura_mm: 400, largura_mm: 900, area_m2: 0, fita_m: 0, temVeio: false, sentidoVeio: "comprimento" },
   ];
 }
+
+/**
+ * Reconstrução independente da contagem de cortes (Task 3.4) — usa a MESMA
+ * lógica recursiva de `guilhotinavel()` (candidato de corte que separa a
+ * região em duas sub-regiões, cada uma validada recursivamente por
+ * `guilhotinavel`), mas conta os cortes em vez de só validar. Serve de
+ * verificação cruzada empírica da fórmula N−1: pela prova (qualquer split
+ * guilhotina-válido dá o mesmo total), o primeiro candidato válido encontrado
+ * já basta.
+ */
+function contarCortesGuilhotina(
+  regiao: { x: number; y: number; w: number; h: number },
+  pecas: PecaPosicionada[]
+): number {
+  if (pecas.length <= 1) return 0;
+
+  for (const eixo of ["x", "y"] as const) {
+    const bordas = eixo === "x" ? pecas.flatMap((p) => [p.x, p.x + p.w]) : pecas.flatMap((p) => [p.y, p.y + p.h]);
+    for (const c of new Set(bordas)) {
+      const antes = eixo === "x" ? pecas.filter((p) => p.x + p.w <= c) : pecas.filter((p) => p.y + p.h <= c);
+      const depois = eixo === "x" ? pecas.filter((p) => p.x >= c) : pecas.filter((p) => p.y >= c);
+      if (antes.length === 0 || depois.length === 0) continue; // não separa nada
+      if (antes.length + depois.length !== pecas.length) continue; // corte cruza alguma peça
+
+      const regiaoAntes =
+        eixo === "x"
+          ? { x: regiao.x, y: regiao.y, w: c - regiao.x, h: regiao.h }
+          : { x: regiao.x, y: regiao.y, w: regiao.w, h: c - regiao.y };
+      const regiaoDepois =
+        eixo === "x"
+          ? { x: c, y: regiao.y, w: regiao.x + regiao.w - c, h: regiao.h }
+          : { x: regiao.x, y: c, w: regiao.w, h: regiao.y + regiao.h - c };
+
+      if (guilhotinavel(regiaoAntes, antes) && guilhotinavel(regiaoDepois, depois)) {
+        return 1 + contarCortesGuilhotina(regiaoAntes, antes) + contarCortesGuilhotina(regiaoDepois, depois);
+      }
+    }
+  }
+  throw new Error("região não guilhotinável — inesperado para saída de empacotarChapas (V5)");
+}
+
+describe("Task 3.4 — Chapa.numCortes (RF-29, Modelo-de-Dominio.md §8.1 nota 3)", () => {
+  it("chapa com 1 peça → 0 cortes", () => {
+    const entrada = [{ id: "1", nome: "P", w: 1000, h: 1000, temVeio: false }];
+    const { chapas } = empacotarChapas(entrada);
+    expect(chapas[0].pecas).toHaveLength(1);
+    expect(chapas[0].numCortes).toBe(0);
+  });
+
+  it("chapa com 3 peças → 2 cortes (exemplo trabalhado da spec: N−1, sempre, qualquer geometria/ordem)", () => {
+    const entrada = [
+      { id: "0", nome: "P", w: 2000, h: 600, temVeio: false },
+      { id: "1", nome: "P", w: 2000, h: 600, temVeio: false },
+      { id: "2", nome: "P", w: 2000, h: 600, temVeio: false },
+    ];
+    const { chapas } = empacotarChapas(entrada, 2750, 1840, 3);
+    expect(chapas).toHaveLength(1);
+    expect(chapas[0].pecas).toHaveLength(3);
+    expect(chapas[0].numCortes).toBe(2);
+  });
+
+  it("caso de borda: 0 peças → 0 cortes (Math.max evita -1)", () => {
+    expect(calcularNumCortes(0)).toBe(0);
+  });
+
+  it("verificação cruzada: numCortes bate com a contagem reconstruída via recursão de guilhotinavel() para ≥4 peças", () => {
+    const entrada = [
+      { id: "a", nome: "A", w: 1400, h: 950, temVeio: false },
+      { id: "b", nome: "B", w: 1400, h: 950, temVeio: false },
+      { id: "c", nome: "C", w: 600, h: 400, temVeio: false },
+      { id: "d", nome: "D", w: 900, h: 300, temVeio: false },
+    ];
+    const { chapas } = empacotarChapas(entrada, 2750, 1840, 3);
+    expect(chapas.length).toBeGreaterThan(0);
+    for (const c of chapas) {
+      const reconstruido = contarCortesGuilhotina({ x: 0, y: 0, w: 2750, h: 1840 }, c.pecas);
+      // Verificação aritmética manual: N peças ⇒ N−1 cortes.
+      expect(reconstruido).toBe(c.pecas.length - 1);
+      expect(c.numCortes).toBe(reconstruido);
+    }
+  });
+});

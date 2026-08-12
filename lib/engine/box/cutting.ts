@@ -32,6 +32,15 @@ export interface Chapa {
   index: number; // 1-based, para exibição
   pecas: PecaPosicionada[];
   aproveitamento: number; // 0..1
+  // Task 3.4 (RF-29, Modelo-de-Dominio.md §8.1 nota 3): quantos cortes de
+  // guilhotina/passadas de serra separam esta chapa em `pecas.length` peças
+  // isoladas. Prova: cada corte de guilhotina divide UMA região em EXATAMENTE
+  // DUAS sub-regiões (`guilhotinavel()` acima já garante que essa divisão
+  // sempre existe — invariante V5). Partindo de 1 região (N peças) até N
+  // folhas (1 peça cada), é uma árvore binária com N folhas ⇒ N−1 nós
+  // internos ⇒ sempre N−1 cortes, para QUALQUER geometria/ordem de corte.
+  // Não precisa reconstruir a árvore: é contagem direta a partir de N.
+  numCortes: number;
 }
 
 export interface GrupoChapas {
@@ -255,6 +264,11 @@ function tentarEncontrar(construcao: ChapaEmConstrucao[], orientacoes: Array<{ w
   return melhor;
 }
 
+/** Task 3.4 — ver a prova completa no comentário de `Chapa.numCortes`. Extraída para ser testável isoladamente (inclui o caso de borda N=0). */
+export function calcularNumCortes(numPecas: number): number {
+  return Math.max(0, numPecas - 1);
+}
+
 interface Passada {
   chapas: Chapa[];
   numCortes: number;
@@ -303,6 +317,7 @@ function executarPassada(
     index: i + 1,
     pecas: c.pecas,
     aproveitamento: c.pecas.reduce((s, p) => s + p.w * p.h, 0) / (larguraChapa * alturaChapa),
+    numCortes: calcularNumCortes(c.pecas.length),
   }));
 
   return { chapas, numCortes };
