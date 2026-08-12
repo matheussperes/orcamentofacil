@@ -76,6 +76,52 @@ describe("montarLinhasInsumos — fita discriminada por cor (Task 3.5 front)", (
   });
 });
 
+describe("montarLinhasInsumos — qtd de MDF sem m² (Task 3.7, RF-15)", () => {
+  function engineComMdfEFerragens(): EngineOutput {
+    return {
+      porModulo: [],
+      globais: [],
+      consolidado: {
+        mdf: [{ cor: "Branco TX", espessura_mm: 15, area_m2: 9.42, area_com_perda_m2: 10.5, chapas: 3 }],
+        fitaTotalM: 5,
+        fitaPorCor: [{ cor: "Branco TX", larguraFitaMm: 22, metros: 5 }],
+        ferragens: [{ item: "dobradica", quantidade: 8 }],
+      },
+      warnings: [],
+    };
+  }
+
+  it("linha de MDF: qtd é o número inteiro de chapas, sem 'chapa(s)' nem 'm²'", () => {
+    const engine = engineComMdfEFerragens();
+    const { linhas } = montarLinhasInsumos(engine, PRECOS_REFERENCIA);
+    const mdf = linhas.find((l) => l.categoria === "Chapas");
+    expect(mdf?.qtd).toBe("3");
+    expect(mdf?.qtd).not.toMatch(/chapa|m²/);
+    expect(mdf?.quantidadeBase).toBe(3);
+  });
+
+  it("linha de fita permanece '{metros} m' (inalterada)", () => {
+    const engine = engineComMdfEFerragens();
+    const { linhas } = montarLinhasInsumos(engine, PRECOS_REFERENCIA);
+    const fita = linhas.find((l) => l.categoria === "Acabamento");
+    expect(fita?.qtd).toBe("5.0 m");
+  });
+
+  it("linha de ferragens permanece bare-number (inalterada)", () => {
+    const engine = engineComMdfEFerragens();
+    const { linhas } = montarLinhasInsumos(engine, PRECOS_REFERENCIA);
+    const ferragem = linhas.find((l) => l.categoria === "Ferragens");
+    expect(ferragem?.qtd).toBe("8");
+  });
+
+  it("total da linha de MDF não muda (chapas × preço da chapa 15mm, sem relação com a string qtd)", () => {
+    const engine = engineComMdfEFerragens();
+    const { linhas } = montarLinhasInsumos(engine, PRECOS_REFERENCIA);
+    const mdf = linhas.find((l) => l.categoria === "Chapas");
+    expect(mdf?.total).toBe(3 * PRECOS_REFERENCIA.chapaPorEspessura[15]);
+  });
+});
+
 describe("calcularRolosDeFita (Task 3.6)", () => {
   const grupos: GrupoFita[] = [
     { cor: "Branco TX", larguraFitaMm: 22, metros: 20 },
