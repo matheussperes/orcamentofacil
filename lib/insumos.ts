@@ -18,6 +18,12 @@ export interface LinhaInsumo {
   item: string;
   categoria: "Chapas" | "Acabamento" | "Ferragens" | "Serviço";
   qtd: string; // descrição legível (ex.: "3 chapa(s) · 9,42 m²")
+  /** Task 3.8 (front) — o número puro que multiplica `unit` para dar `total`
+   * (chapas, metros de fita, unidades de ferragem…), exposto pra permitir
+   * override de quantidade na UI sem precisar reconstruir `qtd` (string
+   * livre). Mesmo número já usado internamente para calcular `total` — não é
+   * um segundo cálculo. */
+  quantidadeBase: number;
   unit: number;
   total: number;
 }
@@ -37,6 +43,7 @@ export function montarLinhasInsumos(
       item: `MDF ${g.cor} ${g.espessura_mm}mm`,
       categoria: "Chapas",
       qtd: `${g.chapas} chapa(s) · ${g.area_m2.toFixed(2)} m²`,
+      quantidadeBase: g.chapas,
       unit,
       total: round2(g.chapas * unit),
     });
@@ -46,6 +53,7 @@ export function montarLinhasInsumos(
     item: "Fita de borda",
     categoria: "Acabamento",
     qtd: `${engine.consolidado.fitaTotalM.toFixed(1)} m`,
+    quantidadeBase: engine.consolidado.fitaTotalM,
     unit: precos.fitaMetro,
     total: round2(engine.consolidado.fitaTotalM * precos.fitaMetro),
   });
@@ -56,6 +64,7 @@ export function montarLinhasInsumos(
       item: f.item.replace(/_/g, " "),
       categoria: "Ferragens",
       qtd: `${f.quantidade}`,
+      quantidadeBase: f.quantidade,
       unit,
       total: round2(f.quantidade * unit),
     });
@@ -66,6 +75,7 @@ export function montarLinhasInsumos(
       item: "Montagem",
       categoria: "Serviço",
       qtd: `${areaTotal.toFixed(2)} m²`,
+      quantidadeBase: areaTotal,
       unit: precos.montagemPorM2,
       total: round2(areaTotal * precos.montagemPorM2),
     });
@@ -73,6 +83,7 @@ export function montarLinhasInsumos(
       item: "Frete",
       categoria: "Serviço",
       qtd: "1",
+      quantidadeBase: 1,
       unit: precos.freteFixo,
       total: round2(precos.freteFixo),
     });

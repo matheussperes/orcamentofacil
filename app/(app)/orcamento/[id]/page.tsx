@@ -3,6 +3,7 @@ import { buscarOrcamentoPorId } from "@/lib/orcamento/buscar";
 import { carregarEstadoAmbiente } from "@/lib/ambiente/carregar";
 import { listarElementoParedePresets } from "@/lib/elemento-parede-preset/listar";
 import { buscarUltimaListaMaterial } from "@/lib/lista-material/buscarUltima";
+import { listarOverridesQuantidade } from "@/lib/lista-material/override";
 import { carregarConfiguracaoPrecificacao } from "@/lib/precificacao/carregarConfiguracao";
 import { carregarOuCriarLinhasProposta } from "@/lib/linha-proposta/carregar";
 import { papelAtual } from "@/lib/perfil/papelAtual";
@@ -74,6 +75,7 @@ export default async function OrcamentoPage({ params }: { params: { id: string }
   const idCurto = orcamento.id.slice(0, 8).toUpperCase();
   const estadoAmbiente = await carregarEstadoAmbiente(orcamento.id);
   const ultimaCongeladaEm = await buscarUltimaListaMaterial(orcamento.id);
+  const overridesQuantidade = await listarOverridesQuantidade(orcamento.id);
   const configuracaoPrecificacao = await carregarConfiguracaoPrecificacao(orcamento.id);
   const linhasProposta = await carregarOuCriarLinhasProposta(orcamento.id, estadoAmbiente);
   const papel = await papelAtual();
@@ -102,6 +104,8 @@ export default async function OrcamentoPage({ params }: { params: { id: string }
           frete={orcamento.frete}
           ultimaCongeladaEmInicial={ultimaCongeladaEm}
           kerfMm={kerfMm}
+          overridesQuantidadeIniciais={overridesQuantidade}
+          congeladoEm={orcamento.congeladoEm}
         />
       }
       abaFinanceiro={

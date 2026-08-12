@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Download, Scissors, X } from "lucide-react";
+import { Check, Download, Pencil, Scissors, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Progress } from "@/components/ui/progress";
 import {
@@ -16,7 +17,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { PlanoCorteCanvas } from "@/app/components/PlanoCorteCanvas";
-import { todasAsPecas, montarLinhasInsumos } from "@/lib/insumos";
+import { todasAsPecas, montarLinhasInsumos, type LinhaInsumo } from "@/lib/insumos";
 import { usePlanoDeCorte } from "@/lib/engine/box/usarPlanoDeCorte";
 import { catalogoParaPrecos, type Catalogo } from "@/lib/catalog";
 import { buscarCatalogoReal } from "@/lib/produto/buscar";
@@ -30,6 +31,8 @@ import {
 } from "@/lib/lista-material/tipos";
 import { baixarArquivo, gerarCsvListaMaterial, gerarTextoListaMaterial } from "@/lib/lista-material/exportar";
 import type { ResultadoCongelarListaMaterial } from "@/lib/lista-material/congelar";
+import { aplicarOverridesQuantidade } from "@/lib/lista-material/aplicarOverrides";
+import type { OverrideQuantidade, ResultadoOverride } from "@/lib/lista-material/override";
 import { formatarDataHora, formatarMoeda } from "@/lib/format";
 import { useIrParaAba } from "./AbaAtivaContext";
 
@@ -67,11 +70,50 @@ export interface CorteMaterialLabProps {
    * e passado como `kerf` real para `planoDeCorte` (Modelo-de-Dominio §8.2).
    * Editar esse valor é a Task 4.16-front (`/perfil`), fora de escopo aqui. */
   kerfMm: number;
+  /** Overrides de quantidade ativos deste orçamento (Task 3.8 back,
+   * `listarOverridesQuantidade`, lido uma vez no Server Component — mesmo
+   * padrão de `ultimaCongeladaEmInicial`). */
+  overridesQuantidadeIniciais: OverrideQuantidade[];
+  /** `orcamento.congeladoEm` (já lido em `page.tsx` para a aba Proposta) —
+   * desabilita a edição inline de quantidade quando o orçamento já está
+   * congelado. */
+  congeladoEm: string | null;
+  onDefinirOverrideQuantidade: (itemChave: string, quantidade: number) => Promise<ResultadoOverride>;
+  onRemoverOverrideQuantidade: (itemChave: string) => Promise<ResultadoOverride>;
   onCongelar: (snapshot: SnapshotListaMaterial) => Promise<ResultadoCongelarListaMaterial>;
 }
 
 function novoItemManualId(): string {
   return `manual-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
+}
+
+function round2(n: number): number {
+  return Math.round(n * 100) / 100;
+}
+
+/** Erro de validação client-side antes de chamar a Server Action — mesma
+ * regra de `definirOverrideQuantidade` (`lib/lista-material/override.ts`),
+ * checada aqui só pra dar feedback imediato sem round-trip. */
+export function validarQuantidadeEditada(valor: number): string | null {
+  if (!Number.isFinite(valor) || valor < 0) {
+    return "Informe uma quantidade válida (número maior ou igual a zero).";
+  }
+  return null;
+}
+
+/** Reducer puro do Map de overrides ativos em tela: `quantidade === null`
+ * reverte (remove a chave), qualquer outro valor define/atualiza. Extraído
+ * pra ser testável sem depender da Server Action real (mock só precisa
+ * devolver `{ ok: true }`, este reducer decide o resto). */
+export function aplicarResultadoOverride(
+  atuais: Map<string, number>,
+  itemChave: string,
+  quantidade: number | null
+): Map<string, number> {
+  const novo = new Map(atuais);
+  if (quantidade === null) novo.delete(itemChave);
+  else novo.set(itemChave, quantidade);
+  return novo;
 }
 
 // Design-System.md Seção 9.4 — limiares de aproveitamento (decisão do
@@ -89,6 +131,10 @@ export function CorteMaterialLab({
   frete,
   ultimaCongeladaEmInicial,
   kerfMm,
+  overridesQuantidadeIniciais,
+  congeladoEm,
+  onDefinirOverrideQuantidade,
+  onRemoverOverrideQuantidade,
   onCongelar,
 }: CorteMaterialLabProps) {
   const irParaAba = useIrParaAba();
@@ -129,9 +175,64 @@ export function CorteMaterialLab({
   // `precos.freteFixo`) são defaults genéricos, não `orcamento.frete` real;
   // misturar os dois aqui seria inventar precificação nova (proibido pelo
   // contrato) — o frete real é mostrado à parte, só leitura, mais abaixo.
-  const { linhas, subtotal } = resultadoEngine.ok
+  const { linhas } = resultadoEngine.ok
     ? montarLinhasInsumos(resultadoEngine.engine, precos, { incluirServicos: false })
-    : { linhas: [], subtotal: 0 };
+    : { linhas: [] as LinhaInsumo[] };
+
+  // Task 3.8 (front) — overrides de quantidade ativos, mantidos em estado
+  // local (Map por `item`) e mesclados sobre `linhas` pra exibição e pro
+  // snapshot de congelamento (`aplicarOverridesQuantidade`, função pura).
+  const [overrides, setOverrides] = useState<Map<string, number>>(
+    () => new Map(overridesQuantidadeIniciais.map((o) => [o.itemChave, o.quantidade]))
+  );
+  const [editandoItem, setEditandoItem] = useState<string | null>(null);
+  const [valorEdicao, setValorEdicao] = useState(0);
+  const [erroEdicaoQuantidade, setErroEdicaoQuantidade] = useState<string | null>(null);
+
+  const overridesAtivos = useMemo(
+    () => Array.from(overrides, ([itemChave, quantidade]) => ({ itemChave, quantidade })),
+    [overrides]
+  );
+  const linhasComOverride = useMemo(
+    () => aplicarOverridesQuantidade(linhas, overridesAtivos),
+    [linhas, overridesAtivos]
+  );
+  const subtotal = round2(linhasComOverride.reduce((s, l) => s + l.total, 0));
+
+  function iniciarEdicaoQuantidade(linha: LinhaInsumo) {
+    setErroEdicaoQuantidade(null);
+    setEditandoItem(linha.item);
+    setValorEdicao(overrides.get(linha.item) ?? linha.quantidadeBase);
+  }
+
+  function cancelarEdicaoQuantidade() {
+    setEditandoItem(null);
+  }
+
+  async function confirmarEdicaoQuantidade(itemChave: string) {
+    const erro = validarQuantidadeEditada(valorEdicao);
+    if (erro) {
+      setErroEdicaoQuantidade(erro);
+      return;
+    }
+    const resultado = await onDefinirOverrideQuantidade(itemChave, valorEdicao);
+    if (!resultado.ok) {
+      setErroEdicaoQuantidade(resultado.erro ?? "Não foi possível salvar a quantidade editada.");
+      return;
+    }
+    setOverrides((atuais) => aplicarResultadoOverride(atuais, itemChave, valorEdicao));
+    setEditandoItem(null);
+  }
+
+  async function reverterEdicaoQuantidade(itemChave: string) {
+    setErroEdicaoQuantidade(null);
+    const resultado = await onRemoverOverrideQuantidade(itemChave);
+    if (!resultado.ok) {
+      setErroEdicaoQuantidade(resultado.erro ?? "Não foi possível remover a quantidade editada.");
+      return;
+    }
+    setOverrides((atuais) => aplicarResultadoOverride(atuais, itemChave, null));
+  }
 
   const [itensManuais, setItensManuais] = useState<ItemManualListaMaterial[]>([]);
   const [formDescricao, setFormDescricao] = useState("");
@@ -165,7 +266,7 @@ export function CorteMaterialLab({
   function montarSnapshotAtual() {
     return montarSnapshotListaMaterial({
       orcamentoId,
-      linhas,
+      linhas: linhasComOverride,
       subtotalMaterial: subtotal,
       itensManuais,
       frete,
@@ -330,16 +431,83 @@ export function CorteMaterialLab({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {linhas.map((linha, i) => (
-              <TableRow key={`bom-${i}`}>
-                <TableCell>{linha.item}</TableCell>
-                <TableCell className="text-cinza-500">{linha.categoria}</TableCell>
-                <TableCell>{linha.qtd}</TableCell>
-                <TableCell className="text-right tabular-nums">{formatarMoeda(linha.unit)}</TableCell>
-                <TableCell className="text-right tabular-nums">{formatarMoeda(linha.total)}</TableCell>
-                <TableCell />
-              </TableRow>
-            ))}
+            {linhasComOverride.map((linha, i) => {
+              const editando = editandoItem === linha.item;
+              const temOverride = overrides.has(linha.item);
+              return (
+                <TableRow key={`bom-${i}`}>
+                  <TableCell>{linha.item}</TableCell>
+                  <TableCell className="text-cinza-500">{linha.categoria}</TableCell>
+                  <TableCell>
+                    {editando ? (
+                      <div className="flex items-center gap-xs">
+                        <Input
+                          type="number"
+                          min={0}
+                          step="0.01"
+                          value={valorEdicao}
+                          onChange={(e) => setValorEdicao(Number(e.target.value) || 0)}
+                          className="h-8 w-24"
+                          aria-label={`Nova quantidade de ${linha.item}`}
+                          autoFocus
+                        />
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => confirmarEdicaoQuantidade(linha.item)}
+                          aria-label={`Confirmar quantidade de ${linha.item}`}
+                        >
+                          <Check className="h-4 w-4" aria-hidden="true" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={cancelarEdicaoQuantidade}
+                          aria-label="Cancelar edição de quantidade"
+                        >
+                          <X className="h-4 w-4" aria-hidden="true" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="flex flex-wrap items-center gap-xs">
+                        {temOverride ? (
+                          <>
+                            <span className="tabular-nums">{overrides.get(linha.item)}</span>
+                            <Badge variant="enviado">Editado</Badge>
+                          </>
+                        ) : (
+                          <span>{linha.qtd}</span>
+                        )}
+                        {congeladoEm === null && (
+                          <>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => iniciarEdicaoQuantidade(linha)}
+                              aria-label={`Editar quantidade de ${linha.item}`}
+                            >
+                              <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
+                            </Button>
+                            {temOverride && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => reverterEdicaoQuantidade(linha.item)}
+                              >
+                                Reverter
+                              </Button>
+                            )}
+                          </>
+                        )}
+                      </div>
+                    )}
+                  </TableCell>
+                  <TableCell className="text-right tabular-nums">{formatarMoeda(linha.unit)}</TableCell>
+                  <TableCell className="text-right tabular-nums">{formatarMoeda(linha.total)}</TableCell>
+                  <TableCell />
+                </TableRow>
+              );
+            })}
             {itensManuais.map((item) => (
               <TableRow key={item.id}>
                 <TableCell>{item.descricao}</TableCell>
@@ -382,6 +550,12 @@ export function CorteMaterialLab({
             </TableRow>
           </TableBody>
         </Table>
+
+        {erroEdicaoQuantidade && (
+          <Alert variant="erro" className="mt-sm">
+            <AlertDescription>{erroEdicaoQuantidade}</AlertDescription>
+          </Alert>
+        )}
 
         <p className="mt-sm text-corpo-pequeno text-cinza-500">
           Frete:{" "}
