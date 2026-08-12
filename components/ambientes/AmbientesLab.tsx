@@ -69,6 +69,7 @@ import {
   type TipoElementoContinuo,
 } from "@/lib/engine/elemento-continuo/types";
 import { trocarModeloTampo } from "@/lib/engine/elemento-continuo/explode";
+import type { Engrossamento } from "@/lib/engine/placa/types";
 import { listarPresets, seedPresetsPadrao, type BoxPreset } from "@/lib/boxPresets";
 import { carregarCatalogo, coresDisponiveis, espessurasDaCor, type Catalogo } from "@/lib/catalog";
 import {
@@ -180,6 +181,24 @@ export function aplicarPresetElementoParede(
     novaAltura: preset.alturaPadrao ?? campoAtual.novaAltura,
   };
 }
+/** Task 3.10–3.11 (front) — monta `ElementoContinuo.engrossamento` a partir da
+ * seleção de modelo/espessura do tampo (Modelo-de-Dominio Seção 3.4.1/2.1).
+ * Extraída como função pura pra ser testável sem jsdom, mesmo motivo de
+ * `salvarElementoNaLista`. "simples" → `undefined`; "engrossado"/"dobrado" →
+ * localiza a combinação base+nível em `OPCOES_ESPESSURA_ENGROSSAMENTO` pela
+ * espessura final escolhida (sempre encontra, se `espessuraFinal` já foi
+ * validado pelo Select — nunca 15/18/25, que só existem no modelo simples).
+ * Lados/largura de sarrafo: default de 4 lados e 70mm (decisão de escopo
+ * desta task, ver contrato — sem seletor visual de lados). */
+export function montarEngrossamentoTampo(selecao: SelecaoTampo): Engrossamento | undefined {
+  if (selecao.modelo === "simples") return undefined;
+  const opcao = OPCOES_ESPESSURA_ENGROSSAMENTO.find((o) => o.espessuraFinal === selecao.espessuraFinal);
+  if (!opcao) return undefined;
+  return selecao.modelo === "engrossado"
+    ? { tecnica: "engrossada", nivel: opcao.nivel, lados: ["superior", "inferior", "esquerda", "direita"], larguraSarrafo: 70 }
+    : { tecnica: "dobrada", nivel: opcao.nivel };
+}
+
 /** Grava um campo de altura customizado no override, preservando os demais.
  * Extraída como função pura pra ser testável sem jsdom, mesmo motivo de
  * `salvarElementoNaLista`. */
@@ -1077,22 +1096,7 @@ export function AmbientesLab({
       alvo = selecao.tipo === "conjunto" ? { conjuntoId: selecao.conjuntoId } : { moduloId: selecao.itemId };
     }
 
-    const opcaoEngrossamento = OPCOES_ESPESSURA_ENGROSSAMENTO.find(
-      (o) => o.espessuraFinal === selecaoTampo.espessuraFinal
-    );
-    const engrossamento: ElementoContinuo["engrossamento"] =
-      novoTipoElemento === "tampo" && opcaoEngrossamento
-        ? selecaoTampo.modelo === "engrossado"
-          ? {
-              tecnica: "engrossada",
-              nivel: opcaoEngrossamento.nivel,
-              lados: ["superior", "inferior", "esquerda", "direita"],
-              larguraSarrafo: 70,
-            }
-          : selecaoTampo.modelo === "dobrado"
-            ? { tecnica: "dobrada", nivel: opcaoEngrossamento.nivel }
-            : undefined
-        : undefined;
+    const engrossamento = novoTipoElemento === "tampo" ? montarEngrossamentoTampo(selecaoTampo) : undefined;
 
     const elemento: ElementoContinuo = {
       id: novoElementoId(),
