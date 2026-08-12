@@ -15,11 +15,13 @@ import type { ModoMontagem, ModoPrecificacao } from "@/lib/engine/precificacao";
 // client já tem de uma leitura anterior (`carregarPerfilOrganizacao`); um id
 // de outra organização simplesmente não passaria no `WITH CHECK` da policy.
 //
-// **Logo sem upload** (decisão de escopo do contrato, documentada aqui
-// também): `organizacao.logo_url` é `text` livre — este formulário só grava
-// a URL como o usuário digitou/colou. Construir upload de imagem (Storage
-// novo, como a Task 13.6a fez pro render de proposta) é escopo maior, fora
-// desta task.
+// **`logoUrl` agora é um PATH de Storage, não uma URL livre** (Task
+// 4.8-4.9-back, bucket `organizacao-logos` — mesma semântica que
+// `linha_proposta.imagem_url` já tinha desde a Task 13.6a): este módulo só
+// grava a string que o client manda, sem validar formato — quem decide se é
+// path (upload real) ou ainda uma URL legada é a Task 4.8-4.9 front, que
+// troca o campo de texto pelo fluxo de upload (`lib/organizacao/logo-storage.ts`).
+// Nenhuma mudança de comportamento nesta task, só o comentário.
 export interface DadosOrganizacao {
   nome: string;
   cnpj: string;

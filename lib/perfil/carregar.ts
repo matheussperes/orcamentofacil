@@ -22,6 +22,10 @@ export interface OrganizacaoCarregada {
   cnpj: string;
   endereco: string;
   telefone: string;
+  /** `organizacao.logo_url` — desde a Task 4.8-4.9-back guarda o PATH do
+   * objeto no bucket privado `organizacao-logos`, nunca uma signed URL
+   * (mesma semântica de `linha_proposta.imagem_url`). Um valor legado que
+   * ainda seja URL externa só é resolvido de volta pela Task 4.8-4.9 front. */
   logoUrl: string;
   unidade: "mm" | "cm";
   modoPrecificacaoPadrao: ModoPrecificacao;
