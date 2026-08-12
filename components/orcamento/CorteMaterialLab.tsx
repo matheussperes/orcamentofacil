@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Progress } from "@/components/ui/progress";
+import { Switch } from "@/components/ui/switch";
 import {
   Table,
   TableBody,
@@ -169,6 +170,11 @@ export function CorteMaterialLab({
     [resultadoEngine]
   );
   const { grupos, calculando } = usePlanoDeCorte(pecas, kerfMm);
+
+  // Task 3.2 — estado local, não persiste entre carregamentos (contrato:
+  // "reseta a cada carregamento da página"). Off por padrão: nenhuma seta é
+  // desenhada até o usuário ligar o toggle.
+  const [mostrarVeios, setMostrarVeios] = useState(false);
 
   // `incluirServicos: false` — só o BOM de material (Chapas/Acabamento/
   // Ferragens). Montagem/frete de catálogo (`precos.montagemPorM2`/
@@ -344,14 +350,22 @@ export function CorteMaterialLab({
   return (
     <div className="flex flex-col gap-lg">
       <section className="rounded-lg border border-cinza-200 bg-cinza-0 p-xl shadow-xs">
-        <div className="mb-xs flex flex-wrap items-center gap-sm">
-          <h2 className="text-titulo-secao text-cinza-900">Plano de corte</h2>
-          {calculando && (
-            <span className="flex items-center gap-xs text-legenda text-cinza-500">
-              <span className="h-1.5 w-1.5 rounded-full bg-cinza-300 animate-pulse" aria-hidden="true" />
-              Otimizando plano de corte…
-            </span>
-          )}
+        <div className="mb-xs flex flex-wrap items-center justify-between gap-sm">
+          <div className="flex flex-wrap items-center gap-sm">
+            <h2 className="text-titulo-secao text-cinza-900">Plano de corte</h2>
+            {calculando && (
+              <span className="flex items-center gap-xs text-legenda text-cinza-500">
+                <span className="h-1.5 w-1.5 rounded-full bg-cinza-300 animate-pulse" aria-hidden="true" />
+                Otimizando plano de corte…
+              </span>
+            )}
+          </div>
+          <div className="flex items-center gap-xs">
+            <Label htmlFor="toggle-mostrar-veios" className="text-corpo-pequeno text-cinza-700">
+              Mostrar veios
+            </Label>
+            <Switch id="toggle-mostrar-veios" checked={mostrarVeios} onCheckedChange={setMostrarVeios} />
+          </div>
         </div>
         <p className="mb-md text-corpo-pequeno text-cinza-500">
           Chapas de {grupos[0]?.larguraChapa ?? 2750}×{grupos[0]?.alturaChapa ?? 1840}mm, escala 1:10.
@@ -381,6 +395,7 @@ export function CorteMaterialLab({
                         chapa={chapa}
                         larguraChapa={grupo.larguraChapa}
                         alturaChapa={grupo.alturaChapa}
+                        mostrarVeios={mostrarVeios}
                       />
                       <Progress
                         value={chapa.aproveitamento * 100}
