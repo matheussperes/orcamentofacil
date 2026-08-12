@@ -1,13 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { Lightbulb, Package, Puzzle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { KpisCatalogo } from "./KpisCatalogo";
-import { TabelaChapas } from "./TabelaChapas";
-import { TabelaFerragens } from "./TabelaFerragens";
-import { TabelaSimples } from "./TabelaSimples";
+import { TabelaProdutos } from "./TabelaProdutos";
 import type { DadosProduto, ResultadoProduto } from "@/lib/produto/acoes";
 import type { ProdutoRow } from "@/lib/produto/tipos";
 
@@ -25,12 +21,13 @@ import type { ProdutoRow } from "@/lib/produto/tipos";
 // vazia", ver `lib/produto/listar.ts`) — substitui TODO o conteúdo, mesmo
 // padrão de `CorteMaterialLab`/`FinanceiroLab` quando o motor não calcula.
 //
-// Abas (Design-System.md Seção 7.8: "abas do catálogo (Todos/Chapas/
-// Ferragens/LEDs/Acessórios/Outros)"). Decisão de escopo (sem resposta
-// explícita no contrato, documentada aqui): a última aba é rotulada "Fita"
-// em vez do genérico "Outros" da Seção 7.8 — os 5 `tipo` reais da tabela
-// `produto` (chapa/ferragem/fita/led/acessorio) já têm nome próprio, um
-// rótulo "Outros" agruparia só fita e seria mais vago sem necessidade.
+// Task 4.1-4.3-4.5 (RF-30, catálogo unificado): as antigas `Tabs`/
+// `TabsList`/`TabsContent` de categoria (Todos/Chapas/Ferragens/LEDs/
+// Acessórios/Fita) e as 3 tabelas separadas deram lugar a um único
+// `TabelaProdutos`, com seletor de categoria interno ao card — Design-
+// System.md §7.8 (Tabs) segue documentando as abas de orçamento/perfil/
+// biblioteca, mas não se aplica mais a esta tela (decisão de produto já
+// registrada no Backlog).
 export interface CatalogoLabProps {
   produtosIniciais: ProdutoRow[];
   erroCarregamento?: boolean;
@@ -68,120 +65,16 @@ export function CatalogoLab({
     );
   }
 
-  const chapas = produtos.filter((p) => p.tipo === "chapa");
-  const ferragens = produtos.filter((p) => p.tipo === "ferragem");
-  const fitas = produtos.filter((p) => p.tipo === "fita");
-  const leds = produtos.filter((p) => p.tipo === "led");
-  const acessorios = produtos.filter((p) => p.tipo === "acessorio");
-
   return (
     <div className="flex flex-col gap-lg">
       <KpisCatalogo produtos={produtos} />
-
-      <Tabs defaultValue="todos">
-        <TabsList>
-          <TabsTrigger value="todos">Todos</TabsTrigger>
-          <TabsTrigger value="chapas">Chapas</TabsTrigger>
-          <TabsTrigger value="ferragens">Ferragens</TabsTrigger>
-          <TabsTrigger value="leds">LEDs</TabsTrigger>
-          <TabsTrigger value="acessorios">Acessórios</TabsTrigger>
-          <TabsTrigger value="fita">Fita</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="todos" className="flex flex-col gap-lg">
-          <TabelaChapas produtos={chapas} onCriar={onCriar} onAtualizar={onAtualizar} onAlternarAtivo={onAlternarAtivo} onSucesso={atualizarListaLocal} />
-          <TabelaFerragens produtos={ferragens} onCriar={onCriar} onAtualizar={onAtualizar} onAlternarAtivo={onAlternarAtivo} onSucesso={atualizarListaLocal} />
-          <TabelaSimples
-            tipo="fita"
-            titulo="Fita de borda"
-            descricao="Preço por metro — usado como valor único de referência em todo o orçamento."
-            Icone={Package}
-            unidade="m"
-            produtos={fitas}
-            onCriar={onCriar}
-            onAtualizar={onAtualizar}
-            onAlternarAtivo={onAlternarAtivo}
-            onSucesso={atualizarListaLocal}
-          />
-          <TabelaSimples
-            tipo="led"
-            titulo="LEDs"
-            descricao="Catalogados para referência — ainda sem correspondência automática no motor de cálculo."
-            Icone={Lightbulb}
-            unidade={null}
-            produtos={leds}
-            onCriar={onCriar}
-            onAtualizar={onAtualizar}
-            onAlternarAtivo={onAlternarAtivo}
-            onSucesso={atualizarListaLocal}
-          />
-          <TabelaSimples
-            tipo="acessorio"
-            titulo="Acessórios"
-            descricao="Catalogados para referência — ainda sem correspondência automática no motor de cálculo."
-            Icone={Puzzle}
-            unidade={null}
-            produtos={acessorios}
-            onCriar={onCriar}
-            onAtualizar={onAtualizar}
-            onAlternarAtivo={onAlternarAtivo}
-            onSucesso={atualizarListaLocal}
-          />
-        </TabsContent>
-
-        <TabsContent value="chapas">
-          <TabelaChapas produtos={chapas} onCriar={onCriar} onAtualizar={onAtualizar} onAlternarAtivo={onAlternarAtivo} onSucesso={atualizarListaLocal} />
-        </TabsContent>
-
-        <TabsContent value="ferragens">
-          <TabelaFerragens produtos={ferragens} onCriar={onCriar} onAtualizar={onAtualizar} onAlternarAtivo={onAlternarAtivo} onSucesso={atualizarListaLocal} />
-        </TabsContent>
-
-        <TabsContent value="leds">
-          <TabelaSimples
-            tipo="led"
-            titulo="LEDs"
-            descricao="Catalogados para referência — ainda sem correspondência automática no motor de cálculo."
-            Icone={Lightbulb}
-            unidade={null}
-            produtos={leds}
-            onCriar={onCriar}
-            onAtualizar={onAtualizar}
-            onAlternarAtivo={onAlternarAtivo}
-            onSucesso={atualizarListaLocal}
-          />
-        </TabsContent>
-
-        <TabsContent value="acessorios">
-          <TabelaSimples
-            tipo="acessorio"
-            titulo="Acessórios"
-            descricao="Catalogados para referência — ainda sem correspondência automática no motor de cálculo."
-            Icone={Puzzle}
-            unidade={null}
-            produtos={acessorios}
-            onCriar={onCriar}
-            onAtualizar={onAtualizar}
-            onAlternarAtivo={onAlternarAtivo}
-            onSucesso={atualizarListaLocal}
-          />
-        </TabsContent>
-
-        <TabsContent value="fita">
-          <TabelaSimples
-            tipo="fita"
-            titulo="Fita de borda"
-            descricao="Preço por metro — usado como valor único de referência em todo o orçamento."
-            Icone={Package}
-            unidade="m"
-            produtos={fitas}
-            onCriar={onCriar}
-            onAtualizar={onAtualizar}
-            onAlternarAtivo={onAlternarAtivo}
-            onSucesso={atualizarListaLocal}
-          />
-        </TabsContent>
-      </Tabs>
+      <TabelaProdutos
+        produtos={produtos}
+        onCriar={onCriar}
+        onAtualizar={onAtualizar}
+        onAlternarAtivo={onAlternarAtivo}
+        onSucesso={atualizarListaLocal}
+      />
     </div>
   );
 }
