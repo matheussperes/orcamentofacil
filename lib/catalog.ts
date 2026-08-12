@@ -13,6 +13,10 @@ export interface AcabamentoMdf {
   espessura: number; // 6 | 15 | 18
   precoChapa: number; // R$ por chapa 2,75×1,84m
   fornecedor?: string;
+  /** [Q-14] Caminho relativo no bucket `texturas` (Supabase Storage),
+   * espelhando `EspecificacaoChapa.texturaUrl` (`lib/produto/tipos.ts`) —
+   * consumido pelo `ModuleViewer` (Task 3.13-front). Ausente ⇒ cor sólida. */
+  texturaUrl?: string;
 }
 
 export interface FerragemCatalogo {

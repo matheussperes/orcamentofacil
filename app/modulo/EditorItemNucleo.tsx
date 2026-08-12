@@ -1,9 +1,14 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import dynamic from "next/dynamic";
+import { Box, RectangleHorizontal, PanelTop, PanelLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import type { ModuleViewerAngulo } from "@/components/modulo/ModuleViewer";
 import { BoxCanvas, type ModoSelecao } from "../components/BoxCanvas";
+import { corParaHex } from "../components/ModulePreview";
 import { PlacaVisual } from "../components/PlacaVisual";
 import { calcularOrcamentoMisto, type ModuloOrcamento } from "@/lib/orcamento";
 import {
@@ -25,6 +30,7 @@ import {
   type Catalogo,
 } from "@/lib/catalog";
 import { buscarCatalogoReal } from "@/lib/produto/buscar";
+import { urlPublicaTextura } from "@/lib/produto/texturas";
 import { buscarEspessuraSerraReal } from "@/lib/organizacao/buscarKerf";
 import { montarLinhasInsumos } from "@/lib/insumos";
 import { calcularPreco } from "@/lib/engine/pricing";
@@ -147,6 +153,33 @@ function idsIguais(a: string[], b: string[]): boolean {
   return sa.every((v, i) => v === sb[i]);
 }
 
+// Task 3.13-front — `ModuleViewer` (3D estático, Design-System §9.6) carrega
+// `three`/`@react-three/fiber`/`@react-three/drei` (bundle pesado): SEMPRE
+// via `next/dynamic({ ssr: false })`, skeleton de canvas técnico (Seção 8/
+// §9.6) enquanto carrega — mesmo `bg-cinza-50 border-cinza-200`, ícone `Box`
+// centralizado em `text-cinza-300`, sem desenho.
+const ModuleViewer = dynamic(
+  () => import("@/components/modulo/ModuleViewer").then((m) => m.ModuleViewer),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="flex h-full w-full items-center justify-center">
+        <Box className="h-8 w-8 text-cinza-300" aria-hidden />
+      </div>
+    ),
+  }
+);
+
+// Controles de ângulo do modo "3D estático" (Design-System §9.6) — próprios e
+// distintos dos botões Frontal/Traseira/Esquerda/Direita/Explodida do 2D,
+// mapeados 1:1 às 4 props fechadas de `ModuleViewer`.
+const ANGULOS_MODULE_VIEWER: { view: ModuleViewerAngulo; rotulo: string; Icone: typeof Box }[] = [
+  { view: "isometric", rotulo: "Isométrica", Icone: Box },
+  { view: "front", rotulo: "Frontal", Icone: RectangleHorizontal },
+  { view: "top", rotulo: "Superior", Icone: PanelTop },
+  { view: "side", rotulo: "Lateral", Icone: PanelLeft },
+];
+
 interface DivisaoSel {
   parentId: string;
   indice: number;
@@ -193,10 +226,27 @@ export function EditorItemNucleo({
     estadoInicial.origem === "placa" ? estadoInicial.placa : placaInicial("Branco TX")
   );
 
+  // Task 3.13-front — mesma fonte de cor/geometria que `BoxCanvas.tsx` já
+  // consome (proibido segundo caminho de derivação, Design-System §9.6):
+  // `corParaHex(box.caixa.cor)` para a cor, e `catalogo.mdf` (mesmo cor +
+  // espessura da caixa) para a `texturaUrl`, quando cadastrada.
+  const corModuleViewer = useMemo(() => corParaHex(box.caixa.cor), [box.caixa.cor]);
+  const texturaUrlModuleViewer = useMemo(() => {
+    const item = catalogo?.mdf.find(
+      (m) => m.cor === box.caixa.cor && m.espessura === box.caixa.espessura
+    );
+    return item?.texturaUrl ? urlPublicaTextura(item.texturaUrl) : undefined;
+  }, [catalogo, box.caixa.cor, box.caixa.espessura]);
+
   const [secaoAbertaBox, setSecaoAbertaBox] = useState<Secao | null>("caixa");
   const ordemPlaca = useMemo(() => ordemSecoesPlaca("placa"), []);
   const [secaoAbertaPlaca, setSecaoAbertaPlaca] = useState<SecaoPlaca | null>(ordemPlaca[0] ?? null);
   const [modoSelecao, setModoSelecao] = useState<ModoSelecao>("vaos");
+  // Task 3.13-front — segundo modo do painel de visualização (Design-System
+  // §9.6): "2D técnico" (default, conteúdo já existente) ou "3D estático"
+  // (`ModuleViewer`). Ângulo da câmera do 3D, independente do 2D.
+  const [modoVisualizacao, setModoVisualizacao] = useState<"2d" | "3d">("2d");
+  const [anguloModuleViewer, setAnguloModuleViewer] = useState<ModuleViewerAngulo>("isometric");
   // Desativado (padrão): clicar num vão troca a seleção (só 1 por vez).
   // Ativado: clicar soma/remove vãos da seleção (usado pra aplicar portas em
   // vários vãos de uma vez).
@@ -741,28 +791,65 @@ export function EditorItemNucleo({
         <div className="card">
           {origem === "custom_box" ? (
             <>
-              <h2>Vãos (clique para selecionar)</h2>
-              <div className="flex flex-wrap gap-sm mb-sm">
-                <Button
-                  variant={modoSelecao === "vaos" ? "iconActive" : "ghost"}
-                  size="sm"
-                  onClick={clicarSelecionarVaos}
-                >
-                  Selecionar vãos{modoSelecao === "vaos" && multiSelecaoVaos ? " (múltiplos)" : ""}
-                </Button>
-              </div>
-              <BoxCanvas
-                box={box}
-                modoSelecao={modoSelecao}
-                vaosSelecionados={vaosSelecionados}
-                onToggleVao={toggleVao}
-                divisaoSelecionada={divisaoSelecionada}
-                onSelecionarDivisoria={setDivisaoSelecionada}
-                portaSelecionada={portaSelecionada}
-                onSelecionarPorta={setPortaSelecionada}
-                vaoGavetaSelecionado={vaoGavetaSelecionado}
-                onSelecionarVaoGaveta={setVaoGavetaSelecionado}
-              />
+              <Tabs
+                value={modoVisualizacao}
+                onValueChange={(v) => setModoVisualizacao(v as "2d" | "3d")}
+              >
+                <TabsList>
+                  <TabsTrigger value="2d">2D técnico</TabsTrigger>
+                  <TabsTrigger value="3d">3D estático</TabsTrigger>
+                </TabsList>
+                <TabsContent value="2d">
+                  <h2>Vãos (clique para selecionar)</h2>
+                  <div className="flex flex-wrap gap-sm mb-sm">
+                    <Button
+                      variant={modoSelecao === "vaos" ? "iconActive" : "ghost"}
+                      size="sm"
+                      onClick={clicarSelecionarVaos}
+                    >
+                      Selecionar vãos{modoSelecao === "vaos" && multiSelecaoVaos ? " (múltiplos)" : ""}
+                    </Button>
+                  </div>
+                  <BoxCanvas
+                    box={box}
+                    modoSelecao={modoSelecao}
+                    vaosSelecionados={vaosSelecionados}
+                    onToggleVao={toggleVao}
+                    divisaoSelecionada={divisaoSelecionada}
+                    onSelecionarDivisoria={setDivisaoSelecionada}
+                    portaSelecionada={portaSelecionada}
+                    onSelecionarPorta={setPortaSelecionada}
+                    vaoGavetaSelecionado={vaoGavetaSelecionado}
+                    onSelecionarVaoGaveta={setVaoGavetaSelecionado}
+                  />
+                </TabsContent>
+                <TabsContent value="3d">
+                  <div className="flex flex-wrap gap-sm mb-sm">
+                    {ANGULOS_MODULE_VIEWER.map(({ view, rotulo, Icone }) => (
+                      <Button
+                        key={view}
+                        variant={anguloModuleViewer === view ? "iconActive" : "ghost"}
+                        size="icon"
+                        aria-label={rotulo}
+                        title={rotulo}
+                        onClick={() => setAnguloModuleViewer(view)}
+                      >
+                        <Icone aria-hidden />
+                      </Button>
+                    ))}
+                  </div>
+                  <div className="aspect-square max-w-full rounded-md border border-cinza-200 bg-cinza-50 p-2">
+                    <ModuleViewer
+                      width={box.largura}
+                      height={box.altura}
+                      depth={box.profundidade}
+                      view={anguloModuleViewer}
+                      color={corModuleViewer}
+                      textureUrl={texturaUrlModuleViewer}
+                    />
+                  </div>
+                </TabsContent>
+              </Tabs>
               <div className="acoes" style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap" }}>
                 {exibirAcaoSalvar && (
                   <button className="primary" onClick={handleSalvar} disabled={salvando}>
