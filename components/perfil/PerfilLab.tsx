@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState, type ChangeEvent } from "react";
 import { Building2, ImageOff, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,10 +9,34 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SeletorModoPrecificacao } from "@/components/precificacao/SeletorModoPrecificacao";
 import { SeletorModoMontagem } from "@/components/precificacao/SeletorModoMontagem";
+import {
+  MIME_TYPES_LOGO_ACEITOS,
+  obterUrlAssinadaLogoOrganizacao,
+  uploadLogoOrganizacao,
+} from "@/lib/organizacao/logo-storage";
 import type { OrganizacaoCarregada, PerfilCarregado } from "@/lib/perfil/carregar";
 import type { DadosOrganizacao, ResultadoSalvarOrganizacao } from "@/lib/organizacao/salvar";
 import type { DadosPerfil, ResultadoSalvarPerfil } from "@/lib/perfil/salvar";
 import type { ModoMontagem, ModoPrecificacao } from "@/lib/engine/precificacao";
+
+// Task 4.8-4.9-front (contrato .maestro/state/contracts/4.8-4.9-front.md) —
+// limite de tamanho replicado do `file_size_limit` do bucket
+// `organizacao-logos` (migration `20260812130418_storage_organizacao_logos.sql`,
+// 2097152 bytes) — checado no client ANTES do upload pra evitar round-trip
+// desnecessário quando o arquivo já é rejeitável de cara.
+const TAMANHO_MAXIMO_LOGO_BYTES = 2 * 1024 * 1024;
+
+/** Validação pura (sem I/O) pra ser testável sem mockar Supabase — mesma
+ * regra que o bucket aplica (mime + tamanho), checada aqui primeiro. */
+export function validarArquivoLogo(arquivo: File): string | null {
+  if (!MIME_TYPES_LOGO_ACEITOS.includes(arquivo.type)) {
+    return "Formato de imagem não suportado. Use PNG, JPEG ou WEBP.";
+  }
+  if (arquivo.size > TAMANHO_MAXIMO_LOGO_BYTES) {
+    return "Arquivo muito grande. O tamanho máximo é 2 MB.";
+  }
+  return null;
+}
 
 // Task 13.7a (contrato .maestro/tmp/13.7a-contract.md) — componente
 // PRESENTACIONAL de `/perfil` (mesmo espírito de `FinanceiroLab`/
@@ -31,14 +55,15 @@ import type { ModoMontagem, ModoPrecificacao } from "@/lib/engine/precificacao";
 // duas chamadas de Server Action com resultados independentes na mesma UI
 // de feedback, sem ganho real de simplicidade para o usuário.
 //
-// Decisão de escopo (contrato, "bônus simples, não obrigatório"): preview da
-// logo a partir da URL digitada, via `<img>` nativo (não `next/image` — a
-// URL é arbitrária, digitada pelo usuário, e `next.config.js` não tem
-// domínio nenhum liberado em `images.remotePatterns`; exigiria o usuário
-// pré-cadastrar domínios, o que não faz sentido para um campo de texto
-// livre). Erro de carregamento da imagem (URL inválida/CORS/404) cai num
-// placeholder neutro em vez de mostrar o ícone de imagem quebrada do
-// navegador.
+// Task 4.8-4.9-front: campo "Logo (URL da imagem)" (texto livre) substituído
+// por upload real (RF-31) — ver `MIME_TYPES_LOGO_ACEITOS`/`uploadLogoOrganizacao`/
+// `obterUrlAssinadaLogoOrganizacao` em `lib/organizacao/logo-storage.ts`
+// (bucket privado, Task 4.8-4.9-back). Preview continua via `<img>` nativo
+// (não `next/image` — a signed URL é temporária e `next.config.js` não tem
+// domínio liberado em `images.remotePatterns`). `logoPath` pode chegar como
+// valor LEGADO (URL externa de antes desta task) — ver `useEffect` de
+// resolução da preview logo abaixo, que cobre esse fallback sem exigir
+// migração de dado.
 //
 // Decisão de escopo (sem resposta explícita no contrato — documentada
 // aqui): a lista "Conteúdo da página" do contrato NÃO inclui as alturas
@@ -98,8 +123,57 @@ function SecaoOrganizacao({
   const [cnpj, setCnpj] = useState(organizacaoInicial.cnpj);
   const [endereco, setEndereco] = useState(organizacaoInicial.endereco);
   const [telefone, setTelefone] = useState(organizacaoInicial.telefone);
-  const [logoUrl, setLogoUrl] = useState(organizacaoInicial.logoUrl);
-  const [logoComErro, setLogoComErro] = useState(false);
+  // `logoPath` é o PATH persistido (Task 4.8-4.9-back) — o que vai pra
+  // `onSalvar`. Pode chegar como valor legado (URL externa de texto livre,
+  // versão anterior a esta task); `previewUrl` é sempre resolvido pra
+  // EXIBIÇÃO (signed URL do path, ou o próprio legado como fallback).
+  const [logoPath, setLogoPath] = useState(organizacaoInicial.logoUrl);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewComErro, setPreviewComErro] = useState(false);
+  const [enviandoLogo, setEnviandoLogo] = useState(false);
+  const [erroLogo, setErroLogo] = useState<string | null>(null);
+  const inputLogoRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    let cancelado = false;
+    setPreviewComErro(false);
+    if (!logoPath) {
+      setPreviewUrl(null);
+      return;
+    }
+    obterUrlAssinadaLogoOrganizacao(logoPath).then((url) => {
+      if (cancelado) return;
+      // `url` null = path não existe no bucket (típico de valor legado que
+      // era URL externa) — cai pro fallback de tentar `logoPath` direto
+      // como `<img src>`; se isso também falhar, o `onError` da imagem
+      // aciona o placeholder.
+      setPreviewUrl(url ?? logoPath);
+    });
+    return () => {
+      cancelado = true;
+    };
+  }, [logoPath]);
+
+  async function handleSelecionarLogo(e: ChangeEvent<HTMLInputElement>) {
+    const arquivo = e.target.files?.[0];
+    e.target.value = "";
+    if (!arquivo) return;
+    const erroValidacao = validarArquivoLogo(arquivo);
+    if (erroValidacao) {
+      setErroLogo(erroValidacao);
+      return;
+    }
+    setErroLogo(null);
+    setEnviandoLogo(true);
+    const resultado = await uploadLogoOrganizacao(organizacaoInicial.id, arquivo);
+    setEnviandoLogo(false);
+    if (resultado.ok) {
+      setLogoPath(resultado.path);
+    } else {
+      setErroLogo(resultado.erro);
+    }
+  }
+
   const [unidade, setUnidade] = useState<"mm" | "cm">(organizacaoInicial.unidade);
   const [precificacao, setPrecificacao] = useState<ModoPrecificacao>(
     organizacaoInicial.modoPrecificacaoPadrao ?? PRECIFICACAO_FALLBACK
@@ -121,7 +195,7 @@ function SecaoOrganizacao({
       cnpj,
       endereco,
       telefone,
-      logoUrl,
+      logoUrl: logoPath,
       unidade,
       modoPrecificacaoPadrao: precificacao,
       modoMontagemPadrao: montagem,
@@ -172,26 +246,37 @@ function SecaoOrganizacao({
 
         <div className="flex flex-col gap-md sm:flex-row sm:items-end">
           <div className="flex-1">
-            <Label htmlFor="org-logo">Logo (URL da imagem)</Label>
-            <Input
+            <Label htmlFor="org-logo">Logo</Label>
+            <input
               id="org-logo"
-              value={logoUrl}
-              onChange={(e) => {
-                setLogoUrl(e.target.value);
-                setLogoComErro(false);
-              }}
-              placeholder="https://…"
+              ref={inputLogoRef}
+              type="file"
+              accept={MIME_TYPES_LOGO_ACEITOS.join(",")}
+              className="hidden"
+              onChange={handleSelecionarLogo}
+              disabled={enviandoLogo}
             />
+            <div>
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => inputLogoRef.current?.click()}
+                disabled={enviandoLogo}
+              >
+                {enviandoLogo ? "Enviando…" : "Selecionar arquivo"}
+              </Button>
+            </div>
+            <p className="mt-1 text-corpo-pequeno text-cinza-500">PNG, JPEG ou WEBP, até 2 MB.</p>
           </div>
           <div>
             <Label>Pré-visualização</Label>
-            {logoUrl && !logoComErro ? (
-              // eslint-disable-next-line @next/next/no-img-element -- URL arbitrária digitada pelo usuário, sem domínio pré-configurado em next.config.js.
+            {previewUrl && !previewComErro ? (
+              // eslint-disable-next-line @next/next/no-img-element -- signed URL (privada) ou fallback de URL legada, sem domínio pré-configurado em next.config.js.
               <img
-                src={logoUrl}
+                src={previewUrl}
                 alt="Pré-visualização da logo da organização"
                 className="h-9 w-16 rounded-sm border border-cinza-200 bg-cinza-0 object-contain"
-                onError={() => setLogoComErro(true)}
+                onError={() => setPreviewComErro(true)}
               />
             ) : (
               <div className="flex h-9 w-16 items-center justify-center rounded-sm border border-cinza-200 bg-cinza-100">
@@ -200,6 +285,11 @@ function SecaoOrganizacao({
             )}
           </div>
         </div>
+        {erroLogo && (
+          <Alert variant="erro">
+            <AlertDescription>{erroLogo}</AlertDescription>
+          </Alert>
+        )}
 
         <div className="w-40">
           <Label htmlFor="org-unidade">Unidade de medida</Label>
