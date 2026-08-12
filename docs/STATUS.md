@@ -1,6 +1,6 @@
 # Status Atual
 
-> Atualizado em 2026-08-11 (Task 3.4 mesclada). Este arquivo é o ponto de partida de qualquer
+> Atualizado em 2026-08-11 (Task 3.5 front mesclada). Este arquivo é o ponto de partida de qualquer
 > sessão nova. Histórico task-a-task (auditorias, tentativas, decisões)
 > não vive mais aqui — está no `git log` e nos commits de merge de cada
 > branch `feature/<task-id>`. Este arquivo mantém só o essencial.
@@ -20,7 +20,7 @@ Fase D (Pré-Lançamento) — Lote 0 (Fundação de dados) ✅ fechado:
 
 **Lote 2 (Lacunas funcionais) ✅ fechado por completo — 17/17 tasks concluídas**.
 
-**Lote 3 — Tasks 3.1/3.3 (motor + front), 3.2, 3.4, 3.5 (motor), 3.8 (back + front), 3.10–3.11 (motor), 3.13 (catálogo-back) e 3.13 (catálogo-front) mescladas (10/~14)**:
+**Lote 3 — Tasks 3.1/3.3 (motor + front), 3.2, 3.4, 3.5 (motor + front), 3.8 (back + front), 3.10–3.11 (motor), 3.13 (catálogo-back) e 3.13 (catálogo-front) mescladas (11/~14)**:
 - **Task 3.1/3.3 (motor)** ✅ (2026-08-11) — Bin-packing melhorado: guilhotina com lista de retângulos livres + simulated annealing (PRNG semeado, `MAX_ITERACOES=5000` fixo). Reescrito em `lib/engine/box/cutting.ts`. Kerf como parâmetro opcional em `GrupoChapas.meta?`, integração em Web Worker será na Task 3.1/3.3 (front). Todas as 7 invariantes V1–V7 (Modelo 8.5) com teste dedicado; 3 exemplos numéricos reproduzidos com valores exatos. `code-auditor` APROVADO (1ª real), `qa-engineer` APROVADO (1ª, 466 testes, verificação aritmética manual). **Desbloqueia Task 3.1/3.3 (front).**
 - **Task 3.1/3.3 (front)** ✅ (2026-08-11) — Web Worker para `planoDeCorte` com estado UI `calculando → pronto`, estimativa síncrona + busca assíncrona, fallback para main thread. Kerf real do perfil (`espessuraSerraPadraoMm`, Task 4.16-back) integrado em `CorteMaterialLab` e `EditorItemNucleo`. Indicador "Otimizando plano de corte…" visual. `code-auditor` APROVADO (3ª convocação real), `qa-engineer` APROVADO (2ª tentativa, 472 testes ao final, teste de fallback coberto). **`ux-auditor` APROVADO (1ª tentativa real, screenshots confirmando estimativa síncrona sempre visível, sem flash de layout na substituição pelo resultado do Worker, tokens do Design System conformes)** — 2 observações não bloqueantes: (1) Critério do contrato sobre "canvas vazio em loading" não se aplica a este fluxo (a estimativa síncrona já preenche desde primeiro render); (2) `EditorItemNucleo.tsx` tem mistura pré-existente de classes CSS legadas com tokens Tailwind, fora do escopo desta task. Impacto Visual: Leve. **Fecha a Task 3.1/3.3 (motor + front) por completo — itens 3.1 (bug do marceneiro, faixa livre ignorada) e 3.3 (avaliação de troca de algoritmo) do backlog-fonte resolvidos ponta a ponta.**
 - **Task 3.5 (motor)** ✅ (2026-08-11) — Fita de borda discriminada por cor: agregação em `lib/engine/consolidar.ts` com `larguraFitaMm()` (regra "menor fita ≥ espessura final" via `[22,35,65]`), `somaFita()` (Map por `cor|largura`), tipo `GrupoFita`, campo `fitaPorCor` em `EngineOutput["consolidado"]`. `fitaTotalM` preservado — invariante soma(fitaPorCor)===fitaTotalM verificada manualmente. 478 testes (10 novos), zero regressão. `code-auditor` APROVADO (1ª), `qa-engineer` APROVADO (1ª). **Desbloqueia Task 3.5 (front) e Task 3.6.**
