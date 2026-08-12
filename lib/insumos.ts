@@ -49,14 +49,16 @@ export function montarLinhasInsumos(
     });
   }
 
-  linhas.push({
-    item: "Fita de borda",
-    categoria: "Acabamento",
-    qtd: `${engine.consolidado.fitaTotalM.toFixed(1)} m`,
-    quantidadeBase: engine.consolidado.fitaTotalM,
-    unit: precos.fitaMetro,
-    total: round2(engine.consolidado.fitaTotalM * precos.fitaMetro),
-  });
+  for (const f of engine.consolidado.fitaPorCor) {
+    linhas.push({
+      item: `Fita de borda ${f.cor} ${f.larguraFitaMm}mm`,
+      categoria: "Acabamento",
+      qtd: `${f.metros.toFixed(1)} m`,
+      quantidadeBase: f.metros,
+      unit: precos.fitaMetro,
+      total: round2(f.metros * precos.fitaMetro),
+    });
+  }
 
   for (const f of engine.consolidado.ferragens) {
     const unit = precos.ferragens[f.item] ?? 0;
