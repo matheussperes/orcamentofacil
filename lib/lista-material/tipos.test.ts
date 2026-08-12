@@ -26,7 +26,7 @@ function grupo(overrides: Partial<GrupoChapas> = {}): GrupoChapas {
 describe("montarSnapshotListaMaterial", () => {
   it("soma subtotal material + subtotal manual no total, sem misturar frete", () => {
     const linhas: LinhaInsumo[] = [
-      { item: "MDF Branco TX 15mm", categoria: "Chapas", qtd: "1 chapa(s)", unit: 285, total: 285 },
+      { item: "MDF Branco TX 15mm", categoria: "Chapas", qtd: "1 chapa(s)", quantidadeBase: 1, unit: 285, total: 285 },
     ];
     const snapshot = montarSnapshotListaMaterial({
       orcamentoId: "orc-1",

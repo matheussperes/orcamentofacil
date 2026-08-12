@@ -3,6 +3,7 @@
 import { CorteMaterialLab } from "./CorteMaterialLab";
 import { estadoMockPreenchido } from "@/lib/ambiente/estadoMockPreenchido";
 import type { ResultadoCongelarListaMaterial } from "@/lib/lista-material/congelar";
+import type { ResultadoOverride } from "@/lib/lista-material/override";
 
 // Task 13.4 (contrato .maestro/tmp/13.4-contract.md) — harness DEV-ONLY
 // (`/dev/preview/orcamento`): mesmo espírito de `AmbientesTabMock.tsx`
@@ -25,6 +26,16 @@ export function CorteMaterialTabMock() {
     return { ok: true, congeladoEm: new Date().toISOString() };
   }
 
+  // Overrides são no-op neste harness dev-only (sem Supabase) — devolvem
+  // sucesso pra exercitar o feedback visual do fluxo de edição/reversão sem
+  // persistir nada, mesmo espírito de `onCongelarMock`.
+  async function onDefinirOverrideQuantidadeMock(): Promise<ResultadoOverride> {
+    return { ok: true };
+  }
+  async function onRemoverOverrideQuantidadeMock(): Promise<ResultadoOverride> {
+    return { ok: true };
+  }
+
   return (
     <CorteMaterialLab
       orcamentoId="preview-orcamento"
@@ -32,6 +43,10 @@ export function CorteMaterialTabMock() {
       frete={200}
       kerfMm={3}
       ultimaCongeladaEmInicial={null}
+      overridesQuantidadeIniciais={[]}
+      congeladoEm={null}
+      onDefinirOverrideQuantidade={onDefinirOverrideQuantidadeMock}
+      onRemoverOverrideQuantidade={onRemoverOverrideQuantidadeMock}
       onCongelar={onCongelarMock}
     />
   );

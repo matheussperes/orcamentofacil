@@ -2,6 +2,12 @@
 
 import { CorteMaterialLab } from "./CorteMaterialLab";
 import { congelarListaMaterial, type ResultadoCongelarListaMaterial } from "@/lib/lista-material/congelar";
+import {
+  definirOverrideQuantidade,
+  removerOverrideQuantidade,
+  type OverrideQuantidade,
+  type ResultadoOverride,
+} from "@/lib/lista-material/override";
 import type { SnapshotListaMaterial } from "@/lib/lista-material/tipos";
 import type { EstadoAmbiente } from "@/lib/ambiente/estado";
 
@@ -21,6 +27,10 @@ export interface CorteMaterialTabConectadaProps {
   ultimaCongeladaEmInicial: string | null;
   /** `organizacao.espessuraSerraPadraoMm` — ver comentário completo em `CorteMaterialLab`. */
   kerfMm: number;
+  /** Task 3.8 (front) — overrides ativos (`listarOverridesQuantidade`) e
+   * `congeladoEm`, lidos no Server Component de `page.tsx`. */
+  overridesQuantidadeIniciais: OverrideQuantidade[];
+  congeladoEm: string | null;
 }
 
 export function CorteMaterialTabConectada({
@@ -29,9 +39,19 @@ export function CorteMaterialTabConectada({
   frete,
   ultimaCongeladaEmInicial,
   kerfMm,
+  overridesQuantidadeIniciais,
+  congeladoEm,
 }: CorteMaterialTabConectadaProps) {
   async function onCongelar(snapshot: SnapshotListaMaterial): Promise<ResultadoCongelarListaMaterial> {
     return congelarListaMaterial(orcamentoId, snapshot);
+  }
+
+  async function onDefinirOverrideQuantidade(itemChave: string, quantidade: number): Promise<ResultadoOverride> {
+    return definirOverrideQuantidade(orcamentoId, itemChave, quantidade);
+  }
+
+  async function onRemoverOverrideQuantidade(itemChave: string): Promise<ResultadoOverride> {
+    return removerOverrideQuantidade(orcamentoId, itemChave);
   }
 
   return (
@@ -41,6 +61,10 @@ export function CorteMaterialTabConectada({
       frete={frete}
       ultimaCongeladaEmInicial={ultimaCongeladaEmInicial}
       kerfMm={kerfMm}
+      overridesQuantidadeIniciais={overridesQuantidadeIniciais}
+      congeladoEm={congeladoEm}
+      onDefinirOverrideQuantidade={onDefinirOverrideQuantidade}
+      onRemoverOverrideQuantidade={onRemoverOverrideQuantidade}
       onCongelar={onCongelar}
     />
   );

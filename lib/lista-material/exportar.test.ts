@@ -12,7 +12,7 @@ function snapshotBase(overrides: Partial<SnapshotListaMaterial> = {}): SnapshotL
     versao: 1,
     geradoEm: "2026-07-30T12:00:00.000Z",
     orcamentoId: "orc-1",
-    linhas: [{ item: "MDF Branco TX 15mm", categoria: "Chapas", qtd: "1 chapa(s) · 0.50 m²", unit: 285, total: 285 }],
+    linhas: [{ item: "MDF Branco TX 15mm", categoria: "Chapas", qtd: "1 chapa(s) · 0.50 m²", quantidadeBase: 1, unit: 285, total: 285 }],
     itensManuais: [{ id: "m1", descricao: "Instalação especial", quantidade: 2, valorUnitario: 50 }],
     subtotalMaterial: 285,
     subtotalManual: 100,
