@@ -12,6 +12,7 @@ import {
   trocarModeloTampo,
 } from "./explode";
 import { modeloDoTampo } from "./types";
+import { larguraFitaMm } from "../consolidar";
 import type { ConfigTampo, ElementoContinuo, ModuloResolvido, SelecaoTampo } from "./types";
 
 const MATERIAL = { cor: "Branco TX", espessura: 15 };
@@ -266,19 +267,30 @@ describe("Tampo — os 3 exemplos trabalhados da Seção 3.4.1 (bloco 600+800+40
   // largura = 600+800+400 = 1800; profundidade = 580+30 = 610 (A-06)
   const itens = [modulo(600, 400), modulo(800, 500), modulo(400, 580)];
 
-  it("simples 25mm: 1 peça 1800×610×25mm, fita 3,02m (3 bordas, sem a de trás)", () => {
+  it("simples 25mm: 1 peça 1800×610×25mm, fita 3,02m em largura 35mm (3 bordas, sem a de trás) — Task 3.12", () => {
+    // Verificação aritmética manual (Modelo-de-Dominio.md 3.4.1):
+    // largura = 600+800+400 = 1800; profundidade = max(400,500,580)+30 = 610
+    // fita (3 bordas aparentes) = 1800 + 610 + 610 = 3020mm = 3,02m
+    // espessura final 25mm ⇒ menor fita ≥ 25 (Seção 2.1) = 35mm
     const el = elemento({
       tipo: "tampo",
       posicao: "superior",
       material: { cor: "Branco TX", espessura: 25 },
     });
     const r = explodeElementoContinuo(el, { itens });
-    expect(r.pecas).toHaveLength(1);
+    expect(r.pecas).toHaveLength(1); // 0 sarrafo (peça única, sem auxiliares)
     expect(r.pecas[0]).toMatchObject({ nome: "Placa", quantidade: 1, largura_mm: 1800, altura_mm: 610, espessura_mm: 25 });
     expect(r.fitaM).toBe(3.02);
+    expect(larguraFitaMm(25)).toBe(35);
+    expect(r.ferragens).toEqual([]); // 0 cola/usinagem — sem ferragem alguma
   });
 
-  it("engrossado nível 1 base 15, 4 lados, sarrafo 70mm: peça 1800×610×15 + 2×(1800×70) + 2×(470×70), fita 3,02m", () => {
+  it("engrossado nível 1 base 15, 4 lados, sarrafo 70mm: peça 1800×610×15 + 2×(1800×70) + 2×(470×70), fita 3,02m em largura 35mm — Task 3.12", () => {
+    // Verificação aritmética manual (Modelo-de-Dominio.md 3.4.1):
+    // espessura final = 15×(1+1) = 30mm
+    // sarrafos eixo maior (1800) = 2×(1800×70); sarrafos eixo menor = 610−(2×70) = 470 → 2×(470×70)
+    // fita (independe da técnica, Seção 2.1) = 1800+610+610 = 3020mm = 3,02m
+    // espessura final 30mm ⇒ menor fita ≥ 30 = 35mm
     const el = elemento({
       tipo: "tampo",
       posicao: "superior",
@@ -305,9 +317,13 @@ describe("Tampo — os 3 exemplos trabalhados da Seção 3.4.1 (bloco 600+800+40
     for (const p of eixoMenor) expect(p).toMatchObject({ altura_mm: 470, largura_mm: 70, quantidade: 1 });
 
     expect(r.fitaM).toBe(3.02); // espessura final 30mm ⇒ fita 35mm; mesma fita do simples 25mm — só a largura da fita muda (catálogo), não o comprimento
+    expect(larguraFitaMm(30)).toBe(35);
   });
 
-  it("dobrado nível 1 base 15: 2× (1800×610×15mm), 0 sarrafo, fita 3,02m", () => {
+  it("dobrado nível 1 base 15: 2× (1800×610×15mm), 0 sarrafo, fita 3,02m em largura 35mm — Task 3.12", () => {
+    // Verificação aritmética manual (Modelo-de-Dominio.md 3.4.1):
+    // espessura final = 15×(1+1) = 30mm; nº de placas = nivel+1 = 2
+    // fita = 1800+610+610 = 3020mm = 3,02m; espessura final 30mm ⇒ fita 35mm
     const el = elemento({
       tipo: "tampo",
       posicao: "superior",
@@ -320,6 +336,7 @@ describe("Tampo — os 3 exemplos trabalhados da Seção 3.4.1 (bloco 600+800+40
     expect(r.pecas).toHaveLength(1);
     expect(r.pecas[0]).toMatchObject({ nome: "Placa (dobrada)", quantidade: 2, largura_mm: 1800, altura_mm: 610, espessura_mm: 15 });
     expect(r.fitaM).toBe(3.02);
+    expect(larguraFitaMm(30)).toBe(35);
   });
 
   it("NIVEL_3_BASE_18 (Seção 2.1) cobre também o tampo, não só engrossamento genérico", () => {
