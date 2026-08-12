@@ -65,10 +65,19 @@ export function produtosParaCatalogo(produtos: ProdutoRow[]): Catalogo {
     .sort((a, b) => a.criadoEm.localeCompare(b.criadoEm));
   const fitaMetro = fitas[0]?.preco ?? PRECOS_REFERENCIA.fitaMetro;
 
+  // Task 3.6 — mesmo critério de desempate de `fitaMetro` acima (primeiro
+  // ativo por `criado_em`), mas SEM fallback: diferente de preço, não existe
+  // tamanho de rolo padrão inventável — ausente/inválido no produto,
+  // `tamanhoRoloFitaM` fica `undefined`.
+  const tamanhoRoloBruto = fitas[0]?.especificacao.tamanhoRoloM;
+  const tamanhoRoloFitaM =
+    typeof tamanhoRoloBruto === "number" && tamanhoRoloBruto > 0 ? tamanhoRoloBruto : undefined;
+
   return {
     mdf,
     ferragens,
     fitaMetro,
+    tamanhoRoloFitaM,
     montagemPorM2: PRECOS_REFERENCIA.montagemPorM2,
     freteFixo: PRECOS_REFERENCIA.freteFixo,
   };
