@@ -71,6 +71,12 @@
   ainda cita o identificador de domínio `"bancada"` em vez do rótulo atualizado
   "Meio". Achado incidental durante a Task 2.14–2.17 (2026-08-08) — renomear as
   mensagens é candidato a task futura de consistência, baixa prioridade.
+- Strings "chapa(s) · X m²" em `lib/lista-material/exportar.ts` e "chapa(s) · m²"
+  na seção "Plano de corte" de `CorteMaterialLab.tsx` permanecem inalteradas
+  (independentes de `LinhaInsumo.qtd` — derivadas diretamente de `GrupoMdf`).
+  Achado incidental durante a Task 3.7 (2026-08-11) — simplificar essas strings
+  também é candidato a task futura de consistência visual (padrão bare-number
+  para todas as linhas de quantidade), sem entrega própria nesta rodada.
 
 ### Épico V2.1 — Pré-Lançamento (Fase D)
 
@@ -266,7 +272,7 @@ está agora desbloqueada e pode começar a qualquer momento**.*
 | 3.2 | Exibir o veio da placa na visualização do plano de corte (MDF Loro Freijó não mostra) — confirmar que o dado (`temVeio`) está correto antes de assumir que é só rendering | ✅ Completo | nenhuma | frontend-engineer (web) | Sonnet | Modelo 8; PRD RF-11 |
 | 3.4 | Contagem de cortes / passadas de serra no resultado do plano de corte | ✅ Completo | nenhuma | motor-engineer | Sonnet | PRD RF-29 |
 | 3.6 | Cálculo de rolos de fita a comprar, a partir do tamanho de rolo cadastrado no catálogo (campo `produto.especificacao`, nunca hardcoded) | ✅ Completo | nenhuma | motor-engineer | Sonnet | Modelo 11.4 (A-12), 11.5; PRD RF-29, 10.4 |
-| 3.7 | Quantidade sem m² na lista de material — número inteiro simples | 🔵 UX | nenhuma | motor-engineer | Sonnet | PRD RF-15 |
+| 3.7 | Quantidade sem m² na lista de material — número inteiro simples | ✅ Completo | nenhuma | motor-engineer | Sonnet | PRD RF-15 |
 | 3.8 (front) | UI de edição de quantidade na lista de material | 🔵 UX | ✅ Desbloqueada (Task 3.8 back mesclada) | frontend-engineer (web) | Sonnet | PRD RF-15 |
 | 3.10–3.11 (front) | UI do tampo: seletor de modelo antes de espessura, lista de espessuras filtrada pelo modelo, campo limpo ao trocar modelo incompatível | 🟠 BUG | ✅ Desbloqueada (Task 3.10–3.11 motor mesclada) | frontend-engineer (web) | Sonnet | Modelo 3.4.1; PRD RF-28 |
 | 3.12 | BOM completo dos três modelos de tampo (simples fechado nesta rodada; engrossado/dobrado já existiam) + fita de 35mm cobrindo também 25mm | 🟡 LACUNA | ✅ Desbloqueada (Task 3.10–3.11 motor mesclada) | motor-engineer | Sonnet | Modelo 3.4.1 (BOM do simples com exemplo trabalhado), 2.1 |
