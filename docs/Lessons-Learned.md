@@ -212,3 +212,56 @@ Task 2.3-2.6: `security-auditor` reprovou na 1ª tentativa porque `salvarEstadoA
 **Ação proposta**: neste projeto, ao redigir contratos de tasks que criam Server Actions com parâmetros de ID recebidos do client (`orcamentoId`, `ambienteId`, `paredeId`, etc.), incluir como critério de aceitação explícito "toda escrita (INSERT/UPDATE/DELETE) que referencia esse ID deve ser precedida de confirmação de posse via `organizacao_id`, no mesmo padrão de funções irmãs do módulo" — não deixar implícito que o executor vai replicar o padrão por conta própria.
 
 **Escopo**: Candidata a melhoria do framework (item de checklist do contrato de `backend-engineer`/`frontend-engineer` para qualquer Server Action que recebe IDs de entidade do client — regra geral de segurança multi-tenant, não peculiar deste projeto).
+
+---
+
+## 2026-08-12 — Pipeline Stage Lote 3 (Precisão do motor)
+
+**Métricas do período**
+- Tasks concluídas: 14/14 (Lote 3 fechado por completo — docs/Backlog.md, seção "Lote 3 — Precisão do motor")
+- Vetos reais (Decline Payload gerado, reprovação contando como tentativa): UX 0 | Segurança 1 (`security-auditor`, Task 3.13-catalogo-back, tentativa 1 — `.maestro/tmp/Security-Decline-Payload.md`) | Build/Lint 0 | Testes 1 (`qa-engineer`, Task 3.10-3.11-front, tentativa 1 — `.maestro/tmp/QA-Decline-Payload.md`)
+- Falhas de gate por bug de transporte conhecido (veredito não gravado na 1ª chamada, reconvocação não contada como reprovação): 3 ocorrências, todas no `code-auditor` — Task 3.1/3.3 (motor) 1×, Task 3.1/3.3 (front) 2× (evidência em docs/Backlog.md, entradas das duas tasks)
+- Circuit Breakers: 0
+- Tasks com ≥1 rodada real de correção: 2 de 14 (3.10-3.11-front, 3.13-catalogo-back) — ~14%
+
+**Padrão 1 — Bug de transporte de veredito segue recorrente entre Stages**
+3 novas ocorrências neste lote (Task 3.1/3.3 motor e 3.1/3.3 front), todas no `code-auditor` — no Lote 2 (Stage anterior) a mesma falha já havia sido registrada 1× no `ux-auditor` (Task 2.24-2.26) e mencionada como recorrente desde a Stage 13. Mesma causa já documentada, não repetida aqui.
+
+**Causa estrutural provável**: já coberta pela proposta existente `.maestro/proposals/2026-08-04-gates-estouram-maxturns-sem-veredito.md`. Este registro só soma dado de frequência: 3 ocorrências em 14 tasks neste lote, todas no `code-auditor` (gate diferente do Lote 2, onde a incidência foi no `ux-auditor`) — indica que a falha não é específica de um gate, é do mecanismo de gravação de veredito em si.
+
+**Ação proposta**: nenhuma ação nova — reforçar a proposta já existente com o dado de que a falha atinge múltiplos gates (`code-auditor` e `ux-auditor` confirmados em Stages diferentes), não só um agente específico.
+
+**Escopo**: Candidata a melhoria do framework — já coberta pela proposta existente.
+
+---
+
+**Padrão 2 — Veto de segurança por sanitização de string ad-hoc (`.trim()`) em vez de remoção explícita de caracteres de controle**
+Task 3.13-catalogo-back: `security-auditor` reprovou na 1ª tentativa porque `ehCaminhoRelativoValido` (`lib/produto/acoes.ts`) usava `valor.trim()` para normalizar a URL antes de rejeitar esquemas absolutos — mas `trim()` só remove espaço em branco nas pontas, enquanto o parser WHATWG de URL do navegador remove caracteres de controle C0 (tab, LF, CR, NUL) em **qualquer posição** da string, permitindo bypass do tipo `"htt\tps://evil.com"`. Corrigido na tentativa 2 removendo caracteres de controle Unicode (faixa `U+0000`-`U+0020` e `U+007F`) em qualquer posição da string, não só nas pontas, 10 payloads de bypass testados.
+
+**Causa estrutural provável**: nenhum documento do projeto (Modelo-de-Domínio.md 4.1.1 regra 2, que exige o bloqueio de hotlink) especifica a técnica de sanitização exigida para validação de URL relativa — o executor escolheu `.trim()` como primeira solução plausível para "normalizar antes de validar", que resolve o caso óbvio (espaço nas pontas) mas não o caso que importa (parser do navegador é mais permissivo que o validador do servidor). É uma classe de bug genérica (mismatch entre validação do servidor e parser do consumidor final), não peculiar deste projeto.
+
+**Ação proposta**: registrar como nota de convenção para qualquer campo de URL/caminho aceito de input não confiável neste projeto — a técnica correta é remover caracteres de controle em qualquer posição da string (faixa `U+0000`-`U+0020` e `U+007F`), não só `.trim()`. Proposta de framework também registrada (ver abaixo).
+
+**Escopo**: Candidata a melhoria do framework — ver `.maestro/proposals/2026-08-12-validacao-url-sanitizacao-controle.md`.
+
+---
+
+**Padrão 3 — Lacuna arquitetural em `fitaPorCor` para peças de Elemento Contínuo (Tampo)**
+Task 3.5 (motor) introduziu `fitaPorCor` agregando fita por `peca.fita_m` de cada peça individual. Task 3.10-3.11 (motor) introduziu Elemento Contínuo (Tampo), cujo `explodeTampo` calcula a fita agregada no nível do módulo (`mod.fitaM`), deixando `peca.fita_m` sempre `0` para peças de Tampo por desenho. Task 3.12 (investigação de BOM, mesmo lote) encontrou o efeito colateral: `fitaTotalM` soma `mod.fitaM` corretamente, mas `fitaPorCor` (usado para lista de compra discriminada por cor) nunca recebe a parcela de fita de Tampo — todo orçamento com Elemento Contínuo fica sem essa entrada em `fitaPorCor`.
+
+**Causa estrutural provável**: `fitaPorCor` foi desenhado (Task 3.5) assumindo uma única origem de dado — fita por peça — antes de o modelo de Elemento Contínuo (Task 3.10-3.11) introduzir uma segunda origem (fita agregada por módulo). O Modelo-de-Domínio.md não unificou as duas formas de agregação de fita no momento em que a segunda foi criada.
+
+**Ação proposta**: task futura de motor (já registrada em "Gaps de lógica/design" no Backlog) — propagar cor+espessura-final do módulo até o mapa de fita por cor quando `peca.fita_m===0` mas `mod.fitaM>0`. Nenhuma ação de framework — é específico do modelo de domínio deste projeto.
+
+**Escopo**: Somente este projeto.
+
+---
+
+**Padrão 4 — Achados incidentais fora de escopo registrados em vez de corrigidos inline (disciplina confirmada)**
+4 ocorrências no lote, mesmo formato: o executor encontra um gap fora do escopo da task corrente e o registra em texto (Backlog ou seção de gaps) em vez de expandir o diff para corrigi-lo — Task 3.2 (cor estática azul em vez de `material.claro/medio/escuro` no plano de corte), Task 3.10-3.11 front (seletor visual de "quais lados engrossar" não implementado), Task 3.1/3.3 front (CSS legado misturado a tokens Tailwind em `EditorItemNucleo.tsx`), Task 3.12 (gap de `fitaPorCor`, Padrão 3 acima). Nenhuma das quatro gerou expansão de escopo ou regressão.
+
+**Causa estrutural provável**: não é uma lacuna — é a regra já vigente de respeito ao domínio/escopo da task funcionando como projetado, mesma conclusão já registrada no Pipeline Stage 13 (Padrão 2) e no Lote 2 (Padrão 2) para o princípio equivalente.
+
+**Ação proposta**: nenhuma — confirmação de disciplina, não gap a corrigir.
+
+**Escopo**: Somente este projeto.
