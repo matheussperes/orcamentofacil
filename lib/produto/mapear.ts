@@ -28,7 +28,11 @@ export function produtosParaCatalogo(produtos: ProdutoRow[]): Catalogo {
     .map((p) => {
       const cor = String(p.especificacao.cor ?? "").trim();
       const espessura = Number(p.especificacao.espessura ?? 0);
-      return { id: p.id, cor, espessura, precoChapa: p.preco, fornecedor: p.fornecedor ?? undefined };
+      const texturaUrlBruta = p.especificacao.texturaUrl;
+      const texturaUrl = typeof texturaUrlBruta === "string" && texturaUrlBruta.length > 0
+        ? texturaUrlBruta
+        : undefined;
+      return { id: p.id, cor, espessura, precoChapa: p.preco, fornecedor: p.fornecedor ?? undefined, texturaUrl };
     })
     // Defesa: uma linha de `produto` tipo chapa sem cor/espessura válida
     // (não deveria existir vinda do formulário de `/catalogo`, que exige os
