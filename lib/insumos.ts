@@ -17,7 +17,7 @@ export function todasAsPecas(engine: EngineOutput): Peca[] {
 export interface LinhaInsumo {
   item: string;
   categoria: "Chapas" | "Acabamento" | "Ferragens" | "Serviço";
-  qtd: string; // descrição legível (ex.: "3 chapa(s) · 9,42 m²")
+  qtd: string; // descrição legível (ex.: "3" para MDF, "12.5 m" para fita)
   /** Task 3.8 (front) — o número puro que multiplica `unit` para dar `total`
    * (chapas, metros de fita, unidades de ferragem…), exposto pra permitir
    * override de quantidade na UI sem precisar reconstruir `qtd` (string
@@ -42,7 +42,9 @@ export function montarLinhasInsumos(
     linhas.push({
       item: `MDF ${g.cor} ${g.espessura_mm}mm`,
       categoria: "Chapas",
-      qtd: `${g.chapas} chapa(s) · ${g.area_m2.toFixed(2)} m²`,
+      // RF-15 — número inteiro simples, sem sufixo de área (m²) redundante
+      // com a contagem de chapas (mesmo padrão bare-number de ferragens).
+      qtd: String(g.chapas),
       quantidadeBase: g.chapas,
       unit,
       total: round2(g.chapas * unit),
