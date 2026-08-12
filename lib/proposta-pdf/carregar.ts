@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { BUCKET_LINHA_PROPOSTA_RENDERS } from "@/lib/linha-proposta/storage";
+import { BUCKET_ORGANIZACAO_LOGOS } from "@/lib/organizacao/logo-storage";
 
 // Task 13.6b (contrato .maestro/tmp/13.6b-contract.md) — leitura server-side
 // única para `/proposta/[id]/pdf`: junta `orcamento` + `cliente` (emitente-
@@ -34,11 +35,12 @@ export interface OrganizacaoProposta {
   telefone: string | null;
   /** `organizacao.logo_url` — desde a Task 4.8-4.9-back guarda o PATH do
    * objeto no bucket privado `organizacao-logos` (não mais URL de texto
-   * livre), nunca uma signed URL persistida. A view cai para o asset
-   * estático `/logo/logo-dark.png` quando `null` (mesmo par de logo usado
-   * na sidebar, `components/shell/Sidebar.tsx`) — resolver o path pra
-   * signed URL nesta rota fica para a Task 4.10 (fallback de marca padrão),
-   * que decide onde chamar `obterUrlAssinadaLogoOrganizacao`. */
+   * livre), nunca uma signed URL persistida. Esta função (Task 4.10) já
+   * resolve o path em signed URL antes do primeiro paint; `null` cobre
+   * tanto a ausência de logo quanto falha ao resolver (path
+   * inexistente/valor legado). A view cai para o asset estático
+   * `/logo/logo-dark.png` quando `null` (mesmo par de logo usado na
+   * sidebar, `components/shell/Sidebar.tsx`). */
   logoUrl: string | null;
 }
 
@@ -98,6 +100,15 @@ async function assinarUrlImagem(supabase: SupabaseServerClient, path: string): P
   const { data, error } = await supabase.storage.from(BUCKET_LINHA_PROPOSTA_RENDERS).createSignedUrl(path, 3600);
   if (error || !data) {
     console.error("[proposta-pdf] falha ao gerar URL assinada da imagem de linha:", error?.message);
+    return null;
+  }
+  return data.signedUrl;
+}
+
+async function assinarUrlLogo(supabase: SupabaseServerClient, path: string): Promise<string | null> {
+  const { data, error } = await supabase.storage.from(BUCKET_ORGANIZACAO_LOGOS).createSignedUrl(path, 3600);
+  if (error || !data) {
+    console.error("[proposta-pdf] falha ao gerar URL assinada da logo da organizacao:", error?.message);
     return null;
   }
   return data.signedUrl;
@@ -164,6 +175,8 @@ export async function carregarDadosPropostaPdf(orcamentoId: string): Promise<Dad
 
   const total = linhas.reduce((soma, l) => soma + (l.valorRateado ?? 0), 0);
 
+  const logoUrl = organizacaoRow.logo_url ? await assinarUrlLogo(supabase, organizacaoRow.logo_url) : null;
+
   return {
     orcamentoId,
     prazoEntrega: row.prazo_entrega,
@@ -172,7 +185,7 @@ export async function carregarDadosPropostaPdf(orcamentoId: string): Promise<Dad
       cnpj: organizacaoRow.cnpj,
       endereco: organizacaoRow.endereco,
       telefone: organizacaoRow.telefone,
-      logoUrl: organizacaoRow.logo_url,
+      logoUrl,
     },
     cliente: {
       nome: clienteRow.nome,
