@@ -15,6 +15,7 @@ function grupo(overrides: Partial<GrupoChapas> = {}): GrupoChapas {
       {
         index: 1,
         aproveitamento: 0.5,
+        numCortes: 0,
         pecas: [{ id: "0-0", nome: "Lateral", w: 1000, h: 500, temVeio: false, x: 0, y: 0 }],
       },
     ],
