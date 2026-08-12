@@ -720,6 +720,7 @@ export function EditorItemNucleo({
                     chapa={c}
                     larguraChapa={g.larguraChapa}
                     alturaChapa={g.alturaChapa}
+                    mostrarVeios={false}
                   />
                 ))}
               </div>
