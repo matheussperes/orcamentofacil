@@ -32,10 +32,13 @@ export interface OrganizacaoProposta {
   cnpj: string | null;
   endereco: string | null;
   telefone: string | null;
-  /** `organizacao.logo_url` — hoje sempre `null` (ninguém cadastrou logo
-   * própria ainda, Task 13.7 futura). A view cai para o asset estático
-   * `/logo/logo-dark.png` quando `null` (mesmo par de logo usado na
-   * sidebar, `components/shell/Sidebar.tsx`). */
+  /** `organizacao.logo_url` — desde a Task 4.8-4.9-back guarda o PATH do
+   * objeto no bucket privado `organizacao-logos` (não mais URL de texto
+   * livre), nunca uma signed URL persistida. A view cai para o asset
+   * estático `/logo/logo-dark.png` quando `null` (mesmo par de logo usado
+   * na sidebar, `components/shell/Sidebar.tsx`) — resolver o path pra
+   * signed URL nesta rota fica para a Task 4.10 (fallback de marca padrão),
+   * que decide onde chamar `obterUrlAssinadaLogoOrganizacao`. */
   logoUrl: string | null;
 }
 
