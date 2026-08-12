@@ -25,9 +25,25 @@ import { produtoRowDeLinha, COLUNAS_PRODUTO, type ProdutoRow, type TipoProduto }
 export interface DadosProduto {
   tipo: TipoProduto;
   nome: string;
+  /** Task 4.4 — código opcional de chamada rápida, único por organização
+   * (constraint `produto_organizacao_id_codigo_key`). */
+  codigo?: string | null;
   especificacao: Record<string, unknown>;
   preco: number;
   fornecedor?: string;
+}
+
+// Task 4.4 — violação de `produto_organizacao_id_codigo_key` (dois produtos
+// da mesma org com o mesmo `codigo`) não pode virar stack trace cru do
+// Postgres pro client; código de erro padrão do Postgres pra unique
+// violation é "23505" (mesmo em cima do PostgREST).
+const CODIGO_ERRO_UNIQUE_VIOLATION = "23505";
+
+function mensagemErroProduto(error: { code?: string; message?: string } | null, acaoFalhou: string): string {
+  if (error?.code === CODIGO_ERRO_UNIQUE_VIOLATION) {
+    return "Já existe um produto com este código nesta organização. Escolha outro código.";
+  }
+  return acaoFalhou;
 }
 
 export interface ResultadoProduto {
@@ -118,6 +134,7 @@ export async function criarProduto(dados: DadosProduto): Promise<ResultadoProdut
       organizacao_id: perfil.organizacao_id as string,
       tipo: dados.tipo,
       nome: dados.nome.trim(),
+      codigo: dados.codigo?.trim() || null,
       especificacao: dados.especificacao,
       preco: dados.preco,
       fornecedor: dados.fornecedor?.trim() || null,
@@ -127,7 +144,7 @@ export async function criarProduto(dados: DadosProduto): Promise<ResultadoProdut
 
   if (error || !linha) {
     console.error("[produto] falha ao criar produto:", error?.message);
-    return { ok: false, erro: "Não foi possível salvar o produto. Tente novamente." };
+    return { ok: false, erro: mensagemErroProduto(error, "Não foi possível salvar o produto. Tente novamente.") };
   }
 
   return { ok: true, produto: produtoRowDeLinha(linha as Record<string, unknown>) };
@@ -153,6 +170,7 @@ export async function atualizarProduto(id: string, dados: DadosProduto): Promise
     .from("produto")
     .update({
       nome: dados.nome.trim(),
+      codigo: dados.codigo?.trim() || null,
       especificacao: dados.especificacao,
       preco: dados.preco,
       fornecedor: dados.fornecedor?.trim() || null,
@@ -163,7 +181,10 @@ export async function atualizarProduto(id: string, dados: DadosProduto): Promise
 
   if (error || !linha) {
     console.error("[produto] falha ao atualizar produto:", error?.message);
-    return { ok: false, erro: "Não foi possível salvar as alterações deste produto." };
+    return {
+      ok: false,
+      erro: mensagemErroProduto(error, "Não foi possível salvar as alterações deste produto."),
+    };
   }
 
   return { ok: true, produto: produtoRowDeLinha(linha as Record<string, unknown>) };

@@ -50,6 +50,10 @@ export interface ProdutoRow {
   id: string;
   tipo: TipoProduto;
   nome: string;
+  /** Task 4.4 — código opcional de chamada rápida (RF-03/RF-30), único por
+   * organização (`produto_organizacao_id_codigo_key`,
+   * `supabase/migrations/20260812120000_produto_codigo.sql`). */
+  codigo?: string | null;
   especificacao: Record<string, unknown>;
   preco: number;
   fornecedor: string | null;
@@ -65,6 +69,7 @@ export function produtoRowDeLinha(linha: Record<string, unknown>): ProdutoRow {
     id: linha.id as string,
     tipo: linha.tipo as TipoProduto,
     nome: (linha.nome as string | null) ?? "",
+    codigo: (linha.codigo as string | null) ?? null,
     especificacao: (linha.especificacao as Record<string, unknown> | null) ?? {},
     preco: Number(linha.preco ?? 0),
     fornecedor: (linha.fornecedor as string | null) ?? null,
@@ -76,7 +81,7 @@ export function produtoRowDeLinha(linha: Record<string, unknown>): ProdutoRow {
 /** Colunas lidas de `produto` em toda leitura (CRUD e consumo) — um só lugar
  * pra manter a lista em sincronia com `produtoRowDeLinha`. */
 export const COLUNAS_PRODUTO =
-  "id, tipo, nome, especificacao, preco, fornecedor, ativo, criado_em";
+  "id, tipo, nome, codigo, especificacao, preco, fornecedor, ativo, criado_em";
 
 /** Códigos fixos de ferragem que o motor de caixa sabe procurar
  * (`lib/engine/box/explode.ts`) — reaproveita os nomes amigáveis já
