@@ -151,3 +151,49 @@ describe("validarDados — especificacao.texturaUrl (chapa)", () => {
     expect(supabaseMock.inserts).toHaveLength(0);
   });
 });
+
+// Task 4.4 — coluna `codigo` (único por organização, constraint
+// `produto_organizacao_id_codigo_key`).
+describe("criarProduto — codigo (Task 4.4)", () => {
+  it("grava codigo informado no insert", async () => {
+    await criarProduto({
+      tipo: "acessorio",
+      nome: "Puxador",
+      preco: 10,
+      especificacao: {},
+      codigo: "PX-01",
+    });
+
+    expect(supabaseMock.inserts).toHaveLength(1);
+    expect(supabaseMock.inserts[0]?.valores.codigo).toBe("PX-01");
+  });
+
+  it("grava null quando codigo não é informado", async () => {
+    await criarProduto({
+      tipo: "acessorio",
+      nome: "Puxador",
+      preco: 10,
+      especificacao: {},
+    });
+
+    expect(supabaseMock.inserts[0]?.valores.codigo).toBeNull();
+  });
+
+  it("traduz violação de unicidade (código duplicado na org) em mensagem tratada", async () => {
+    supabaseMock.respostas.produto = {
+      data: null,
+      error: { code: "23505", message: 'duplicate key value violates unique constraint "produto_organizacao_id_codigo_key"' },
+    };
+
+    const resultado = await criarProduto({
+      tipo: "acessorio",
+      nome: "Puxador",
+      preco: 10,
+      especificacao: {},
+      codigo: "PX-01",
+    });
+
+    expect(resultado.ok).toBe(false);
+    expect(resultado.erro).toMatch(/já existe um produto com este código/i);
+  });
+});
