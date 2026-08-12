@@ -58,12 +58,17 @@ import {
 import { MATERIAIS_PADRAO, PARAMETROS_FABRICA_PADRAO } from "@/lib/engine/defaults";
 import type { BoxMaterial, BoxModule, TipoPuxador } from "@/lib/engine/box/types";
 import {
+  ESPESSURAS_VALIDAS_POR_MODELO_TAMPO,
+  OPCOES_ESPESSURA_ENGROSSAMENTO,
   POSICOES_VALIDAS,
   type AlvoElementoContinuo,
   type ElementoContinuo,
+  type ModeloTampo,
   type PosicaoElemento,
+  type SelecaoTampo,
   type TipoElementoContinuo,
 } from "@/lib/engine/elemento-continuo/types";
+import { trocarModeloTampo } from "@/lib/engine/elemento-continuo/explode";
 import { listarPresets, seedPresetsPadrao, type BoxPreset } from "@/lib/boxPresets";
 import { carregarCatalogo, coresDisponiveis, espessurasDaCor, type Catalogo } from "@/lib/catalog";
 import {
@@ -249,6 +254,12 @@ const ROTULO_POSICAO_ELEMENTO: Record<PosicaoElemento, string> = {
   esquerda: "Esquerda",
   direita: "Direita",
   topo: "Topo",
+};
+// Task 3.10–3.11 (front) — seletor "Modelo", só para tipo "tampo".
+const ROTULO_MODELO_TAMPO: Record<ModeloTampo, string> = {
+  simples: "Simples",
+  engrossado: "Engrossado",
+  dobrado: "Dobrado",
 };
 
 // Alvo de seleção do painel: um Conjunto (bloco) detectado/ajustado (Task
@@ -472,6 +483,10 @@ export function AmbientesLab({
   const [moduloTamponamento, setModuloTamponamento] = useState<string>("");
   const [corElemento, setCorElemento] = useState<string>("");
   const [espessuraElemento, setEspessuraElemento] = useState<number>(18);
+  // Task 3.10–3.11 (front) — modelo do tampo, escolhido ANTES da espessura.
+  // Só relevante quando `novoTipoElemento === "tampo"` (Modelo-de-Dominio
+  // Seção 3.4.1); rodapé/tamponamento não têm conceito de modelo.
+  const [selecaoTampo, setSelecaoTampo] = useState<SelecaoTampo>({ modelo: "simples" });
 
   // Task 13.3d — "Salvar alterações": ação explícita (não autosave). Feedback
   // legível de sucesso/erro (Design-System Seção 11 / Alert, Seção 7.13).
@@ -950,6 +965,15 @@ export function AmbientesLab({
       ? posicoesDisponiveisTamponamento(moduloTamponamentoAtual)
       : POSICOES_VALIDAS[novoTipoElemento];
 
+  // Task 3.10–3.11 (front) — espessuras oferecidas pro tampo, filtradas por
+  // modelo (Modelo-de-Dominio Seção 3.4.1). "Simples": interseção entre o
+  // catálogo real e as espessuras válidas do modelo (nunca 6mm, nunca fora da
+  // tabela). "Engrossado"/"dobrado": não é catálogo-driven — vem direto de
+  // `OPCOES_ESPESSURA_ENGROSSAMENTO` (fonte única, `lib/engine/elemento-continuo/types.ts`).
+  const espessurasTampoSimples = (
+    catalogo && corElemento ? espessurasDaCor(catalogo, corElemento) : [15, 18, 25]
+  ).filter((esp) => ESPESSURAS_VALIDAS_POR_MODELO_TAMPO.simples.includes(esp));
+
   // Reseta o formulário (tipo/posição/módulo-alvo/material) sempre que a
   // seleção muda — evita carregar estado de um Conjunto/item anterior.
   useEffect(() => {
@@ -958,8 +982,18 @@ export function AmbientesLab({
     setModuloTamponamento("");
     if (catalogo) setCorElemento(coresDisponiveis(catalogo)[0] ?? "");
     setEspessuraElemento(18);
+    setSelecaoTampo({ modelo: "simples" });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [chaveSelecao(selecao)]);
+
+  // Task 3.10–3.11 (front) — reseta a seleção de modelo/espessura do tampo
+  // sempre que o tipo do elemento deixa de ser "tampo" (mesmo padrão de reset
+  // já usado pros outros campos deste formulário, useEffect acima).
+  useEffect(() => {
+    if (novoTipoElemento !== "tampo") {
+      setSelecaoTampo({ modelo: "simples" });
+    }
+  }, [novoTipoElemento]);
 
   // Mantém a posição sempre dentro do conjunto disponível (troca de tipo,
   // troca de módulo-alvo do tamponamento etc. podem invalidar a atual).
@@ -1026,8 +1060,14 @@ export function AmbientesLab({
 
   function adicionarElementoContinuo() {
     if (!selecao) return;
+    // Task 3.10–3.11 (front) — tampo com modelo escolhido mas espessura ainda
+    // não (campo limpo por `trocarModeloTampo`, ou nunca escolhida): mesma
+    // disciplina de campo obrigatório dos outros seletores, não submete.
+    if (novoTipoElemento === "tampo" && selecaoTampo.espessuraFinal === undefined) return;
+
     const cor = corElemento || (catalogo ? coresDisponiveis(catalogo)[0] : undefined) || "Branco TX";
-    const material: BoxMaterial = { cor, espessura: espessuraElemento };
+    const espessura = novoTipoElemento === "tampo" ? selecaoTampo.espessuraFinal! : espessuraElemento;
+    const material: BoxMaterial = { cor, espessura };
 
     let alvo: AlvoElementoContinuo;
     if (novoTipoElemento === "tamponamento") {
@@ -1037,12 +1077,30 @@ export function AmbientesLab({
       alvo = selecao.tipo === "conjunto" ? { conjuntoId: selecao.conjuntoId } : { moduloId: selecao.itemId };
     }
 
+    const opcaoEngrossamento = OPCOES_ESPESSURA_ENGROSSAMENTO.find(
+      (o) => o.espessuraFinal === selecaoTampo.espessuraFinal
+    );
+    const engrossamento: ElementoContinuo["engrossamento"] =
+      novoTipoElemento === "tampo" && opcaoEngrossamento
+        ? selecaoTampo.modelo === "engrossado"
+          ? {
+              tecnica: "engrossada",
+              nivel: opcaoEngrossamento.nivel,
+              lados: ["superior", "inferior", "esquerda", "direita"],
+              larguraSarrafo: 70,
+            }
+          : selecaoTampo.modelo === "dobrado"
+            ? { tecnica: "dobrada", nivel: opcaoEngrossamento.nivel }
+            : undefined
+        : undefined;
+
     const elemento: ElementoContinuo = {
       id: novoElementoId(),
       tipo: novoTipoElemento,
       alvo,
       posicao: novaPosicaoElemento,
       material,
+      engrossamento,
     };
     setElementosContinuos((els) => [...els, elemento]);
     setResultadoSalvar(null);
@@ -1956,28 +2014,77 @@ export function AmbientesLab({
                   </Select>
                 </div>
 
+                {novoTipoElemento === "tampo" && (
+                  <div>
+                    <Label htmlFor="ec-modelo">Modelo</Label>
+                    <Select
+                      value={selecaoTampo.modelo}
+                      onValueChange={(v) => setSelecaoTampo(trocarModeloTampo(selecaoTampo, v as ModeloTampo))}
+                    >
+                      <SelectTrigger id="ec-modelo" className="w-32">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {(Object.keys(ROTULO_MODELO_TAMPO) as ModeloTampo[]).map((m) => (
+                          <SelectItem key={m} value={m}>
+                            {ROTULO_MODELO_TAMPO[m]}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
                 <div>
                   <Label htmlFor="ec-espessura">Espessura</Label>
-                  <Select
-                    value={String(espessuraElemento)}
-                    onValueChange={(v) => setEspessuraElemento(numero(v))}
-                  >
-                    <SelectTrigger id="ec-espessura" className="w-24">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {(catalogo && corElemento ? espessurasDaCor(catalogo, corElemento) : [15, 18, 25]).map(
-                        (esp) => (
-                          <SelectItem key={esp} value={String(esp)}>
-                            {esp} mm
-                          </SelectItem>
-                        )
-                      )}
-                    </SelectContent>
-                  </Select>
+                  {novoTipoElemento === "tampo" ? (
+                    <Select
+                      value={selecaoTampo.espessuraFinal !== undefined ? String(selecaoTampo.espessuraFinal) : ""}
+                      onValueChange={(v) => setSelecaoTampo((s) => ({ ...s, espessuraFinal: numero(v) }))}
+                    >
+                      <SelectTrigger id="ec-espessura" className="w-24">
+                        <SelectValue placeholder="mm" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {selecaoTampo.modelo === "simples"
+                          ? espessurasTampoSimples.map((esp) => (
+                              <SelectItem key={esp} value={String(esp)}>
+                                {esp} mm
+                              </SelectItem>
+                            ))
+                          : OPCOES_ESPESSURA_ENGROSSAMENTO.map((o) => (
+                              <SelectItem key={o.espessuraFinal} value={String(o.espessuraFinal)}>
+                                {o.espessuraFinal}mm
+                              </SelectItem>
+                            ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <Select
+                      value={String(espessuraElemento)}
+                      onValueChange={(v) => setEspessuraElemento(numero(v))}
+                    >
+                      <SelectTrigger id="ec-espessura" className="w-24">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {(catalogo && corElemento ? espessurasDaCor(catalogo, corElemento) : [15, 18, 25]).map(
+                          (esp) => (
+                            <SelectItem key={esp} value={String(esp)}>
+                              {esp} mm
+                            </SelectItem>
+                          )
+                        )}
+                      </SelectContent>
+                    </Select>
+                  )}
                 </div>
 
-                <Button variant="primary" onClick={adicionarElementoContinuo}>
+                <Button
+                  variant="primary"
+                  onClick={adicionarElementoContinuo}
+                  disabled={novoTipoElemento === "tampo" && selecaoTampo.espessuraFinal === undefined}
+                >
                   Adicionar
                 </Button>
               </div>
