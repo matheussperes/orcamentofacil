@@ -1,6 +1,6 @@
 # Status Atual
 
-> Atualizado em 2026-08-12 (Task 3.13 (front) mesclada). Este arquivo é o ponto de partida de qualquer
+> Atualizado em 2026-08-12 (Task 4.4 mesclada). Este arquivo é o ponto de partida de qualquer
 > sessão nova. Histórico task-a-task (auditorias, tentativas, decisões)
 > não vive mais aqui — está no `git log` e nos commits de merge de cada
 > branch `feature/<task-id>`. Este arquivo mantém só o essencial.
@@ -29,7 +29,8 @@ Fase D (Pré-Lançamento) — Lote 0 (Fundação de dados) ✅ fechado:
 - **Task 3.8 (back)** ✅ (2026-08-11) — Persistência de override de quantidade por item da lista de material: migration `supabase/migrations/20260811110000_lista_material_override.sql` cria tabela `lista_material_override` (colunas `organizacao_id`, `orcamento_id`, `item_chave`, `quantidade`; UNIQUE `(orcamento_id, item_chave)`, CHECK `quantidade >= 0`; RLS com SELECT/INSERT/UPDATE/DELETE escopadas por `organizacao_id`). Server Actions `definirOverrideQuantidade`, `removerOverrideQuantidade` e leitura `listarOverridesQuantidade` em `lib/lista-material/override.ts` com checklist de posse (organização do servidor, rejeição cross-tenant). Rejeição por orçamento congelado em ambas Server Actions de escrita, sem bypass. 506 testes (10 novos), zero regressão. `code-auditor` APROVADO (1ª), `security-auditor` APROVADO (1ª, RLS + posse + congelamento verificados), `qa-engineer` APROVADO (1ª, 5 critérios + posse cruzada). Sem UI/ux-auditor. **Migration NÃO aplicada no Supabase real** — bloqueio de CLI pendente operador. **Desbloqueia Task 3.8 (front).**
 - **Task 3.13 (catálogo-back)** ✅ (2026-08-11) — Bucket de Storage `texturas` (read-only `authenticated`, escrita `service_role`), campo `texturaUrl?: string` em `EspecificacaoChapa`, validação anti-hotlink em `lib/produto/acoes.ts`. **2 rodadas de gate**: `security-auditor` reprovou 1ª tentativa por bypass no `.trim()` da validação — correção: `.replace(/[\u0000-\u0020\u007f]/g, "")` com testes de 10 variantes de bypass. `code-auditor` APROVADO (1ª), `security-auditor` APROVADO (2ª), `qa-engineer` APROVADO (1ª, 504 testes, 8 novos). Sem UI. **Migration NÃO aplicada no Supabase real** — bloqueio de CLI pendente operador. **Desbloqueia Task 3.13 (catálogo-front).**
 
-**Lote 4 — Primeira task mesclada (1/13)**:
+**Lote 4 — Segunda task mesclada (2/13)**:
+- **Task 4.4** ✅ (2026-08-12) — Coluna `codigo` (text, nullable) em `produto` com constraint `unique (organizacao_id, codigo)`. Migration `20260812120000_produto_codigo.sql`. Tipos em `lib/produto/tipos.ts`, leitura/escrita em `lib/produto/acoes.ts` (`criarProduto`/`atualizarProduto`) com tratamento de erro de violação de unicidade (Postgres `23505`) → mensagem amigável (`mensagemErroProduto`). Três testes novos em `lib/produto/acoes.test.ts`. `code-auditor` APROVADO (1ª), `qa-engineer` APROVADO (1ª, 566/566 testes). Sem `security-auditor` (RLS de `produto` já existente cobre a tabela). Sem `ux-auditor` (backend puro). **Migration real NÃO aplicada em Supabase** — bloqueio CLI; pendente operador. **Desbloqueia Task 4.1–4.3/4.5 (Catálogo unificado).**
 - **Task 4.16 (back)** ✅ (2026-08-11) — Coluna `espessura_serra_padrao_mm numeric` em `organizacao` (default `3`, check `>= 0`), leitura/escrita no perfil. Round-trip mínimo, sem UI. `code-auditor` APROVADO (1ª), `qa-engineer` APROVADO (1ª, 452/452 testes). Sem impacto visual. Migration real não aplicada em Supabase (bloqueio CLI); pendente operador. **Desbloqueou a Task 3.1/3.3 (motor), Lote 3.**
 
 Histórico das demais tarefas do Lote 2 (17/17 concluídas):
@@ -159,6 +160,8 @@ limpos.
   via MCP ou Dashboard Supabase — migration `20260811110000_lista_material_override.sql` foi aprovada em audit mas não pode ser aplicada via CLI (mesmo bloqueio de permissão de conta).
 - **Operador**: aplicar migration real `storage_texturas` (Task 3.13-catálogo-back)
   via MCP ou Dashboard Supabase — migration `20260811110000_storage_texturas.sql` foi aprovada em audit mas não pode ser aplicada via CLI (mesmo bloqueio de permissão de conta).
+- **Operador**: aplicar migration real `produto_codigo` (Task 4.4)
+  via MCP ou Dashboard Supabase — migration `20260812120000_produto_codigo.sql` foi aprovada em audit mas não pode ser aplicada via CLI (mesmo bloqueio de permissão de conta).
 - Dívida de segurança de baixa prioridade nunca endereçada — ver
   `docs/Backlog.md` (Stage 3): headers de segurança, auditoria de operações
   sensíveis, limite de cache de fórmulas.
