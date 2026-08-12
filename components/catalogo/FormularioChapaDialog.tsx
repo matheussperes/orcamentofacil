@@ -13,6 +13,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { SeletorTexturaChapa } from "@/components/catalogo/SeletorTexturaChapa";
 import type { DadosProduto, ResultadoProduto } from "@/lib/produto/acoes";
 import type { EspecificacaoChapa } from "@/lib/produto/tipos";
 import type { ProdutoRow } from "@/lib/produto/tipos";
@@ -41,6 +42,7 @@ export function FormularioChapaDialog({
   const [cor, setCor] = useState(especEmEdicao?.cor ?? "");
   const [espessura, setEspessura] = useState(especEmEdicao?.espessura ?? 15);
   const [preco, setPreco] = useState(produtoEmEdicao?.preco ?? 0);
+  const [texturaUrl, setTexturaUrl] = useState<string | undefined>(especEmEdicao?.texturaUrl);
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
 
@@ -49,6 +51,7 @@ export function FormularioChapaDialog({
     setCor(especEmEdicao?.cor ?? "");
     setEspessura(especEmEdicao?.espessura ?? 15);
     setPreco(produtoEmEdicao?.preco ?? 0);
+    setTexturaUrl(especEmEdicao?.texturaUrl);
     setErro(null);
   }
 
@@ -58,7 +61,7 @@ export function FormularioChapaDialog({
     const resultado = await onSalvar({
       tipo: "chapa",
       nome,
-      especificacao: { cor, espessura },
+      especificacao: { cor, espessura, texturaUrl },
       preco,
     });
     setSalvando(false);
@@ -126,6 +129,7 @@ export function FormularioChapaDialog({
               onChange={(e) => setPreco(Number(e.target.value) || 0)}
             />
           </div>
+          <SeletorTexturaChapa value={texturaUrl} onChange={setTexturaUrl} />
         </div>
 
         {erro && (
