@@ -11,14 +11,26 @@ import { PerfilMock, PerfilMockErro } from "@/components/perfil/PerfilMock";
 // `?erro=1` — auditoria do estado de erro da seção "Organização" (Design-
 // System Seção 8: organização não resolvível, ver `PerfilLab.tsx`), mesmo
 // padrão do `?vazio=1` do Dashboard.
-export default function DevPreviewPerfilPage({ searchParams }: { searchParams: { erro?: string } }) {
+//
+// `?definirSenha=1` — Task 4.12-4.13-front: auditoria visual do formulário
+// "Definir nova senha" da seção "Segurança" sem depender do fluxo real de
+// e-mail (mesmo parâmetro que `app/auth/confirm/route.ts` usa em produção).
+export default function DevPreviewPerfilPage({
+  searchParams,
+}: {
+  searchParams: { erro?: string; definirSenha?: string };
+}) {
   if (process.env.NODE_ENV === "production") {
     notFound();
   }
 
   return (
     <Shell user={{ nome: "Usuário de teste", organizacao: "Organização de teste" }}>
-      {searchParams.erro ? <PerfilMockErro /> : <PerfilMock />}
+      {searchParams.erro ? (
+        <PerfilMockErro />
+      ) : (
+        <PerfilMock definirSenhaInicial={searchParams.definirSenha === "1"} />
+      )}
     </Shell>
   );
 }

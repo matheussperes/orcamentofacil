@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState, type ChangeEvent } from "react";
-import { Building2, ImageOff, User } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Building2, ImageOff, ShieldCheck, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -22,6 +23,8 @@ import {
 import type { OrganizacaoCarregada, PerfilCarregado } from "@/lib/perfil/carregar";
 import type { DadosOrganizacao, ResultadoSalvarOrganizacao } from "@/lib/organizacao/salvar";
 import type { DadosPerfil, ResultadoSalvarPerfil } from "@/lib/perfil/salvar";
+import type { ResultadoTrocaSenha } from "@/lib/auth/trocar-senha";
+import { senhaValida, senhasConferem, TAMANHO_MINIMO_SENHA } from "@/lib/auth/validacao";
 import type { ModoMontagem, ModoPrecificacao } from "@/lib/engine/precificacao";
 import { formatarCnpj, formatarTelefone } from "@/lib/format";
 
@@ -108,12 +111,26 @@ export interface PerfilLabProps {
   perfilInicial: PerfilCarregado;
   onSalvarOrganizacao: (organizacaoId: string, dados: DadosOrganizacao) => Promise<ResultadoSalvarOrganizacao>;
   onSalvarPerfil: (dados: DadosPerfil) => Promise<ResultadoSalvarPerfil>;
+  /** `true` quando a página chegou com `?definirSenha=1` (usuário voltou do
+   * link de confirmação por e-mail, `app/auth/confirm/route.ts`) — mostra o
+   * formulário "Definir nova senha" dentro de `SecaoSeguranca`. */
+  definirSenhaInicial: boolean;
+  onSolicitarTrocaSenha: () => Promise<ResultadoTrocaSenha>;
+  onDefinirNovaSenha: (novaSenha: string) => Promise<ResultadoTrocaSenha>;
 }
 
 const PRECIFICACAO_FALLBACK: ModoPrecificacao = { modo: "multiplicador", fator: 2 };
 const MONTAGEM_FALLBACK: ModoMontagem = { modo: "percentual_material", percentual: 0.1 };
 
-export function PerfilLab({ organizacaoInicial, perfilInicial, onSalvarOrganizacao, onSalvarPerfil }: PerfilLabProps) {
+export function PerfilLab({
+  organizacaoInicial,
+  perfilInicial,
+  onSalvarOrganizacao,
+  onSalvarPerfil,
+  definirSenhaInicial,
+  onSolicitarTrocaSenha,
+  onDefinirNovaSenha,
+}: PerfilLabProps) {
   return (
     <div className="flex flex-col gap-xl">
       {organizacaoInicial ? (
@@ -131,6 +148,13 @@ export function PerfilLab({ organizacaoInicial, perfilInicial, onSalvarOrganizac
       )}
 
       <SecaoPerfilPessoal perfilInicial={perfilInicial} onSalvar={onSalvarPerfil} />
+
+      <SecaoSeguranca
+        email={perfilInicial.email}
+        definirSenhaInicial={definirSenhaInicial}
+        onSolicitarTrocaSenha={onSolicitarTrocaSenha}
+        onDefinirNovaSenha={onDefinirNovaSenha}
+      />
     </div>
   );
 }
@@ -446,14 +470,6 @@ function SecaoPerfilPessoal({
           </div>
         </div>
 
-        <div className="sm:max-w-sm">
-          <Label htmlFor="perfil-email">E-mail</Label>
-          <Input id="perfil-email" value={perfilInicial.email} disabled readOnly />
-          <p className="mt-1 text-corpo-pequeno text-cinza-500">
-            Trocar o e-mail de acesso não está disponível nesta versão.
-          </p>
-        </div>
-
         <div className="flex flex-col gap-md sm:flex-row sm:items-end">
           <div className="flex-1">
             <Label htmlFor="perfil-foto">Foto de perfil</Label>
@@ -514,6 +530,153 @@ function SecaoPerfilPessoal({
                 : (resultado.erro ?? "Não foi possível salvar seus dados de perfil.")}
             </AlertDescription>
           </Alert>
+        )}
+      </div>
+    </section>
+  );
+}
+
+// Task 4.12-4.13-front (RF-31) — terceira seção de `/perfil`, mesmo padrão
+// visual de `SecaoOrganizacao`/`SecaoPerfilPessoal` (card com ícone + título
+// + `p-xl`). E-mail (identidade de conta) mora aqui, não em "Perfil
+// pessoal" — mesmo raciocínio do item 4.14 do Backlog. As duas ações
+// (solicitar troca de senha / definir nova senha) usam as Server Actions já
+// auditadas em `lib/auth/trocar-senha.ts` (Task 4.12-4.13 back); nenhuma
+// lógica de autenticação nova aqui, só UI + validação client-side reaproveitada
+// de `lib/auth/validacao.ts` (mesmo padrão de `app/signup/page.tsx`).
+function SecaoSeguranca({
+  email,
+  definirSenhaInicial,
+  onSolicitarTrocaSenha,
+  onDefinirNovaSenha,
+}: {
+  email: string;
+  definirSenhaInicial: boolean;
+  onSolicitarTrocaSenha: () => Promise<ResultadoTrocaSenha>;
+  onDefinirNovaSenha: (novaSenha: string) => Promise<ResultadoTrocaSenha>;
+}) {
+  const router = useRouter();
+
+  const [solicitando, setSolicitando] = useState(false);
+  const [resultadoSolicitacao, setResultadoSolicitacao] = useState<ResultadoTrocaSenha | null>(null);
+
+  async function handleSolicitarTrocaSenha() {
+    setSolicitando(true);
+    setResultadoSolicitacao(null);
+    const resposta = await onSolicitarTrocaSenha();
+    setSolicitando(false);
+    setResultadoSolicitacao(resposta);
+  }
+
+  // `definirSenhaInicial` só controla a EXIBIÇÃO inicial do formulário —
+  // depois de definir a senha com sucesso ele é escondido (via `concluido`),
+  // sem depender de reler a URL.
+  const [novaSenha, setNovaSenha] = useState("");
+  const [confirmacaoSenha, setConfirmacaoSenha] = useState("");
+  const [definindoSenha, setDefinindoSenha] = useState(false);
+  const [resultadoDefinicao, setResultadoDefinicao] = useState<ResultadoTrocaSenha | null>(null);
+  const [erroValidacao, setErroValidacao] = useState<string | null>(null);
+
+  async function handleDefinirNovaSenha() {
+    setErroValidacao(null);
+    setResultadoDefinicao(null);
+
+    if (!senhaValida(novaSenha)) {
+      setErroValidacao(`A senha precisa ter no mínimo ${TAMANHO_MINIMO_SENHA} caracteres.`);
+      return;
+    }
+    if (!senhasConferem(novaSenha, confirmacaoSenha)) {
+      setErroValidacao("As senhas não coincidem. Confira e tente de novo.");
+      return;
+    }
+
+    setDefinindoSenha(true);
+    const resposta = await onDefinirNovaSenha(novaSenha);
+    setDefinindoSenha(false);
+    setResultadoDefinicao(resposta);
+    if (resposta.ok) {
+      // Remove `?definirSenha=1` da URL — evita reabrir o formulário num F5
+      // depois que a senha já foi definida (decisão do executor, contrato
+      // deixava o mecanismo exato a critério).
+      router.replace("/perfil");
+    }
+  }
+
+  return (
+    <section className="rounded-lg border border-cinza-200 bg-cinza-0 p-xl shadow-xs">
+      <div className="mb-md flex items-center gap-2">
+        <ShieldCheck className="h-5 w-5 text-cinza-500" aria-hidden="true" />
+        <h2 className="text-titulo-secao text-cinza-900">Segurança</h2>
+      </div>
+
+      <div className="flex flex-col gap-md">
+        <div className="sm:max-w-sm">
+          <Label htmlFor="seguranca-email">E-mail</Label>
+          <Input id="seguranca-email" value={email} disabled readOnly />
+          <p className="mt-1 text-corpo-pequeno text-cinza-500">
+            Trocar o e-mail de acesso não está disponível nesta versão.
+          </p>
+        </div>
+
+        <div>
+          <Button type="button" variant="ghost" onClick={handleSolicitarTrocaSenha} disabled={solicitando}>
+            {solicitando ? "Enviando…" : "Trocar senha"}
+          </Button>
+          {resultadoSolicitacao && (
+            <Alert variant={resultadoSolicitacao.ok ? "sucesso" : "erro"} className="mt-sm">
+              <AlertDescription>
+                {resultadoSolicitacao.ok
+                  ? "Enviamos um link de confirmação para o seu e-mail. Clique nele para definir uma nova senha."
+                  : (resultadoSolicitacao.erro ?? "Não foi possível enviar o link de troca de senha.")}
+              </AlertDescription>
+            </Alert>
+          )}
+        </div>
+
+        {definirSenhaInicial && !resultadoDefinicao?.ok && (
+          <div className="border-t border-cinza-200 pt-md">
+            <h3 className="mb-sm text-titulo-card text-cinza-900">Definir nova senha</h3>
+            <div className="grid grid-cols-1 gap-md sm:max-w-sm">
+              <div>
+                <Label htmlFor="seguranca-nova-senha">Nova senha</Label>
+                <Input
+                  id="seguranca-nova-senha"
+                  type="password"
+                  value={novaSenha}
+                  onChange={(e) => setNovaSenha(e.target.value)}
+                  placeholder={`Mínimo de ${TAMANHO_MINIMO_SENHA} caracteres`}
+                />
+              </div>
+              <div>
+                <Label htmlFor="seguranca-confirmacao-senha">Confirmar nova senha</Label>
+                <Input
+                  id="seguranca-confirmacao-senha"
+                  type="password"
+                  value={confirmacaoSenha}
+                  onChange={(e) => setConfirmacaoSenha(e.target.value)}
+                />
+              </div>
+            </div>
+            <div className="mt-md flex flex-col items-start gap-sm">
+              <Button variant="primary" onClick={handleDefinirNovaSenha} disabled={definindoSenha}>
+                {definindoSenha ? "Salvando…" : "Salvar nova senha"}
+              </Button>
+              {erroValidacao && (
+                <Alert variant="erro" className="w-full">
+                  <AlertDescription>{erroValidacao}</AlertDescription>
+                </Alert>
+              )}
+              {resultadoDefinicao && (
+                <Alert variant={resultadoDefinicao.ok ? "sucesso" : "erro"} className="w-full">
+                  <AlertDescription>
+                    {resultadoDefinicao.ok
+                      ? "Senha atualizada com sucesso."
+                      : (resultadoDefinicao.erro ?? "Não foi possível atualizar a senha.")}
+                  </AlertDescription>
+                </Alert>
+              )}
+            </div>
+          </div>
         )}
       </div>
     </section>
