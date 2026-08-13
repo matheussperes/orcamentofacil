@@ -16,13 +16,23 @@ import { PerfilConectado } from "@/components/perfil/PerfilConectado";
 // mostrar; o cenário de borda (organização não resolvível) vira estado de
 // erro dentro de `PerfilLab`, não 404 da rota inteira (a seção "Perfil
 // pessoal" continua utilizável mesmo nesse cenário).
-export default async function PerfilPage() {
+// Task 4.12-4.13-front (RF-31) — `searchParams.definirSenha === "1"` sinaliza
+// que o usuário voltou do link de confirmação de troca de senha
+// (`app/auth/confirm/route.ts` redireciona pra cá com esse parâmetro); a
+// prop é threaded até `SecaoSeguranca` mesmo padrão de `organizacaoInicial`/
+// `perfilInicial` acima.
+export default async function PerfilPage({
+  searchParams,
+}: {
+  searchParams: { definirSenha?: string };
+}) {
   const dados = await carregarPerfilOrganizacao();
 
   return (
     <PerfilConectado
       organizacaoInicial={dados?.organizacao ?? null}
       perfilInicial={dados?.perfil ?? { id: "", nome: "", telefone: "", email: "", fotoUrl: "" }}
+      definirSenhaInicial={searchParams.definirSenha === "1"}
     />
   );
 }

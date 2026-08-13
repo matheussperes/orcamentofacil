@@ -4,6 +4,7 @@ import { PerfilLab } from "./PerfilLab";
 import type { OrganizacaoCarregada, PerfilCarregado } from "@/lib/perfil/carregar";
 import type { ResultadoSalvarOrganizacao } from "@/lib/organizacao/salvar";
 import type { ResultadoSalvarPerfil } from "@/lib/perfil/salvar";
+import type { ResultadoTrocaSenha } from "@/lib/auth/trocar-senha";
 
 // Task 13.7a (contrato .maestro/tmp/13.7a-contract.md) — harness DEV-ONLY
 // (`/dev/preview/perfil`), mesmo espírito de `FinanceiroTabMock.tsx`: sem
@@ -30,7 +31,19 @@ const PERFIL_MOCK: PerfilCarregado = {
   fotoUrl: "",
 };
 
-export function PerfilMock() {
+// Task 4.12-4.13-front — no-op das duas Server Actions de troca de senha
+// (mesmo espírito de `onSalvarOrganizacaoMock`/`onSalvarPerfilMock`).
+async function onSolicitarTrocaSenhaMock(): Promise<ResultadoTrocaSenha> {
+  await new Promise((resolve) => setTimeout(resolve, 300));
+  return { ok: true };
+}
+
+async function onDefinirNovaSenhaMock(): Promise<ResultadoTrocaSenha> {
+  await new Promise((resolve) => setTimeout(resolve, 300));
+  return { ok: true };
+}
+
+export function PerfilMock({ definirSenhaInicial = false }: { definirSenhaInicial?: boolean }) {
   async function onSalvarOrganizacaoMock(): Promise<ResultadoSalvarOrganizacao> {
     await new Promise((resolve) => setTimeout(resolve, 300));
     return { ok: true };
@@ -47,6 +60,9 @@ export function PerfilMock() {
       perfilInicial={PERFIL_MOCK}
       onSalvarOrganizacao={onSalvarOrganizacaoMock}
       onSalvarPerfil={onSalvarPerfilMock}
+      definirSenhaInicial={definirSenhaInicial}
+      onSolicitarTrocaSenha={onSolicitarTrocaSenhaMock}
+      onDefinirNovaSenha={onDefinirNovaSenhaMock}
     />
   );
 }
@@ -71,6 +87,9 @@ export function PerfilMockErro() {
       perfilInicial={PERFIL_MOCK}
       onSalvarOrganizacao={onSalvarOrganizacaoMock}
       onSalvarPerfil={onSalvarPerfilMock}
+      definirSenhaInicial={false}
+      onSolicitarTrocaSenha={onSolicitarTrocaSenhaMock}
+      onDefinirNovaSenha={onDefinirNovaSenhaMock}
     />
   );
 }
