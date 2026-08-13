@@ -1,27 +1,42 @@
 # UX Decline Payload
 
-**Task**: 2.3-2.6
-**Branch**: feature/2.3-2.6
-**Data**: 2026-08-06
+**Task**: 4.15
+**Branch**: feature/4.15
+**Data**: 2026-08-13
 **Veredicto**: REPROVADO
 
-## 1. Seletor de ambiente/parede não renderiza o estilo "Tabs underline" documentado — herda CSS legado global de `<button>`
+## 1. Diálogo de exclusão de organização sem o campo de confirmação por digitação
 
-- **Componente**: `components/ambientes/SeletorLista.tsx` linhas 94-109 (o `<button>` nativo que renderiza cada item do seletor de ambiente/parede)
-- **Causa raiz**: `app/globals.css` linhas 147-158 define uma regra genérica `button { background: var(--legacy-panel-2); border: 1px solid var(--legacy-border); border-radius: 8px; padding: 8px 12px; }` e `button:hover { border-color: var(--legacy-accent); }` sem escopo — qualquer `<button>` nativo sem classe própria de override herda esse estilo. O `<button>` de `SeletorLista.tsx` só define `border-b-2 border-accent`/`border-b-2 border-transparent` + cor de texto, e não neutraliza (`bg-transparent`, `border-0`/`p-0`, `rounded-none`) as propriedades do seletor global — então a regra legada vence nas propriedades que o componente não sobrescreve (background, border lateral, radius, padding).
-- **Regra violada**: Design-System §7.8 (Tabs underline: "trigger inativo `text-corpo font-medium text-cinza-500 border-b-2 border-transparent`; trigger ativo `text-accent border-b-2 border-accent`"), o próprio padrão que o comentário do arquivo (linhas 33-35) declara estar seguindo. Também viola §15.4 item 12 ("Nenhum componente introduz cor, raio, sombra ou espaçamento fora dos tokens das Seções 2–5") — o CSS legado usa hex hardcoded fora do sistema de tokens Tailwind.
-- **Breakpoint**: todos (desktop, tablet 768, mobile 480) — é uma colisão de CSS global, não um problema responsivo
-- **Esperado**: item do seletor com apenas `border-b-2` (sublinhado) — transparente quando inativo, `accent` quando ativo; sem fundo, sem borda lateral, sem padding em caixa, sem raio (visual "Tabs", igual às abas do orçamento acima)
-- **Encontrado**: cada item ("Ambiente 1", "Cozinha", "Parede 1", "Parede 2") renderiza como uma pílula com borda em todo o contorno, fundo `cinza-50`, `border-radius: 8px`, `padding: 8px 12px`. O hover reforça a borda completa em accent (regra `button:hover` legada), em vez de sublinhar.
-- **Evidência**: `.maestro/tmp/screenshots/2.3-2.6-02-multi-ambiente-parede.png` e `.maestro/tmp/screenshots/2.3-2.6-05-hover-cozinha-nao-selecionada.png`
-- **Correção sugerida** (não vinculante — decisão do frontend-engineer): adicionar classes que neutralizem a regra `button {}` legada no `<button>` de `SeletorLista.tsx` (ex.: `bg-transparent border-0 border-b-2 rounded-none p-0`), preservando só `border-b-2` + cor de texto conforme §7.8.
+- **Componente**: `components/perfil/PerfilLab.tsx` (`SecaoExcluirConta`, linhas 231-265)
+- **Regra violada**: `docs/Design-System.md` Seção 7.11, bloco "Exclusão de organização (Q-13) — o caso de maior severidade, um passo a mais": *"Campo de confirmação por digitação: `Input` (7.9) abaixo do corpo, rótulo 'Digite `<nome da organização>` para confirmar', placeholder vazio (...). O botão primário/destrutivo do rodapé (...) permanece `disabled` até o texto digitado bater exatamente com o nome da organização."* O texto do próprio Design System nomeia explicitamente que o padrão simples de "nomear + irreversível" **não basta sozinho** para este caso específico, por ser a única operação multi-tenant e irreversível do produto.
+- **Breakpoint**: desktop (1440px), único capturado (nível Leve)
+- **Esperado**: `Input` com rótulo "Digite Marcenaria Boa Vista para confirmar" abaixo do texto de aviso, e botão destrutivo desabilitado até o texto bater
+- **Encontrado**: Dialog vai direto do texto de aviso para o rodapé com "Cancelar"/"Excluir tudo" — nenhum campo de digitação, botão nunca fica desabilitado por conferência de nome
+- **Evidência**: `.maestro/tmp/screenshots/4.15-dialog-confirmacao.png`
+
+## 2. Botão de confirmação não usa o estilo sólido reforçado especificado
+
+- **Componente**: `components/perfil/PerfilLab.tsx` linha 260 (`<Button variant="danger" onClick={confirmar}>`)
+- **Regra violada**: `docs/Design-System.md` Seção 7.11, mesmo bloco: *"O botão primário/destrutivo do rodapé (`destructive` sólido: `bg-erro text-cinza-0 hover:bg-erro/90`, diferente do `destructive` outline padrão da 7.1 — a severidade máxima justifica o contraste maior)"*
+- **Breakpoint**: desktop (1440px)
+- **Esperado**: botão sólido vermelho (`bg-erro text-cinza-0`)
+- **Encontrado**: `variant="danger"` do `components/ui/button.tsx` é o outline padrão (`bg-transparent border border-cinza-300 text-cinza-700 hover:border-erro`) — visualmente idêntico ao "Cancelar" ao lado, sem o contraste sólido exigido para este caso de severidade máxima
+- **Evidência**: `.maestro/tmp/screenshots/4.15-dialog-confirmacao.png`
+
+## 3. Rótulo do botão de confirmação diverge do texto especificado
+
+- **Componente**: `components/perfil/PerfilLab.tsx` linha 261 (`{excluindo ? "Excluindo…" : "Excluir tudo"}`)
+- **Regra violada**: `docs/Design-System.md` Seção 7.11: *"Rodapé: botão secundário `outline` 'Cancelar' + botão destrutivo sólido 'Excluir organização' (rótulo explícito, não 'Excluir' sozinho)."*
+- **Breakpoint**: desktop (1440px)
+- **Esperado**: rótulo "Excluir organização"
+- **Encontrado**: rótulo "Excluir tudo"
+- **Evidência**: `.maestro/tmp/screenshots/4.15-dialog-confirmacao.png`
+
+## Observação não bloqueante (registrar, não corrigir nesta rodada)
+
+O botão de rejeição para não-admin usa ocultação total da seção (`{ehAdmin && <SecaoExcluirConta />}`, `PerfilLab.tsx:176`), enquanto `docs/Design-System.md` Seção 7.11 especifica botão `disabled` visível + `Tooltip` explicando a restrição de papel. Não pôde ser fotografado nesta sessão porque o harness `/dev/preview/perfil` (`components/perfil/PerfilMock.tsx`) fixa `ehAdmin` em `true` sem parâmetro de query para alternar — a divergência foi confirmada por leitura de código, não por captura visual, e por isso listada como observação e não como achado numerado do payload. Fica registrada para o frontend-engineer avaliar junto com os achados acima, já que ambos tocam o mesmo componente.
 
 ## Capturas realizadas
-- `.maestro/tmp/screenshots/2.3-2.6-01-inicial.png`
-- `.maestro/tmp/screenshots/2.3-2.6-02-multi-ambiente-parede.png`
-- `.maestro/tmp/screenshots/2.3-2.6-03-parede2-largura1800.png`
-- `.maestro/tmp/screenshots/2.3-2.6-04-volta-parede1.png`
-- `.maestro/tmp/screenshots/2.3-2.6-05-hover-cozinha-nao-selecionada.png`
-- `.maestro/tmp/screenshots/2.3-2.6-06-tablet-768.png`
-- `.maestro/tmp/screenshots/2.3-2.6-07-mobile-480.png`
-- `.maestro/tmp/screenshots/2.3-2.6-08-dialog-exclusao.png`
+
+- `.maestro/tmp/screenshots/4.15-secao-excluir-conta.png` — seção "Excluir conta" em `/perfil`, estado fechado
+- `.maestro/tmp/screenshots/4.15-dialog-confirmacao.png` — Dialog de confirmação aberto

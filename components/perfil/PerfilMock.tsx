@@ -5,6 +5,7 @@ import type { OrganizacaoCarregada, PerfilCarregado } from "@/lib/perfil/carrega
 import type { ResultadoSalvarOrganizacao } from "@/lib/organizacao/salvar";
 import type { ResultadoSalvarPerfil } from "@/lib/perfil/salvar";
 import type { ResultadoTrocaSenha } from "@/lib/auth/trocar-senha";
+import type { ResultadoExcluirOrganizacao } from "@/lib/organizacao/excluir";
 
 // Task 13.7a (contrato .maestro/tmp/13.7a-contract.md) — harness DEV-ONLY
 // (`/dev/preview/perfil`), mesmo espírito de `FinanceiroTabMock.tsx`: sem
@@ -43,6 +44,14 @@ async function onDefinirNovaSenhaMock(): Promise<ResultadoTrocaSenha> {
   return { ok: true };
 }
 
+// Task 4.15 — no-op do harness: devolve rejeicao em vez de `ok: true` porque
+// sucesso navegaria para `/login` e tiraria o preview do ar. O que importa
+// visualmente aqui e o Dialog de confirmacao, nao o desfecho.
+async function onExcluirOrganizacaoMock(): Promise<ResultadoExcluirOrganizacao> {
+  await new Promise((resolve) => setTimeout(resolve, 300));
+  return { ok: false, erro: "Preview: nada foi excluido." };
+}
+
 export function PerfilMock({ definirSenhaInicial = false }: { definirSenhaInicial?: boolean }) {
   async function onSalvarOrganizacaoMock(): Promise<ResultadoSalvarOrganizacao> {
     await new Promise((resolve) => setTimeout(resolve, 300));
@@ -63,6 +72,8 @@ export function PerfilMock({ definirSenhaInicial = false }: { definirSenhaInicia
       definirSenhaInicial={definirSenhaInicial}
       onSolicitarTrocaSenha={onSolicitarTrocaSenhaMock}
       onDefinirNovaSenha={onDefinirNovaSenhaMock}
+      ehAdmin
+      onExcluirOrganizacao={onExcluirOrganizacaoMock}
     />
   );
 }
@@ -90,6 +101,8 @@ export function PerfilMockErro() {
       definirSenhaInicial={false}
       onSolicitarTrocaSenha={onSolicitarTrocaSenhaMock}
       onDefinirNovaSenha={onDefinirNovaSenhaMock}
+      ehAdmin
+      onExcluirOrganizacao={onExcluirOrganizacaoMock}
     />
   );
 }
