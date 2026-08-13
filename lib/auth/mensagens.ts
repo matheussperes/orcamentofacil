@@ -31,3 +31,18 @@ export function mensagemErroSignup(mensagemBruta: string): string {
   }
   return "Não foi possível criar sua conta. Verifique os dados e tente de novo.";
 }
+
+// Task 4.12-4.13-back (RF-31) — troca de senha.
+export function mensagemErroTrocaSenha(mensagemBruta: string): string {
+  const m = mensagemBruta.toLowerCase();
+  if (m.includes("same password") || m.includes("different from the old")) {
+    return "A nova senha precisa ser diferente da senha atual.";
+  }
+  if (m.includes("password")) {
+    return "Senha inválida — use pelo menos 8 caracteres.";
+  }
+  if (m.includes("too many requests") || m.includes("rate limit")) {
+    return "Muitas tentativas seguidas. Aguarde um instante e tente de novo.";
+  }
+  return "Não foi possível trocar sua senha agora. Tente de novo em instantes.";
+}
