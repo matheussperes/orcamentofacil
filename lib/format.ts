@@ -20,3 +20,39 @@ export function formatarDataHora(iso: string): string {
     timeStyle: "short",
   });
 }
+
+// Task 4.6-4.7 (contrato .maestro/state/contracts/4.6-4.7.md) — máscaras
+// mask-as-you-type para os campos de texto livre de `/perfil` (RF-31).
+// Ambas extraem só os dígitos, truncam no máximo e reconstroem a máscara —
+// por isso lidam igual com digitação tecla-a-tecla ou colar valor sujo.
+
+export function formatarCnpj(valor: string): string {
+  const digitos = valor.replace(/\D/g, "").slice(0, 14);
+  if (digitos.length === 0) return "";
+
+  let resultado = digitos.slice(0, 2);
+  if (digitos.length > 2) resultado += "." + digitos.slice(2, 5);
+  if (digitos.length > 5) resultado += "." + digitos.slice(5, 8);
+  if (digitos.length > 8) resultado += "/" + digitos.slice(8, 12);
+  if (digitos.length > 12) resultado += "-" + digitos.slice(12, 14);
+  return resultado;
+}
+
+export function formatarTelefone(valor: string): string {
+  const digitos = valor.replace(/\D/g, "").slice(0, 11);
+  if (digitos.length === 0) return "";
+
+  const tamanhoDdd = Math.min(digitos.length, 2);
+  const ddd = digitos.slice(0, tamanhoDdd);
+  const resto = digitos.slice(2);
+  if (resto.length === 0) return `(${ddd}`;
+
+  let resultado = `(${ddd}) `;
+  // 11 dígitos = celular (9 na frente do número), 10 = fixo.
+  const tamanhoPrimeiroBloco = digitos.length > 10 ? 5 : 4;
+  const primeiroBloco = resto.slice(0, tamanhoPrimeiroBloco);
+  const segundoBloco = resto.slice(tamanhoPrimeiroBloco);
+  resultado += primeiroBloco;
+  if (segundoBloco.length > 0) resultado += "-" + segundoBloco;
+  return resultado;
+}
