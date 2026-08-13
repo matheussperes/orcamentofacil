@@ -1651,11 +1651,11 @@ decisão. O ato correto é apagar a linha de `organizacao`.
    rotina precisa: **(i)** ler os `perfil.id` da org **antes** de apagar (depois
    eles não existem mais), **(ii)** apagar a `organizacao`, **(iii)** apagar
    cada usuário do Auth (Admin API / `service_role`). A ordem importa.
-3. **Storage não tem FK.** Logo da organização (buckets das Tasks 4.8–4.9) e
-   **foto de perfil pessoal** dos usuários (Task 4.11) **não** são apagados por
-   cascade nenhum. Precisam de expurgo
-   por prefixo na mesma rotina, senão sobra arquivo órfão — e, com ele, dado que
-   deveria ter sido eliminado.
+3. **Storage não tem FK.** Logo da organização (buckets das Tasks 4.8–4.9),
+   **foto de perfil pessoal** dos usuários (Task 4.11) e **renders de proposta**
+   (bucket `linha-proposta-renders`, Task 13.6a) **não** são apagados por
+   cascade nenhum. Precisam de expurgo por prefixo na mesma rotina, senão sobra
+   arquivo órfão — e, com ele, dado que deveria ter sido eliminado.
 4. **`gabarito.origem_gabarito_id ... on delete set null`**: um gabarito global
    promovido a partir de um gabarito desta org perde a linhagem (vira `null`) e,
    com ela, a deduplicação da regra 6 da 7.1 deixa de escondê-lo. Efeito
