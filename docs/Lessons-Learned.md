@@ -265,3 +265,31 @@ Task 3.5 (motor) introduziu `fitaPorCor` agregando fita por `peca.fita_m` de cad
 **Ação proposta**: nenhuma — confirmação de disciplina, não gap a corrigir.
 
 **Escopo**: Somente este projeto.
+
+---
+
+## 2026-08-13 — Lote 4 (Cadastros e identidade, RF-31, 13/13 tasks)
+
+**Métricas do período**
+- Tasks concluídas: 13 (4.1–4.3, 4.4, 4.5, 4.6–4.7, 4.8–4.9 back/front, 4.10, 4.11 back/front, 4.12–4.13 back/front, 4.15, 4.16-back)
+- Vetos de UX: 1 (Task 4.15, `.maestro/tmp/UX-Decline-Payload.md`) | Segurança: 1 bloqueante (Task 4.15, `.maestro/tmp/Security-Decline-Payload.md`) | Build/Lint: 0 | Testes (QA): 0
+- Circuit Breakers: 0 (confirmado em `.maestro/state/handoff.md`: "zero Circuit Breaker")
+- Tasks que exigiram mais de uma rodada de gate: 1 de 13 (4.15 — security tentativa 2, ux tentativa 2, code tentativa 3 só para reverificar as duas correções, nunca reprovado por si)
+
+**Padrão identificado**
+
+Todos os vetos do lote (1 UX + 1 segurança, os únicos do período) caíram na mesma task, e nenhum caiu em `code-auditor` — que aprovou as 13 tasks e as 3 rodadas de 4.15 na primeira checagem sintática/build sem nenhuma reprovação. A task 4.15 (exclusão de organização, cascade irreversível) foi a única do lote com risco de negócio real (dado destrutivo, elevação de privilégio, LGPD); as outras 12 eram CRUD/RLS por padrão já replicado de tasks anteriores (upload de arquivo com bucket+RLS clonado de precedente, troca de senha reaproveitando rota existente). O achado de segurança de 4.15 (`Security-Decline-Payload.md`) é concreto: `perfil.papel` era gravável por qualquer usuário autenticado via `PATCH /rest/v1/perfil` porque a policy de RLS restringia a *linha* (`id = auth.uid()`) mas nenhuma regra restringia a *coluna* — a checagem de papel-admin da Server Action lia esse mesmo campo, então o gate de autorização de negócio era contornável por escrita direta ao PostgREST antes de a Server Action nunca ser chamada.
+
+Sobre a escalação de `security-auditor` para Opus (confirmada em `.maestro/state/handoff.md` para 4.8-4.9-back e 4.12-4.13-back; recomendada no Backlog para 4.15 por "não é CRUD padrão"): dos 3 casos, 1 (4.8-4.9-back) não encontrou nada digno de registro (verdict: "Achados: Nenhum"), 1 (4.12-4.13-back) encontrou 2 observações reais não bloqueantes (fragilidade de `redirectTo` sem allowlist — CWE-601 — e ausência de reautenticação recente para troca de senha), e 1 (4.15) encontrou o único achado bloqueante do lote. A alegação de "achado real nas 3 escalações" não se sustenta à leitura literal dos vereditos — é 2 de 3 com achado substantivo, não 3 de 3 — mas o sinal de que escalar security-auditor em tasks de autenticação/RLS-sensível/dado-destrutivo tem taxa de acerto maior que zero, contra uma tarefa CRUD comparável (4.8-4.9-back, réplica de padrão já auditado) que não achou nada, permanece.
+
+**Causa estrutural provável**
+
+RLS por linha (`using`/`with check` comparando `id = auth.uid()`) é o único mecanismo de isolamento que os documentos de domínio deste projeto (Modelo-de-Domínio.md, seção de storage/RLS já replicada em 4.8-4.9, 4.11) especificam explicitamente. Nenhum documento (Modelo-de-Domínio.md nem um checklist de segurança) menciona que colunas sensíveis dentro de uma tabela já protegida por RLS de linha (como `perfil.papel`, `perfil.organizacao_id`) precisam também de `REVOKE`/grant por coluna quando a aplicação usa essas colunas como fonte de decisão de autorização. A lacuna só foi fechada porque a Task 4.15 foi a primeira a *ler* `perfil.papel` como gate de uma operação irreversível — nas tasks anteriores (Task 1.9, reabertura de orçamento) o mesmo campo gravável já era usado como gate, mas a consequência de bypass era reversível, então o risco nunca foi crítico o bastante para ativar o veto.
+
+**Ação proposta**
+
+Adicionar ao Modelo-de-Domínio.md (ou a um checklist específico de segurança referenciado por ele) a regra: toda coluna usada como fonte de decisão de autorização (papel, tenant/organização, flags de permissão) deve ter `REVOKE`/`GRANT` por coluna explícito para `authenticated`, independentemente de já existir RLS de linha na tabela — RLS de linha e grant de coluna resolvem problemas ortogonais (quem pode tocar a linha vs. o que pode ser escrito nela). Aplicar retroativamente a `perfil.papel`/`organizacao_id` já foi feito nesta task; verificar se existe alguma outra coluna de decisão de autorização no schema sem esse endurecimento (varredura pontual, não urgente — nenhuma outra tabela deste projeto usa uma coluna própria como gate de operação destrutiva hoje).
+
+**Escopo**
+Candidata a melhoria do framework — o padrão "RLS de linha não implica proteção de coluna, e colunas de autorização precisam de grant explícito" é uma checagem genérica de segurança, não peculiar a este projeto. Proposta registrada em `.maestro/proposals/2026-08-13-grant-coluna-para-colunas-de-autorizacao.md`.
+
