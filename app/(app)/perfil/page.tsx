@@ -1,4 +1,5 @@
 import { carregarPerfilOrganizacao } from "@/lib/perfil/carregar";
+import { papelAtual } from "@/lib/perfil/papelAtual";
 import { PerfilConectado } from "@/components/perfil/PerfilConectado";
 
 // Task 13.7a (contrato .maestro/tmp/13.7a-contract.md) — `/perfil`
@@ -26,13 +27,17 @@ export default async function PerfilPage({
 }: {
   searchParams: { definirSenha?: string };
 }) {
-  const dados = await carregarPerfilOrganizacao();
+  // Task 4.15 — `papelAtual()` (já existente, Task 1.9-front) decide se a
+  // seção "Excluir conta" sequer aparece; a autorização de verdade continua
+  // dentro de `excluirOrganizacao` (Q-17).
+  const [dados, papel] = await Promise.all([carregarPerfilOrganizacao(), papelAtual()]);
 
   return (
     <PerfilConectado
       organizacaoInicial={dados?.organizacao ?? null}
       perfilInicial={dados?.perfil ?? { id: "", nome: "", telefone: "", email: "", fotoUrl: "" }}
       definirSenhaInicial={searchParams.definirSenha === "1"}
+      ehAdmin={papel === "admin"}
     />
   );
 }

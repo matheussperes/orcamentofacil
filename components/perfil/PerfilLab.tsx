@@ -2,11 +2,19 @@
 
 import { useEffect, useRef, useState, type ChangeEvent } from "react";
 import { useRouter } from "next/navigation";
-import { Building2, ImageOff, ShieldCheck, User } from "lucide-react";
+import { AlertTriangle, Building2, ImageOff, ShieldCheck, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SeletorModoPrecificacao } from "@/components/precificacao/SeletorModoPrecificacao";
 import { SeletorModoMontagem } from "@/components/precificacao/SeletorModoMontagem";
@@ -23,6 +31,7 @@ import {
 import type { OrganizacaoCarregada, PerfilCarregado } from "@/lib/perfil/carregar";
 import type { DadosOrganizacao, ResultadoSalvarOrganizacao } from "@/lib/organizacao/salvar";
 import type { DadosPerfil, ResultadoSalvarPerfil } from "@/lib/perfil/salvar";
+import type { ResultadoExcluirOrganizacao } from "@/lib/organizacao/excluir";
 import type { ResultadoTrocaSenha } from "@/lib/auth/trocar-senha";
 import { senhaValida, senhasConferem, TAMANHO_MINIMO_SENHA } from "@/lib/auth/validacao";
 import type { ModoMontagem, ModoPrecificacao } from "@/lib/engine/precificacao";
@@ -117,6 +126,12 @@ export interface PerfilLabProps {
   definirSenhaInicial: boolean;
   onSolicitarTrocaSenha: () => Promise<ResultadoTrocaSenha>;
   onDefinirNovaSenha: (novaSenha: string) => Promise<ResultadoTrocaSenha>;
+  /** Task 4.15 — só o papel `admin` pode excluir a organização (Q-17). Isto
+   * apenas ESCONDE a seção "Excluir conta" para vendedor/projetista; a
+   * autorização de verdade é a primeira coisa que `excluirOrganizacao`
+   * (`lib/organizacao/excluir.ts`) faz no servidor, não esta prop. */
+  ehAdmin: boolean;
+  onExcluirOrganizacao: () => Promise<ResultadoExcluirOrganizacao>;
 }
 
 const PRECIFICACAO_FALLBACK: ModoPrecificacao = { modo: "multiplicador", fator: 2 };
@@ -130,6 +145,8 @@ export function PerfilLab({
   definirSenhaInicial,
   onSolicitarTrocaSenha,
   onDefinirNovaSenha,
+  ehAdmin,
+  onExcluirOrganizacao,
 }: PerfilLabProps) {
   return (
     <div className="flex flex-col gap-xl">
@@ -155,7 +172,98 @@ export function PerfilLab({
         onSolicitarTrocaSenha={onSolicitarTrocaSenha}
         onDefinirNovaSenha={onDefinirNovaSenha}
       />
+
+      {ehAdmin && (
+        <SecaoExcluirConta
+          nomeOrganizacao={organizacaoInicial?.nome ?? "sua organização"}
+          onExcluir={onExcluirOrganizacao}
+        />
+      )}
     </div>
+  );
+}
+
+// Task 4.15 (Modelo-de-Dominio.md 7.3) — "excluir conta" apaga a ORGANIZAÇÃO
+// inteira, de forma imediata e irreversível. Confirmação explícita em `Dialog`
+// (nunca `window.confirm`), mesmo padrão destrutivo de
+// `components/biblioteca/ExcluirGabaritoDialog.tsx`: nomeia o que será perdido
+// e diz por escrito que não dá pra desfazer.
+//
+// Só renderizada para `admin` (Q-17). Em caso de sucesso, manda o usuário para
+// `/login` — o `perfil` e o login dele acabaram de deixar de existir, qualquer
+// outra rota só renderizaria estado de erro.
+function SecaoExcluirConta({
+  nomeOrganizacao,
+  onExcluir,
+}: {
+  nomeOrganizacao: string;
+  onExcluir: () => Promise<ResultadoExcluirOrganizacao>;
+}) {
+  const router = useRouter();
+  const [aberto, setAberto] = useState(false);
+  const [excluindo, setExcluindo] = useState(false);
+  const [erro, setErro] = useState<string | null>(null);
+
+  async function confirmar() {
+    setExcluindo(true);
+    setErro(null);
+    const resultado = await onExcluir();
+    if (resultado.ok) {
+      router.replace("/login");
+      return;
+    }
+    setExcluindo(false);
+    setErro(resultado.erro ?? "Não foi possível excluir a conta.");
+  }
+
+  return (
+    <section className="rounded-lg border border-erro-border bg-cinza-0 p-xl shadow-xs">
+      <div className="mb-md flex items-center gap-2">
+        <AlertTriangle className="h-5 w-5 text-erro" aria-hidden="true" />
+        <h2 className="text-titulo-secao text-cinza-900">Excluir conta</h2>
+      </div>
+
+      <p className="mb-md text-corpo-pequeno text-cinza-800">
+        Excluir a conta apaga a organização <strong>{nomeOrganizacao}</strong> inteira, para todos
+        os usuários dela. Esta ação não pode ser desfeita.
+      </p>
+
+      <Dialog
+        open={aberto}
+        onOpenChange={(v) => {
+          setAberto(v);
+          if (!v) setErro(null);
+        }}
+      >
+        <DialogTrigger asChild>
+          <Button variant="danger">Excluir conta</Button>
+        </DialogTrigger>
+        <DialogContent tamanho="confirmacao">
+          <DialogHeader>
+            <DialogTitle>Excluir a conta de {nomeOrganizacao}?</DialogTitle>
+          </DialogHeader>
+          <p className="text-corpo-pequeno text-cinza-800">
+            Serão apagados para sempre: todos os orçamentos (com ambientes, paredes, propostas e
+            listas de material), todos os clientes, todo o catálogo de produtos, os módulos da sua
+            biblioteca, os arquivos enviados e os acessos de todos os usuários da organização —
+            inclusive o seu. <strong>Não é possível desfazer nem recuperar depois.</strong>
+          </p>
+          {erro && (
+            <Alert variant="erro">
+              <AlertDescription>{erro}</AlertDescription>
+            </Alert>
+          )}
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setAberto(false)} disabled={excluindo}>
+              Cancelar
+            </Button>
+            <Button variant="danger" onClick={confirmar} disabled={excluindo}>
+              {excluindo ? "Excluindo…" : "Excluir tudo"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </section>
   );
 }
 

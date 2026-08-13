@@ -4,6 +4,7 @@ import { PerfilLab } from "./PerfilLab";
 import { salvarOrganizacao } from "@/lib/organizacao/salvar";
 import { salvarPerfil } from "@/lib/perfil/salvar";
 import { definirNovaSenha, solicitarTrocaSenha } from "@/lib/auth/trocar-senha";
+import { excluirOrganizacao } from "@/lib/organizacao/excluir";
 import type { OrganizacaoCarregada, PerfilCarregado } from "@/lib/perfil/carregar";
 
 // Task 13.7a (contrato .maestro/tmp/13.7a-contract.md) — "dono de I/O" de
@@ -20,9 +21,18 @@ export interface PerfilConectadoProps {
   organizacaoInicial: OrganizacaoCarregada | null;
   perfilInicial: PerfilCarregado;
   definirSenhaInicial: boolean;
+  /** Task 4.15 — resolvido no servidor por `papelAtual()` (`app/(app)/perfil/page.tsx`).
+   * Só controla a exibição da seção "Excluir conta"; a autorização real está
+   * dentro de `excluirOrganizacao`. */
+  ehAdmin: boolean;
 }
 
-export function PerfilConectado({ organizacaoInicial, perfilInicial, definirSenhaInicial }: PerfilConectadoProps) {
+export function PerfilConectado({
+  organizacaoInicial,
+  perfilInicial,
+  definirSenhaInicial,
+  ehAdmin,
+}: PerfilConectadoProps) {
   return (
     <PerfilLab
       organizacaoInicial={organizacaoInicial}
@@ -32,6 +42,8 @@ export function PerfilConectado({ organizacaoInicial, perfilInicial, definirSenh
       definirSenhaInicial={definirSenhaInicial}
       onSolicitarTrocaSenha={solicitarTrocaSenha}
       onDefinirNovaSenha={definirNovaSenha}
+      ehAdmin={ehAdmin}
+      onExcluirOrganizacao={excluirOrganizacao}
     />
   );
 }
