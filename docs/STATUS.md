@@ -159,6 +159,10 @@ limpos.
   template de e-mail "Confirm signup", ou desligar "Confirm email") antes de
   criar a primeira conta real e validar os fluxos de escrita ponta-a-ponta
   (o Maestro nunca cria conta nem digita senha).
+- **Operador**: configurar o template de e-mail "Reset Password" no
+  dashboard Supabase (Task 4.12-4.13-back, RF-31 — troca de senha) para
+  `{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=recovery`,
+  mesma customização já feita para "Confirm signup" acima.
 - **Operador**: cadastrar os ~380 padrões reais de MDF em `/catalogo` (ou via
   Supabase Table Editor) — hoje só o catálogo seed genérico existe.
 - **Operador**: aplicar migration real `elemento_parede_preset` (Task 2.12-back)

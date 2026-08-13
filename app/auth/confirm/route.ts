@@ -35,8 +35,16 @@ export async function GET(request: NextRequest) {
 
     if (!error) {
       const redirectTo = request.nextUrl.clone();
-      redirectTo.pathname = "/";
       redirectTo.search = "";
+      if (type === "recovery") {
+        // Task 4.12-4.13-back (RF-31) — troca de senha: sessão de
+        // recuperação estabelecida, manda pro /perfil já sinalizando pra
+        // Task 4.12-4.13 (front) mostrar o formulário de nova senha.
+        redirectTo.pathname = "/perfil";
+        redirectTo.searchParams.set("definirSenha", "1");
+      } else {
+        redirectTo.pathname = "/";
+      }
       return NextResponse.redirect(redirectTo);
     }
   }
