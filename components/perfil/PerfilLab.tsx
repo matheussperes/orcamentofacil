@@ -14,6 +14,11 @@ import {
   obterUrlAssinadaLogoOrganizacao,
   uploadLogoOrganizacao,
 } from "@/lib/organizacao/logo-storage";
+import {
+  MIME_TYPES_FOTO_ACEITOS,
+  obterUrlAssinadaFotoPerfil,
+  uploadFotoPerfil,
+} from "@/lib/perfil/foto-storage";
 import type { OrganizacaoCarregada, PerfilCarregado } from "@/lib/perfil/carregar";
 import type { DadosOrganizacao, ResultadoSalvarOrganizacao } from "@/lib/organizacao/salvar";
 import type { DadosPerfil, ResultadoSalvarPerfil } from "@/lib/perfil/salvar";
@@ -34,6 +39,23 @@ export function validarArquivoLogo(arquivo: File): string | null {
     return "Formato de imagem não suportado. Use PNG, JPEG ou WEBP.";
   }
   if (arquivo.size > TAMANHO_MAXIMO_LOGO_BYTES) {
+    return "Arquivo muito grande. O tamanho máximo é 2 MB.";
+  }
+  return null;
+}
+
+// Task 4.11-front (contrato .maestro/state/contracts/4.11-front.md) —
+// réplica direta de `validarArquivoLogo`/`TAMANHO_MAXIMO_LOGO_BYTES` acima,
+// mesmo limite (bucket `perfil-fotos`, Task 4.11-back) e mesmos mimes
+// (`MIME_TYPES_FOTO_ACEITOS`).
+const TAMANHO_MAXIMO_FOTO_BYTES = 2 * 1024 * 1024;
+
+/** Validação pura (sem I/O), mesma regra do bucket `perfil-fotos`. */
+export function validarArquivoFoto(arquivo: File): string | null {
+  if (!MIME_TYPES_FOTO_ACEITOS.includes(arquivo.type)) {
+    return "Formato de imagem não suportado. Use PNG, JPEG ou WEBP.";
+  }
+  if (arquivo.size > TAMANHO_MAXIMO_FOTO_BYTES) {
     return "Arquivo muito grande. O tamanho máximo é 2 MB.";
   }
   return null;
@@ -343,6 +365,51 @@ function SecaoPerfilPessoal({
 }) {
   const [nome, setNome] = useState(perfilInicial.nome);
   const [telefone, setTelefone] = useState(perfilInicial.telefone);
+  // `fotoPath` é o PATH persistido (Task 4.11-back) — o que vai pra
+  // `onSalvar`. Campo novo (nunca existiu como texto livre), então sem
+  // fallback de valor legado (diferente de `logoPath` em `SecaoOrganizacao`).
+  const [fotoPath, setFotoPath] = useState(perfilInicial.fotoUrl);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewComErro, setPreviewComErro] = useState(false);
+  const [enviandoFoto, setEnviandoFoto] = useState(false);
+  const [erroFoto, setErroFoto] = useState<string | null>(null);
+  const inputFotoRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    let cancelado = false;
+    setPreviewComErro(false);
+    if (!fotoPath) {
+      setPreviewUrl(null);
+      return;
+    }
+    obterUrlAssinadaFotoPerfil(fotoPath).then((url) => {
+      if (cancelado) return;
+      setPreviewUrl(url);
+    });
+    return () => {
+      cancelado = true;
+    };
+  }, [fotoPath]);
+
+  async function handleSelecionarFoto(e: ChangeEvent<HTMLInputElement>) {
+    const arquivo = e.target.files?.[0];
+    e.target.value = "";
+    if (!arquivo) return;
+    const erroValidacao = validarArquivoFoto(arquivo);
+    if (erroValidacao) {
+      setErroFoto(erroValidacao);
+      return;
+    }
+    setErroFoto(null);
+    setEnviandoFoto(true);
+    const resultado = await uploadFotoPerfil(perfilInicial.id, arquivo);
+    setEnviandoFoto(false);
+    if (resultado.ok) {
+      setFotoPath(resultado.path);
+    } else {
+      setErroFoto(resultado.erro);
+    }
+  }
 
   const [salvando, setSalvando] = useState(false);
   const [resultado, setResultado] = useState<ResultadoSalvarPerfil | null>(null);
@@ -350,7 +417,7 @@ function SecaoPerfilPessoal({
   async function handleSalvar() {
     setSalvando(true);
     setResultado(null);
-    const resposta = await onSalvar({ nome, telefone });
+    const resposta = await onSalvar({ nome, telefone, fotoUrl: fotoPath });
     setSalvando(false);
     setResultado(resposta);
   }
@@ -386,6 +453,53 @@ function SecaoPerfilPessoal({
             Trocar o e-mail de acesso não está disponível nesta versão.
           </p>
         </div>
+
+        <div className="flex flex-col gap-md sm:flex-row sm:items-end">
+          <div className="flex-1">
+            <Label htmlFor="perfil-foto">Foto de perfil</Label>
+            <input
+              id="perfil-foto"
+              ref={inputFotoRef}
+              type="file"
+              accept={MIME_TYPES_FOTO_ACEITOS.join(",")}
+              className="hidden"
+              onChange={handleSelecionarFoto}
+              disabled={enviandoFoto}
+            />
+            <div>
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => inputFotoRef.current?.click()}
+                disabled={enviandoFoto}
+              >
+                {enviandoFoto ? "Enviando…" : "Selecionar arquivo"}
+              </Button>
+            </div>
+            <p className="mt-1 text-corpo-pequeno text-cinza-500">PNG, JPEG ou WEBP, até 2 MB.</p>
+          </div>
+          <div>
+            <Label>Pré-visualização</Label>
+            {previewUrl && !previewComErro ? (
+              // eslint-disable-next-line @next/next/no-img-element -- signed URL (privada), sem domínio pré-configurado em next.config.js.
+              <img
+                src={previewUrl}
+                alt="Pré-visualização da foto de perfil"
+                className="h-9 w-9 rounded-full border border-cinza-200 bg-cinza-0 object-cover"
+                onError={() => setPreviewComErro(true)}
+              />
+            ) : (
+              <div className="flex h-9 w-9 items-center justify-center rounded-full border border-cinza-200 bg-cinza-100">
+                <ImageOff className="h-4 w-4 text-cinza-300" aria-hidden="true" />
+              </div>
+            )}
+          </div>
+        </div>
+        {erroFoto && (
+          <Alert variant="erro">
+            <AlertDescription>{erroFoto}</AlertDescription>
+          </Alert>
+        )}
       </div>
 
       <div className="mt-lg flex flex-col items-start gap-sm">
