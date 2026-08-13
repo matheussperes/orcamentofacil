@@ -26,6 +26,7 @@ const PERFIL_MOCK: PerfilCarregado = {
   nome: "Usuário de teste",
   telefone: "(11) 98888-0000",
   email: "usuario@teste.com",
+  fotoUrl: "",
 };
 
 export function PerfilMock() {

@@ -22,7 +22,7 @@ export default async function PerfilPage() {
   return (
     <PerfilConectado
       organizacaoInicial={dados?.organizacao ?? null}
-      perfilInicial={dados?.perfil ?? { nome: "", telefone: "", email: "" }}
+      perfilInicial={dados?.perfil ?? { nome: "", telefone: "", email: "", fotoUrl: "" }}
     />
   );
 }

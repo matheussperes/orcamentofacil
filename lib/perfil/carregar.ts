@@ -37,6 +37,10 @@ export interface PerfilCarregado {
   nome: string;
   telefone: string;
   email: string;
+  /** `perfil.foto_url` — desde a Task 4.11-back guarda o PATH do objeto no
+   * bucket privado `perfil-fotos`, nunca uma signed URL (mesma semântica de
+   * `organizacao.logo_url`). */
+  fotoUrl: string;
 }
 
 export interface PerfilOrganizacaoCarregados {
@@ -65,7 +69,7 @@ export async function carregarPerfilOrganizacao(): Promise<PerfilOrganizacaoCarr
 
   const { data: perfilRow } = await supabase
     .from("perfil")
-    .select("nome, telefone, organizacao_id")
+    .select("nome, telefone, foto_url, organizacao_id")
     .eq("id", user.id)
     .maybeSingle();
 
@@ -73,6 +77,7 @@ export async function carregarPerfilOrganizacao(): Promise<PerfilOrganizacaoCarr
     nome: (perfilRow?.nome as string | null) ?? "",
     telefone: (perfilRow?.telefone as string | null) ?? "",
     email: user.email ?? "",
+    fotoUrl: (perfilRow?.foto_url as string | null) ?? "",
   };
 
   const organizacaoId = (perfilRow?.organizacao_id as string | undefined) ?? null;
