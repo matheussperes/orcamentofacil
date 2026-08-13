@@ -34,6 +34,11 @@ export interface OrganizacaoCarregada {
 }
 
 export interface PerfilCarregado {
+  /** `perfil.id` (= `auth.uid()`) — Task 4.11-front: path do upload de foto
+   * é `{id}/foto.<ext>` (mesmo padrão de `OrganizacaoCarregada.id` usado
+   * pela logo), propagado por prop em vez de uma segunda leitura de sessão
+   * dentro do componente client. */
+  id: string;
   nome: string;
   telefone: string;
   email: string;
@@ -74,6 +79,7 @@ export async function carregarPerfilOrganizacao(): Promise<PerfilOrganizacaoCarr
     .maybeSingle();
 
   const perfil: PerfilCarregado = {
+    id: user.id,
     nome: (perfilRow?.nome as string | null) ?? "",
     telefone: (perfilRow?.telefone as string | null) ?? "",
     email: user.email ?? "",

@@ -23,6 +23,7 @@ const ORGANIZACAO_MOCK: OrganizacaoCarregada = {
 };
 
 const PERFIL_MOCK: PerfilCarregado = {
+  id: "preview-perfil",
   nome: "Usuário de teste",
   telefone: "(11) 98888-0000",
   email: "usuario@teste.com",
