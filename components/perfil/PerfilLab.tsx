@@ -18,6 +18,7 @@ import type { OrganizacaoCarregada, PerfilCarregado } from "@/lib/perfil/carrega
 import type { DadosOrganizacao, ResultadoSalvarOrganizacao } from "@/lib/organizacao/salvar";
 import type { DadosPerfil, ResultadoSalvarPerfil } from "@/lib/perfil/salvar";
 import type { ModoMontagem, ModoPrecificacao } from "@/lib/engine/precificacao";
+import { formatarCnpj, formatarTelefone } from "@/lib/format";
 
 // Task 4.8-4.9-front (contrato .maestro/state/contracts/4.8-4.9-front.md) —
 // limite de tamanho replicado do `file_size_limit` do bucket
@@ -224,7 +225,7 @@ function SecaoOrganizacao({
           </div>
           <div>
             <Label htmlFor="org-cnpj">CNPJ</Label>
-            <Input id="org-cnpj" value={cnpj} onChange={(e) => setCnpj(e.target.value)} placeholder="00.000.000/0000-00" />
+            <Input id="org-cnpj" value={cnpj} onChange={(e) => setCnpj(formatarCnpj(e.target.value))} placeholder="00.000.000/0000-00" />
           </div>
         </div>
 
@@ -234,7 +235,7 @@ function SecaoOrganizacao({
             <Input
               id="org-telefone"
               value={telefone}
-              onChange={(e) => setTelefone(e.target.value)}
+              onChange={(e) => setTelefone(formatarTelefone(e.target.value))}
               placeholder="Ex.: (11) 91234-5678"
             />
           </div>
@@ -372,7 +373,7 @@ function SecaoPerfilPessoal({
             <Input
               id="perfil-telefone"
               value={telefone}
-              onChange={(e) => setTelefone(e.target.value)}
+              onChange={(e) => setTelefone(formatarTelefone(e.target.value))}
               placeholder="Ex.: (11) 91234-5678"
             />
           </div>
