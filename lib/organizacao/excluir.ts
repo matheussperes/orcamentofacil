@@ -12,6 +12,14 @@ import { createClient } from "@/lib/supabase/server";
 // `20260813140434_perfil_foto_url_storage.sql`.
 const BUCKET_ORGANIZACAO_LOGOS = "organizacao-logos";
 const BUCKET_PERFIL_FOTOS = "perfil-fotos";
+// `linha-proposta-renders` (`20260730190000_storage_linha_proposta_renders.sql`)
+// também usa `{organizacao_id}/...` e guarda render das propostas da org.
+// A Seção 7.3 não o cita porque é anterior à Task 13.6a, que criou o bucket —
+// a spec é que está desatualizada (achado do security-auditor, observação 1).
+// Incluído aqui porque deixá-lo de fora contraria a própria armadilha 3
+// ("senão sobra arquivo órfão — e, com ele, dado que deveria ter sido
+// eliminado"). `texturas` é conteúdo global curado, não por-tenant: não entra.
+const BUCKET_LINHA_PROPOSTA_RENDERS = "linha-proposta-renders";
 
 // Task 4.15 (contrato .maestro/state/contracts/4.15.md; domínio em
 // `docs/Modelo-de-Dominio.md` Seção 7.3) — "excluir conta" = excluir a
@@ -36,8 +44,8 @@ const BUCKET_PERFIL_FOTOS = "perfil-fotos";
 //      ele, ambiente/parede/linha_proposta/lista_material/elemento_continuo/
 //      elemento_parede_preset. Depende da migration
 //      `20260813160000_orcamento_cliente_id_no_action.sql` (armadilha 1).
-//   3. expurga o Storage — os dois buckets (armadilha 3: Storage não tem FK,
-//      nenhuma cascata alcança os objetos).
+//   3. expurga o Storage — os três buckets por-tenant (armadilha 3: Storage não
+//      tem FK, nenhuma cascata alcança os objetos).
 //   4. Admin API: apaga cada usuário de `auth.users` (armadilha 2 de novo — a
 //      cascata vai do pai para o filho, o login sobrevive ao `perfil`).
 //
@@ -59,6 +67,13 @@ const E_D1: ResultadoExcluirOrganizacao = {
   codigo: "NAO_AUTORIZADO_EXCLUIR_ORG",
 };
 
+/** `storage.list` devolve no máximo 100 objetos por padrão e não avisa que
+ * truncou. `organizacao-logos`/`perfil-fotos` guardam um arquivo por prefixo,
+ * mas `linha-proposta-renders` guarda UM POR LINHA DE PROPOSTA
+ * (`{org}/{linhaId}.png`) — uma org real passa de 100 fácil. Sem paginar, o
+ * expurgo deixaria resto em silêncio. */
+const TAMANHO_PAGINA_STORAGE = 100;
+
 /** Remove todos os objetos sob um prefixo de um bucket. Storage não tem FK:
  * sem isto sobra arquivo órfão — e, com ele, dado pessoal que a exclusão
  * deveria ter eliminado (7.3, armadilha 3). Erro aqui é logado e NÃO aborta a
@@ -69,21 +84,35 @@ async function expurgarPrefixo(
   bucket: string,
   prefixo: string
 ): Promise<void> {
-  const { data: objetos, error } = await admin.storage.from(bucket).list(prefixo);
+  // Sempre relê a partir do offset 0: os objetos da página anterior acabaram de
+  // ser removidos, então a página seguinte "sobe" para o lugar deles. Paginar
+  // por offset crescente aqui PULARIA metade dos arquivos.
+  for (;;) {
+    const { data: objetos, error } = await admin.storage
+      .from(bucket)
+      .list(prefixo, { limit: TAMANHO_PAGINA_STORAGE });
 
-  if (error) {
-    console.error(`[organizacao/excluir] falha ao listar ${bucket}/${prefixo}:`, error.message);
-    return;
-  }
-  if (!objetos || objetos.length === 0) {
-    return;
-  }
+    if (error) {
+      console.error(`[organizacao/excluir] falha ao listar ${bucket}/${prefixo}:`, error.message);
+      return;
+    }
+    if (!objetos || objetos.length === 0) {
+      return;
+    }
 
-  const paths = objetos.map((objeto) => `${prefixo}/${objeto.name}`);
-  const { error: erroRemocao } = await admin.storage.from(bucket).remove(paths);
+    const paths = objetos.map((objeto) => `${prefixo}/${objeto.name}`);
+    const { error: erroRemocao } = await admin.storage.from(bucket).remove(paths);
 
-  if (erroRemocao) {
-    console.error(`[organizacao/excluir] falha ao remover ${bucket}/${prefixo}:`, erroRemocao.message);
+    if (erroRemocao) {
+      // Sem `return` aqui a repetição viraria loop infinito (a mesma página
+      // continuaria listando). Aborta este prefixo e deixa o log.
+      console.error(`[organizacao/excluir] falha ao remover ${bucket}/${prefixo}:`, erroRemocao.message);
+      return;
+    }
+
+    if (objetos.length < TAMANHO_PAGINA_STORAGE) {
+      return;
+    }
   }
 }
 
@@ -155,6 +184,7 @@ export async function excluirOrganizacao(): Promise<ResultadoExcluirOrganizacao>
   // Passo 3 — Storage: logo da org (`{organizacao_id}/logo.<ext>`) e foto
   // pessoal de cada membro (`{perfil_id}/foto.<ext>`).
   await expurgarPrefixo(admin, BUCKET_ORGANIZACAO_LOGOS, organizacaoId);
+  await expurgarPrefixo(admin, BUCKET_LINHA_PROPOSTA_RENDERS, organizacaoId);
   for (const perfilId of perfilIds) {
     await expurgarPrefixo(admin, BUCKET_PERFIL_FOTOS, perfilId);
   }

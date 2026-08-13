@@ -27,10 +27,18 @@ const estado = vi.hoisted(() => ({
   perfisDaOrg: [{ id: "user-admin" }, { id: "user-colega" }] as { id: string }[],
   objetosPorPrefixo: {
     "organizacao-logos/org-1": [{ name: "logo.png" }],
+    "linha-proposta-renders/org-1": [{ name: "linha-a.png" }, { name: "linha-b.png" }],
     "perfil-fotos/user-admin": [{ name: "foto.png" }],
     "perfil-fotos/user-colega": [] as { name: string }[],
   } as Record<string, { name: string }[]>,
 }));
+
+const OBJETOS_INICIAIS = () => ({
+  "organizacao-logos/org-1": [{ name: "logo.png" }],
+  "linha-proposta-renders/org-1": [{ name: "linha-a.png" }, { name: "linha-b.png" }],
+  "perfil-fotos/user-admin": [{ name: "foto.png" }],
+  "perfil-fotos/user-colega": [] as { name: string }[],
+});
 
 vi.mock("@/lib/supabase/server", () => ({
   createClient: async () => ({
@@ -73,13 +81,26 @@ vi.mock("@supabase/supabase-js", () => ({
         }),
       }),
       storage: {
+        // O mock de Storage é uma máquina de estado de verdade (`remove`
+        // realmente esvazia o prefixo) — sem isso a paginação de
+        // `expurgarPrefixo` não seria testável: um prefixo com exatamente
+        // `limit` objetos listaria os mesmos para sempre.
         from: (bucket: string) => ({
-          list: async (prefixo: string) => ({
-            data: estado.objetosPorPrefixo[`${bucket}/${prefixo}`] ?? [],
-            error: null,
-          }),
+          list: async (prefixo: string, opcoes?: { limit?: number }) => {
+            const chave = `${bucket}/${prefixo}`;
+            const todos = estado.objetosPorPrefixo[chave] ?? [];
+            return { data: todos.slice(0, opcoes?.limit ?? 100), error: null };
+          },
           remove: async (paths: string[]) => {
-            trilha.push(`storage.remove ${bucket}: ${paths.join(",")}`);
+            trilha.push(`storage.remove ${bucket}: ${paths.length} objeto(s)`);
+            for (const path of paths) {
+              const barra = path.indexOf("/");
+              const chave = `${bucket}/${path.slice(0, barra)}`;
+              const nome = path.slice(barra + 1);
+              estado.objetosPorPrefixo[chave] = (estado.objetosPorPrefixo[chave] ?? []).filter(
+                (objeto) => objeto.name !== nome
+              );
+            }
             return { error: null };
           },
         }),
@@ -101,6 +122,7 @@ beforeEach(() => {
   estado.usuario = { id: "user-admin" };
   estado.perfilChamador = { data: { organizacao_id: "org-1", papel: "admin" }, error: null };
   estado.perfisDaOrg = [{ id: "user-admin" }, { id: "user-colega" }];
+  estado.objetosPorPrefixo = OBJETOS_INICIAIS();
   process.env.NEXT_PUBLIC_SUPABASE_URL = "https://projeto.supabase.co";
   process.env.SUPABASE_SERVICE_ROLE_KEY = "service-role-de-teste";
 });
@@ -165,9 +187,10 @@ describe("excluirOrganizacao — sequência do cascade (admin)", () => {
       "admin.select perfil where organizacao_id=org-1",
       // Passo 2 — o delete que dispara a cascata
       "admin.delete organizacao where id=org-1",
-      // Passo 3 — Storage nos dois buckets (armadilha 3)
-      "storage.remove organizacao-logos: org-1/logo.png",
-      "storage.remove perfil-fotos: user-admin/foto.png",
+      // Passo 3 — Storage nos três buckets por-tenant (armadilha 3)
+      "storage.remove organizacao-logos: 1 objeto(s)",
+      "storage.remove linha-proposta-renders: 2 objeto(s)",
+      "storage.remove perfil-fotos: 1 objeto(s)",
       // Passo 4 — Admin API para cada usuário lido no passo 1
       "auth.admin.deleteUser user-admin",
       "auth.admin.deleteUser user-colega",
@@ -185,8 +208,28 @@ describe("excluirOrganizacao — sequência do cascade (admin)", () => {
   it("não chama remove quando o prefixo não tem objeto (org sem logo/foto)", async () => {
     await excluirOrganizacao();
 
-    // `perfil-fotos/user-colega` está vazio no mock — nenhum remove para ele.
-    expect(trilha).not.toContain("storage.remove perfil-fotos: user-colega/foto.png");
+    // `perfil-fotos/user-colega` está vazio no mock: só UM remove no bucket de
+    // fotos, o do `user-admin`.
+    expect(trilha.filter((passo) => passo.startsWith("storage.remove perfil-fotos"))).toHaveLength(1);
+  });
+
+  it("pagina o expurgo além do limite de 100 do storage.list, sem deixar resto", async () => {
+    // `linha-proposta-renders` guarda um objeto por linha de proposta
+    // (`{org}/{linhaId}.png`) — 250 é um volume plausível para uma org real, e
+    // `list` só devolve 100 por chamada.
+    estado.objetosPorPrefixo["linha-proposta-renders/org-1"] = Array.from(
+      { length: 250 },
+      (_, i) => ({ name: `linha-${i}.png` })
+    );
+
+    await excluirOrganizacao();
+
+    expect(trilha.filter((passo) => passo.startsWith("storage.remove linha-proposta-renders"))).toEqual([
+      "storage.remove linha-proposta-renders: 100 objeto(s)",
+      "storage.remove linha-proposta-renders: 100 objeto(s)",
+      "storage.remove linha-proposta-renders: 50 objeto(s)",
+    ]);
+    expect(estado.objetosPorPrefixo["linha-proposta-renders/org-1"]).toHaveLength(0);
   });
 
   it("nunca usa o service_role antes da checagem de papel", async () => {
