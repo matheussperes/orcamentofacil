@@ -16,6 +16,12 @@ import { createClient } from "@/lib/supabase/server";
 export interface DadosPerfil {
   nome: string;
   telefone: string;
+  /** Path do objeto no bucket privado `perfil-fotos` (Task 4.11-back),
+   * nunca uma signed URL — mesma semântica de `DadosOrganizacao.logoUrl`.
+   * Opcional aqui porque a UI de upload (Task 4.11 front) ainda não existe —
+   * `PerfilLab.tsx` (`components/perfil/PerfilLab.tsx:353`) ainda não envia
+   * este campo; a Task 4.11 front passa a preenchê-lo. */
+  fotoUrl?: string;
 }
 
 export interface ResultadoSalvarPerfil {
@@ -39,6 +45,7 @@ export async function salvarPerfil(dados: DadosPerfil): Promise<ResultadoSalvarP
     .update({
       nome: dados.nome.trim() || null,
       telefone: dados.telefone.trim() || null,
+      ...(dados.fotoUrl !== undefined ? { foto_url: dados.fotoUrl.trim() || null } : {}),
     })
     .eq("id", user.id);
 
