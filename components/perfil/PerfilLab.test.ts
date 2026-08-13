@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { validarArquivoFoto, validarArquivoLogo } from "./PerfilLab";
+import { confirmacaoExclusaoConfere, validarArquivoFoto, validarArquivoLogo } from "./PerfilLab";
 
 // Task 4.8-4.9-front — só a validação pura (mime/tamanho, checada ANTES do
 // upload) é testável sem Supabase; o fluxo de upload em si depende do client
@@ -48,5 +48,30 @@ describe("validarArquivoFoto", () => {
 
   it("aceita arquivo exatamente no limite de 2 MB", () => {
     expect(validarArquivoFoto(arquivoFake("foto.png", "image/png", 2 * 1024 * 1024))).toBeNull();
+  });
+});
+
+// Task 4.15 (Design-System 7.11) — o campo de digitacao e a ultima barreira
+// antes da unica operacao irreversivel e multi-tenant do produto: liberar o
+// botao com um texto que nao bate seria pior que nao ter o campo.
+describe("confirmacaoExclusaoConfere", () => {
+  it("libera so com o nome exato da organizacao", () => {
+    expect(confirmacaoExclusaoConfere("Marcenaria Boa Vista", "Marcenaria Boa Vista")).toBe(true);
+  });
+
+  it("tolera espaco acidental nas pontas", () => {
+    expect(confirmacaoExclusaoConfere("  Marcenaria Boa Vista ", "Marcenaria Boa Vista")).toBe(true);
+  });
+
+  it("nao libera com caixa diferente, acento faltando, prefixo ou vazio", () => {
+    expect(confirmacaoExclusaoConfere("marcenaria boa vista", "Marcenaria Boa Vista")).toBe(false);
+    expect(confirmacaoExclusaoConfere("Marcenaria Sao Joao", "Marcenaria São João")).toBe(false);
+    expect(confirmacaoExclusaoConfere("Marcenaria", "Marcenaria Boa Vista")).toBe(false);
+    expect(confirmacaoExclusaoConfere("", "Marcenaria Boa Vista")).toBe(false);
+  });
+
+  it("nunca libera quando a organizacao nao tem nome (campo vazio nao vira senha vazia)", () => {
+    expect(confirmacaoExclusaoConfere("", "")).toBe(false);
+    expect(confirmacaoExclusaoConfere("   ", "  ")).toBe(false);
   });
 });

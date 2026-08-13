@@ -173,9 +173,13 @@ export function PerfilLab({
         onDefinirNovaSenha={onDefinirNovaSenha}
       />
 
-      {ehAdmin && (
+      {/* Sem `organizacaoInicial` não há nome para o campo de confirmação por
+          digitação exigido pela 7.11 — e uma exclusão irreversível não pode
+          cair num rótulo genérico. O cenário de borda (organização não
+          resolvível) já mostra o estado de erro acima. */}
+      {ehAdmin && organizacaoInicial && (
         <SecaoExcluirConta
-          nomeOrganizacao={organizacaoInicial?.nome ?? "sua organização"}
+          nomeOrganizacao={organizacaoInicial.nome}
           onExcluir={onExcluirOrganizacao}
         />
       )}
@@ -183,11 +187,38 @@ export function PerfilLab({
   );
 }
 
+/** Task 4.15 — conferência do campo de digitação do Dialog de exclusão
+ * (Design-System 7.11: "permanece `disabled` até o texto digitado bater
+ * EXATAMENTE com o nome da organização"). Exportada e pura só para ser
+ * testável sem montar o Dialog, mesmo motivo de `validarArquivoLogo` acima.
+ *
+ * `trim()` nas duas pontas é a única tolerância: espaço acidental no fim de um
+ * nome digitado à mão não é o erro que este campo existe para impedir (clicar
+ * sem ler é). Caixa e acentuação continuam tendo que bater — o ponto do reforço
+ * é obrigar a LER e reproduzir o nome. */
+export function confirmacaoExclusaoConfere(digitado: string, nomeOrganizacao: string): boolean {
+  const alvo = nomeOrganizacao.trim();
+  return alvo.length > 0 && digitado.trim() === alvo;
+}
+
 // Task 4.15 (Modelo-de-Dominio.md 7.3) — "excluir conta" apaga a ORGANIZAÇÃO
 // inteira, de forma imediata e irreversível. Confirmação explícita em `Dialog`
-// (nunca `window.confirm`), mesmo padrão destrutivo de
-// `components/biblioteca/ExcluirGabaritoDialog.tsx`: nomeia o que será perdido
-// e diz por escrito que não dá pra desfazer.
+// (nunca `window.confirm`).
+//
+// NÃO segue o padrão simples de `ExcluirGabaritoDialog`: o Design-System 7.11
+// abre uma exceção nomeada só para este caso ("o caso de maior severidade, um
+// passo a mais"), porque é a única operação multi-tenant e sem qualquer forma
+// de desfazer do produto — nomear + "é irreversível" explicitamente NÃO basta
+// aqui. Os três reforços exigidos pela 7.11, e o motivo de cada um:
+//   - campo de confirmação por digitação, sem placeholder pré-preenchido
+//     (copiar/colar não pode ser mais fácil que digitar), com o botão
+//     destrutivo `disabled` até bater exatamente;
+//   - botão destrutivo SÓLIDO (`bg-erro text-cinza-0 hover:bg-erro/90`), não o
+//     `danger` outline da 7.1 — que ficaria visualmente igual ao "Cancelar" ao
+//     lado;
+//   - rótulo explícito "Excluir organização", nunca "Excluir" sozinho.
+// Este é o ÚNICO ponto do produto que usa o campo de digitação (7.11): não
+// replique este tratamento em outra confirmação destrutiva.
 //
 // Só renderizada para `admin` (Q-17). Em caso de sucesso, manda o usuário para
 // `/login` — o `perfil` e o login dele acabaram de deixar de existir, qualquer
@@ -203,8 +234,15 @@ function SecaoExcluirConta({
   const [aberto, setAberto] = useState(false);
   const [excluindo, setExcluindo] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
+  const [confirmacao, setConfirmacao] = useState("");
+
+  const podeExcluir = confirmacaoExclusaoConfere(confirmacao, nomeOrganizacao);
 
   async function confirmar() {
+    // Cinto e suspensório: o botão já está `disabled`, mas a ação destrutiva
+    // não depende disso para não rodar.
+    if (!podeExcluir) return;
+
     setExcluindo(true);
     setErro(null);
     const resultado = await onExcluir();
@@ -232,22 +270,40 @@ function SecaoExcluirConta({
         open={aberto}
         onOpenChange={(v) => {
           setAberto(v);
-          if (!v) setErro(null);
+          // Fechar o diálogo zera a confirmação: reabrir sempre começa do
+          // estado seguro, nunca com o botão destrutivo já liberado.
+          if (!v) {
+            setErro(null);
+            setConfirmacao("");
+          }
         }}
       >
         <DialogTrigger asChild>
-          <Button variant="danger">Excluir conta</Button>
+          <Button variant="danger">Excluir organização</Button>
         </DialogTrigger>
         <DialogContent tamanho="confirmacao">
           <DialogHeader>
-            <DialogTitle>Excluir a conta de {nomeOrganizacao}?</DialogTitle>
+            <DialogTitle>Excluir organização?</DialogTitle>
           </DialogHeader>
           <p className="text-corpo-pequeno text-cinza-800">
-            Serão apagados para sempre: todos os orçamentos (com ambientes, paredes, propostas e
-            listas de material), todos os clientes, todo o catálogo de produtos, os módulos da sua
-            biblioteca, os arquivos enviados e os acessos de todos os usuários da organização —
-            inclusive o seu. <strong>Não é possível desfazer nem recuperar depois.</strong>
+            Isso vai apagar permanentemente a organização <strong>{nomeOrganizacao}</strong> — todos
+            os usuários, clientes, orçamentos, catálogo de produtos e gabaritos próprios. Esta ação
+            não pode ser desfeita.
           </p>
+
+          <div>
+            <Label htmlFor="excluir-confirmacao">
+              Digite <strong>{nomeOrganizacao}</strong> para confirmar
+            </Label>
+            <Input
+              id="excluir-confirmacao"
+              value={confirmacao}
+              onChange={(e) => setConfirmacao(e.target.value)}
+              autoComplete="off"
+              disabled={excluindo}
+            />
+          </div>
+
           {erro && (
             <Alert variant="erro">
               <AlertDescription>{erro}</AlertDescription>
@@ -257,8 +313,16 @@ function SecaoExcluirConta({
             <Button variant="ghost" onClick={() => setAberto(false)} disabled={excluindo}>
               Cancelar
             </Button>
-            <Button variant="danger" onClick={confirmar} disabled={excluindo}>
-              {excluindo ? "Excluindo…" : "Excluir tudo"}
+            {/* `variant="primary"` como base porque é o único sólido, com os
+                estados de `disabled` da 7.1 já corretos; a cor é sobrescrita
+                para `bg-erro` conforme a exceção da 7.11. */}
+            <Button
+              variant="primary"
+              className="bg-erro hover:bg-erro/90 active:bg-erro/90"
+              onClick={confirmar}
+              disabled={excluindo || !podeExcluir}
+            >
+              {excluindo ? "Excluindo…" : "Excluir organização"}
             </Button>
           </DialogFooter>
         </DialogContent>
