@@ -293,3 +293,25 @@ Adicionar ao Modelo-de-Domínio.md (ou a um checklist específico de segurança 
 **Escopo**
 Candidata a melhoria do framework — o padrão "RLS de linha não implica proteção de coluna, e colunas de autorização precisam de grant explícito" é uma checagem genérica de segurança, não peculiar a este projeto. Proposta registrada em `.maestro/proposals/2026-08-13-grant-coluna-para-colunas-de-autorizacao.md`.
 
+---
+
+## 2026-08-14 — Lote 2, incremento da Task 2.27 (lote segue aberto — falta 2.28–2.30)
+
+O Lote 2 já tinha retrospectiva registrada em 2026-08-08 (Padrões 1-4 acima, então em 17/17 sob a numeração antiga do documento-fonte). Esta entrada cobre só o que mudou desde então: a Task 2.27 (mesclada 2026-08-14) e um achado de sincronização de estado encontrado nesta sessão. O lote segue aberto — falta a Task 2.28–2.30 (agrupamento comercial cross-faixa/parede).
+
+**Métricas do período (só o incremento desde 2026-08-08)**
+- Tasks concluídas no período: 1 (2.27) — lote em 17/18, falta 2.28–2.30
+- Vetos de UX: 0 | Segurança: 0 | Build/Lint: 0 | Testes: 0 — Task 2.27 aprovada de primeira nos 3 gates (`code-auditor`, `qa-engineer` 626/626 testes, `ux-auditor`, checklist §9.5 conforme), sem rodada de correção
+- Circuit Breakers: 0
+
+**Achado — desync entre "Histórico de execução" (bullet) e tabela-resumo (coluna Tag) do Backlog para a mesma task**
+
+O commit `768c64b` (2026-08-08, "Sincroniza docs apos merge da Task 2.19-2.23") atualizou corretamente o bullet de "Histórico de execução" da Task 2.19-2.23 para `✅` no mesmo commit em que a mesclou — mas não tocou a linha correspondente na tabela-resumo do Lote 2, que permaneceu com a Tag `🟡 LACUNA` por 6 dias, até o commit `ce42f43` (2026-08-14, "Sincroniza Backlog: Task 2.19-2.23 marcada como Completo (memory-manager)") corrigir só essa célula. Conferido nos demais commits de sincronização do mesmo lote (`4c9e45a`, `e80141c`, `a300faa`/`eee2c90`, `26eaa54`, `cd32843`, `091d0ac`): em todos os outros, tabela e bullet foram atualizados juntos no mesmo commit — a Task 2.19-2.23 é a única ocorrência divergente encontrada no histórico do Lote 2.
+
+**Causa estrutural**: não determinada — ocorrência única no período, sem segundo caso no mesmo lote para caracterizar padrão. Não há evidência suficiente para apontar se foi omissão pontual do agente que rodou a sincronização em `768c64b` ou outra causa; registrar sem especular.
+
+**Ação proposta**: nenhuma correção de processo — o achado já foi comprido nesta sessão (`ce42f43`). Se um segundo caso do mesmo tipo (bullet atualizado, coluna da tabela-resumo não) aparecer em lote futuro, isso vira padrão acionável (ex.: checklist do memory-manager exigindo diff nas duas seções antes de fechar o commit de sincronização); com um único caso, fica só registrado como observação.
+
+**Escopo**
+Somente este projeto (achado pontual sobre a estrutura de `docs/Backlog.md`; sem evidência de recorrência que justifique proposta de framework).
+

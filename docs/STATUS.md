@@ -1,6 +1,6 @@
 # Status Atual
 
-> Atualizado em 2026-08-14 (Task 2.27 mesclada, Lote 2 fechado 18/18). Este arquivo é o ponto de partida de qualquer
+> Atualizado em 2026-08-14 (Task 2.27 mesclada, Lote 2 em 17/18 — falta 2.28–2.30). Este arquivo é o ponto de partida de qualquer
 > sessão nova. Histórico task-a-task (auditorias, tentativas, decisões)
 > não vive mais aqui — está no `git log` e nos commits de merge de cada
 > branch `feature/<task-id>`. Este arquivo mantém só o essencial.
@@ -18,7 +18,7 @@ Fase D (Pré-Lançamento) — Lote 0 (Fundação de dados) ✅ fechado:
 
 **Lote 1 (Confiança e estado) ✅ fechado por completo** — 7/7 tasks concluídas (5/5 back + 2/2 front).
 
-**Lote 2 (Lacunas funcionais) ✅ fechado por completo — 18/18 tasks concluídas**.
+**Lote 2 (Lacunas funcionais) — 17/18 tasks concluídas, falta a Task 2.28–2.30 (agrupamento comercial cross-faixa/parede)**.
 
 **Lote 3 (Precisão do motor) ✅ fechado por completo — 14/14 tasks concluídas** — Tasks 3.1/3.3 (motor + front), 3.2, 3.4, 3.5 (motor + front), 3.6, 3.7, 3.8 (back + front), 3.10–3.11 (motor + front), 3.12, 3.13 (catálogo-back), 3.13 (catálogo-front) e 3.13 (front) mescladas:
 - **Task 3.1/3.3 (motor)** ✅ (2026-08-11) — Bin-packing melhorado: guilhotina com lista de retângulos livres + simulated annealing (PRNG semeado, `MAX_ITERACOES=5000` fixo). Reescrito em `lib/engine/box/cutting.ts`. Kerf como parâmetro opcional em `GrupoChapas.meta?`, integração em Web Worker será na Task 3.1/3.3 (front). Todas as 7 invariantes V1–V7 (Modelo 8.5) com teste dedicado; 3 exemplos numéricos reproduzidos com valores exatos. `code-auditor` APROVADO (1ª real), `qa-engineer` APROVADO (1ª, 466 testes, verificação aritmética manual). **Desbloqueia Task 3.1/3.3 (front).**
