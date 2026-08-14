@@ -304,14 +304,26 @@ O Lote 2 já tinha retrospectiva registrada em 2026-08-08 (Padrões 1-4 acima, e
 - Vetos de UX: 0 | Segurança: 0 | Build/Lint: 0 | Testes: 0 — Task 2.27 aprovada de primeira nos 3 gates (`code-auditor`, `qa-engineer` 626/626 testes, `ux-auditor`, checklist §9.5 conforme), sem rodada de correção
 - Circuit Breakers: 0
 
-**Achado — desync entre "Histórico de execução" (bullet) e tabela-resumo (coluna Tag) do Backlog para a mesma task**
+**Padrão — desync sistemático entre "Histórico de execução" (bullet) e tabela-resumo (coluna Tag) do Backlog para a mesma task**
 
-O commit `768c64b` (2026-08-08, "Sincroniza docs apos merge da Task 2.19-2.23") atualizou corretamente o bullet de "Histórico de execução" da Task 2.19-2.23 para `✅` no mesmo commit em que a mesclou — mas não tocou a linha correspondente na tabela-resumo do Lote 2, que permaneceu com a Tag `🟡 LACUNA` por 6 dias, até o commit `ce42f43` (2026-08-14, "Sincroniza Backlog: Task 2.19-2.23 marcada como Completo (memory-manager)") corrigir só essa célula. Conferido nos demais commits de sincronização do mesmo lote (`4c9e45a`, `e80141c`, `a300faa`/`eee2c90`, `26eaa54`, `cd32843`, `091d0ac`): em todos os outros, tabela e bullet foram atualizados juntos no mesmo commit — a Task 2.19-2.23 é a única ocorrência divergente encontrada no histórico do Lote 2.
+Achado durante sincronização de fechamento do Lote 2 (esta sessão, 2026-08-14): **8 de 18 linhas da tabela-resumo do Lote 2** tinham a Tag da coluna desatualizada enquanto o bullet de "Histórico de execução" já estava correto há dias. A divergência não é isolada em uma única task, é um padrão que atravessou o lote inteiro.
 
-**Causa estrutural**: não determinada — ocorrência única no período, sem segundo caso no mesmo lote para caracterizar padrão. Não há evidência suficiente para apontar se foi omissão pontual do agente que rodou a sincronização em `768c64b` ou outra causa; registrar sem especular.
+**Linhas afetadas** (8 de 18 da tabela-resumo, todas em `docs/Backlog.md`):
+- 2.3–2.6: bullet `✅` desde 2026-08-06 (commit `4c9e45a`), tag da tabela `🟡 LACUNA` até 2026-08-14 (esta sessão)
+- 2.7: bullet `✅` desde 2026-08-07, tag `🟡 LACUNA` até 2026-08-14
+- 2.8–2.11 (back): bullet `✅` desde 2026-08-06, tag `🟡 LACUNA` até 2026-08-14
+- 2.7–2.11 (front): bullet `✅` desde 2026-08-07, tag `🟡 LACUNA` até 2026-08-14
+- 2.12 (back): bullet `✅` desde 2026-08-08, tag `🟡 LACUNA` até 2026-08-14
+- 2.12 (front): bullet `✅` desde 2026-08-08, tag `🟡 LACUNA` até 2026-08-14
+- 2.13: bullet `✅` desde 2026-08-08, tag `🟡 LACUNA` até 2026-08-14
+- 2.19–2.23: bullet `✅` desde 2026-08-08 (commit `768c64b`), tag `🟡 LACUNA` até 2026-08-14 (commit `ce42f43`)
 
-**Ação proposta**: nenhuma correção de processo — o achado já foi comprido nesta sessão (`ce42f43`). Se um segundo caso do mesmo tipo (bullet atualizado, coluna da tabela-resumo não) aparecer em lote futuro, isso vira padrão acionável (ex.: checklist do memory-manager exigindo diff nas duas seções antes de fechar o commit de sincronização); com um único caso, fica só registrado como observação.
+A mais antiga dessas divergências datava de **2026-08-06/07/08** — todas foram corrigidas juntas só nesta sessão (2026-08-14), na sincronização de fechamento do lote. Enquanto isso, outros eventos de sincronização do mesmo lote (commits `e80141c`, `a300faa`, `26eaa54`, `cd32843`, `091d0ac`) atualizavam tabela e bullet juntos. Isso caracteriza um padrão real, não um deslize pontual: a tag da tabela-resumo não é atualizada de forma confiável quando uma task é sincronizada — apenas o bullet do histórico recebe atenção consistente.
+
+**Causa estrutural**: a definição do agente `memory-manager` (em `docs/`, linhas do próprio arquivo de instruções que o agente segue, não em Lessons-Learned) exigiu apenas que o bullet de histórico seja atualizado ("Localize a entrada pelo Task ID e troque **apenas o campo Status**"). Nenhuma checklist ou passo explícito pediu para também tocar a linha correspondente na tabela-resumo do stage. O agente atualizou uma estrutura e ignorou a outra, e nenhum gate de qualidade verificou a consistência entre as duas.
+
+**Ação proposta**: modificar a definição do agente `memory-manager` para incluir um checklist explícito: ao sincronizar qualquer task, atualizar **ambas as localizações simultaneamente no mesmo commit** — tanto o bullet do histórico quanto a tag da tabela-resumo. Exemplo concreto: "confira se o número da task (ex. 2.19-2.23) tem bullet E linha de tabela; se um foi atualizado e o outro não, incluir a correção do segundo no mesmo diff antes de fechar".
 
 **Escopo**
-Somente este projeto (achado pontual sobre a estrutura de `docs/Backlog.md`; sem evidência de recorrência que justifique proposta de framework).
+Candidata a melhoria do framework — o padrão de sincronização de dois locais independentes para o mesmo estado (bullet de histórico + célula de tabela) é uma propriedade da estrutura de documentação deste projeto, reutilizável como lição para qualquer framework que mantenha redundância de estado em dois formatos diferentes (ex.: dados em texto narrativo + dados em tabela/lista estruturada). Proposta registrada em `.maestro/proposals/2026-08-14-memory-manager-checklist-duas-localizacoes.md`.
 
