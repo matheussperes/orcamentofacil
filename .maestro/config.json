@@ -32,5 +32,8 @@
     "maxAttemptsPerGate": 2,
     "uxAuditRequiresScreenshots": true,
     "qaGateEnabled": true
+  },
+  "obsidian": {
+    "vaultPathFallback": "C:\\Users\\teteu\\iCloudDrive\\iCloud~md~obsidian\\Obsidian-Claude\\00 - Inbox"
   }
 }
