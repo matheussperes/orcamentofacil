@@ -4,6 +4,7 @@ import type { AlturasFaixas, ElementoParede, Faixa, Parede } from "@/lib/engine/
 import { derivarY } from "@/lib/engine/parede";
 import type { ItemDoConjunto } from "@/app/components/BoxCanvas";
 import { alturaDoItem, larguraDoItem, nomeDoItem } from "@/lib/orcamento";
+import type { TagComercial } from "@/lib/linha-proposta/tipos";
 
 // Task 13.2a — elevação 2D da parede: régua de largura + as 4 faixas
 // (inferior/bancada/aéreo/torre) + elementos de parede (janela/porta/tomada/
@@ -156,6 +157,15 @@ const MARGIN_BOTTOM = 16;
 const AREA_W = SVG_W - MARGIN_LEFT - MARGIN_RIGHT;
 const AREA_H = SVG_H - MARGIN_TOP - MARGIN_BOTTOM;
 
+// Task 2.28-2.30 (RF-37/Q-3) — badge comercial (Linha de Proposta), distinto
+// do handle/bracket de Conjunto (`informacao` `#2563EB`, BoxCanvas.tsx linhas
+// 550-619): Design-System Seção 2.3 (`accent`), o mesmo par cor/fundo/borda
+// já usado no badge de status "Enviado" (Seção 7.4, tabela de status) — chip
+// preenchido em vez de linha/círculo, forma e cor diferentes do Conjunto.
+const TAG_COR = "#B45309"; // accent (Design-System Seção 2.3)
+const TAG_SUBTLE = "#FFF3E0"; // accent.subtle
+const TAG_BORDER = "#F3C88F"; // accent.border
+
 const CINZA_900 = "#0F172A";
 const CINZA_700 = "#334155";
 const CINZA_500 = "#64748B";
@@ -177,9 +187,43 @@ export interface ElevacaoParedeProps {
    * estado, ver AmbientesLab.tsx). Opcional: sem handler, o elemento
    * continua só desenho, sem afordância de clique. */
   onClicarElemento?: (elemento: ElementoParede, indice: number) => void;
+  /** Task 2.28-2.30 (RF-37/Q-3) — itemId -> Linha de Proposta (agrupamento
+   * comercial) a que pertence, derivado por `AmbientesLab.tsx::
+   * derivarTagsComerciais`. Opcional/vazio: nenhum badge desenhado (mesmo
+   * comportamento de antes desta task) — regra de ruído (só 2+ linhas)
+   * já resolvida por quem deriva o mapa, não aqui. */
+  tagsComerciais?: Map<string, TagComercial>;
 }
 
-export function ElevacaoParede({ parede, alturas, itens, onClicarElemento }: ElevacaoParedeProps) {
+/** Trunca o título da Linha de Proposta pro chip caber num item pequeno —
+ * só apresentacional, o título completo continua na aba Proposta. */
+function tituloAbreviado(titulo: string): string {
+  return titulo.length > 12 ? `${titulo.slice(0, 11)}…` : titulo;
+}
+
+/** Task 2.28-2.30 — chip do badge comercial: pílula preenchida (`TAG_SUBTLE`/
+ * `TAG_COR`), forma e cor diferentes do colchete/handle de Conjunto (linha +
+ * círculo em `informacao`, ver comentário de `TAG_COR` acima). */
+function TagComercialBadge({ tag, x, y, maxW }: { tag: TagComercial; x: number; y: number; maxW: number }) {
+  const label = tituloAbreviado(tag.titulo);
+  const chipW = Math.max(20, Math.min(maxW, label.length * 5.5 + 14));
+  return (
+    <g>
+      <rect x={x} y={y} width={chipW} height={14} rx={7} fill={TAG_SUBTLE} stroke={TAG_BORDER} />
+      <text x={x + chipW / 2} y={y + 10} textAnchor="middle" fontSize={9} fill={TAG_COR}>
+        {label}
+      </text>
+    </g>
+  );
+}
+
+export function ElevacaoParede({
+  parede,
+  alturas,
+  itens,
+  onClicarElemento,
+  tagsComerciais,
+}: ElevacaoParedeProps) {
   const layout = layoutElevacao(parede, alturas, AREA_W, AREA_H);
   const x0 = MARGIN_LEFT + (AREA_W - layout.larguraPx) / 2;
   const y0 = MARGIN_TOP + (AREA_H - layout.alturaPx); // alinhado ao chão
@@ -409,6 +453,14 @@ export function ElevacaoParede({ parede, alturas, itens, onClicarElemento }: Ele
                   {nomeDoItem(d.item.item)}
                 </text>
               )}
+              {rect.w > 24 && rect.h > 18 && tagsComerciais?.get(d.item.posicao.itemId) && (
+                <TagComercialBadge
+                  tag={tagsComerciais.get(d.item.posicao.itemId)!}
+                  x={x0 + rect.x + 3}
+                  y={svgY + 3}
+                  maxW={rect.w - 6}
+                />
+              )}
             </g>
           );
         })}
@@ -439,6 +491,14 @@ export function ElevacaoParede({ parede, alturas, itens, onClicarElemento }: Ele
                 >
                   {nomeDoItem(d.item.item)}
                 </text>
+              )}
+              {rect.w > 24 && rect.h > 18 && tagsComerciais?.get(d.item.posicao.itemId) && (
+                <TagComercialBadge
+                  tag={tagsComerciais.get(d.item.posicao.itemId)!}
+                  x={x0 + rect.x + 3}
+                  y={svgY + 3}
+                  maxW={rect.w - 6}
+                />
               )}
             </g>
           );
