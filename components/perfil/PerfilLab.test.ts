@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { confirmacaoExclusaoConfere, validarArquivoFoto, validarArquivoLogo } from "./PerfilLab";
+import { confirmacaoExclusaoConfere, sanitizarKerf, validarArquivoFoto, validarArquivoLogo } from "./PerfilLab";
 
 // Task 4.8-4.9-front — só a validação pura (mime/tamanho, checada ANTES do
 // upload) é testável sem Supabase; o fluxo de upload em si depende do client
@@ -73,5 +73,29 @@ describe("confirmacaoExclusaoConfere", () => {
   it("nunca libera quando a organizacao nao tem nome (campo vazio nao vira senha vazia)", () => {
     expect(confirmacaoExclusaoConfere("", "")).toBe(false);
     expect(confirmacaoExclusaoConfere("   ", "  ")).toBe(false);
+  });
+});
+
+// Task 4.16-front (Modelo-de-Dominio 8.2, A-13/A-14) — kerf é sempre um
+// numero (0 e default valido, nunca sentinela), e nunca negativo (mesmo
+// `check` da migration 4.16-back). `sanitizarKerf` roda no `onChange` do
+// campo em `SecaoOrganizacao`.
+describe("sanitizarKerf", () => {
+  it("mantem o valor inicial vindo do prop quando ja valido (round-trip sem input)", () => {
+    expect(sanitizarKerf(3)).toBe(3);
+    expect(sanitizarKerf(4.5)).toBe(4.5);
+  });
+
+  it("aceita 0 como valor valido, nao trata como vazio", () => {
+    expect(sanitizarKerf(0)).toBe(0);
+  });
+
+  it("rejeita negativo, nunca deixa o estado assumir valor abaixo de zero", () => {
+    expect(sanitizarKerf(-1)).toBe(0);
+    expect(sanitizarKerf(-3.2)).toBe(0);
+  });
+
+  it("entrada invalida (NaN, de campo vazio ou nao numerico) cai para 0, nao propaga NaN", () => {
+    expect(sanitizarKerf(Number.NaN)).toBe(0);
   });
 });
