@@ -86,6 +86,7 @@ import { resolverAlvoElemento } from "@/lib/ambiente/resolverAlvo";
 import { criarElementoParedePreset } from "@/lib/elemento-parede-preset/criar";
 import { excluirElementoParedePreset } from "@/lib/elemento-parede-preset/excluir";
 import type { ElementoParedePresetRow } from "@/lib/elemento-parede-preset/tipos";
+import type { LinhaProposta, TagComercial } from "@/lib/linha-proposta/tipos";
 
 // Task 13.3d (contrato .maestro/tmp/13.3d-contract.md) — refatoração para
 // componente PRESENTACIONAL: recebe o estado profundo de Ambientes (parede,
@@ -342,6 +343,32 @@ export interface AmbientesLabProps {
    * prop: a UI de preset fica vazia/oculta pra eles (mesmo tratamento de
    * `orcamentoId` opcional). */
   presetsElementoParede?: ElementoParedePresetRow[];
+  /** Task 2.28-2.30 (RF-37/Q-3) — Linhas de Proposta do orçamento, só para
+   * derivar o badge comercial somente-leitura da elevação/painel de
+   * conjunto (ver `derivarTagsComerciais`, abaixo). Ausente em
+   * `AmbientesLabStandalone` (`/ambientes`, sem orçamento pai — não há
+   * Linha de Proposta pra mostrar) — nesse caso nenhum badge é desenhado
+   * (mesmo tratamento de prop opcional já usado por `orcamentoId`/
+   * `presetsElementoParede`). */
+  linhasProposta?: LinhaProposta[];
+}
+
+/** Task 2.28-2.30 (RF-37/Q-3) — mapa itemId -> Linha de Proposta a que
+ * pertence, consumido pelo badge comercial somente-leitura de
+ * `ElevacaoParede`/`BoxCanvas` (modo conjunto). Regra de ruído do contrato:
+ * com 0 ou 1 linha (o default D-17, que cobre todos os itens do ambiente),
+ * o badge seria redundante em 100% dos itens — mapa fica vazio e nenhum
+ * badge é desenhado. Só a partir de 2+ linhas o agrupamento comercial
+ * carrega informação nova em relação ao Conjunto físico. */
+export function derivarTagsComerciais(linhasProposta: LinhaProposta[]): Map<string, TagComercial> {
+  const mapa = new Map<string, TagComercial>();
+  if (linhasProposta.length <= 1) return mapa;
+  for (const linha of linhasProposta) {
+    for (const itemId of linha.itens) {
+      mapa.set(itemId, { linhaId: linha.id, titulo: linha.titulo });
+    }
+  }
+  return mapa;
 }
 
 /** Estado inicial de ambientes sempre não-vazio na entrada de `AmbientesLab`
@@ -399,6 +426,7 @@ export function AmbientesLab({
   onMutarAmbientes,
   orcamentoId,
   presetsElementoParede = [],
+  linhasProposta = [],
 }: AmbientesLabProps) {
   const [ambientes, setAmbientes] = useState<AmbienteItem[]>(() =>
     ambientesGarantidos(estadoInicial.ambientes)
@@ -873,6 +901,8 @@ export function AmbientesLab({
     }
     return m;
   }, [warnings]);
+
+  const tagsComerciais = useMemo(() => derivarTagsComerciais(linhasProposta), [linhasProposta]);
 
   const itensDoConjunto: ItemDoConjunto[] = useMemo(
     () =>
@@ -1857,6 +1887,7 @@ export function AmbientesLab({
               alturas={alturas}
               itens={itensDoConjunto}
               onClicarElemento={(_, indice) => editarElemento(indice)}
+              tagsComerciais={tagsComerciais}
             />
           </div>
         </section>
@@ -1869,6 +1900,7 @@ export function AmbientesLab({
               itensComAviso={itensComAviso}
               conjuntos={conjuntosFinais}
               onToggleJuncao={alternarJuncao}
+              tagsComerciais={tagsComerciais}
             />
           ) : (
             <p className="text-corpo-pequeno text-cinza-500">Adicione um item para visualizar.</p>

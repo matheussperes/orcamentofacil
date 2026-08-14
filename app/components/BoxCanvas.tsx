@@ -14,6 +14,7 @@ import { corParaHex } from "./ModulePreview";
 import { alturaDoItem, corExternaDoItem, larguraDoItem, type ModuloOrcamento } from "@/lib/orcamento";
 import { derivarY, type AlturasFaixas, type Faixa, type ItemPosicionado } from "@/lib/engine/parede";
 import type { Conjunto } from "@/lib/engine/conjunto/types";
+import type { TagComercial } from "@/lib/linha-proposta/tipos";
 
 // V3 — Canvas 2D do módulo-caixa, em dois modos:
 //  - Laboratório (padrão): vãos com borda técnica, rótulo do conteúdo,
@@ -561,6 +562,44 @@ function desenharDestaqueItem(ctx: CanvasRenderingContext2D, g: GeoItemConjunto,
 // hex precisa acompanhar.
 const CONJUNTO_COR = "#2563EB"; // informacao (Design-System v3, Seção 2.4)
 
+// Task 2.28-2.30 (RF-37/Q-3) — badge comercial (Linha de Proposta): chip
+// preenchido em `accent` (Design-System Seção 2.3, mesmo par usado no badge
+// de status "Enviado"), deliberadamente diferente de `CONJUNTO_COR`
+// (`informacao`, linha+círculo) — nunca o mesmo botão/afordância dos dois
+// agrupamentos (Q-3, item 2.30).
+const TAG_COR = "#B45309"; // accent
+const TAG_SUBTLE = "#FFF3E0"; // accent.subtle
+const TAG_BORDER = "#F3C88F"; // accent.border
+const TAG_ALTURA_PX = 13;
+
+function tituloAbreviado(titulo: string): string {
+  return titulo.length > 12 ? `${titulo.slice(0, 11)}…` : titulo;
+}
+
+function desenharTagComercial(ctx: CanvasRenderingContext2D, g: GeoItemConjunto, tag: TagComercial) {
+  const largura = larguraDoItem(g.item) * g.scale;
+  const altura = alturaDoItem(g.item) * g.scale;
+  if (largura <= 24 || altura <= 18) return; // item pequeno demais pro chip caber
+
+  const label = tituloAbreviado(tag.titulo);
+  const chipW = Math.max(20, Math.min(largura - 6, label.length * 5.5 + 14));
+  const x = g.ox + 3;
+  const y = g.oy + 3;
+
+  ctx.fillStyle = TAG_SUBTLE;
+  ctx.strokeStyle = TAG_BORDER;
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.roundRect(x, y, chipW, TAG_ALTURA_PX, TAG_ALTURA_PX / 2);
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.fillStyle = TAG_COR;
+  ctx.font = "9px sans-serif";
+  ctx.textAlign = "center";
+  ctx.fillText(label, x + chipW / 2, y + TAG_ALTURA_PX - 4);
+}
+
 const HANDLE_RAIO_PX = 10; // círculo de 20px de diâmetro (Design-System 9.3)
 const BRACKET_TICK_PX = 6; // altura da perna do colchete nas extremidades
 
@@ -623,12 +662,15 @@ function desenharConjunto(
   itens: ItemDoConjunto[],
   alturas: AlturasFaixas,
   itensComAviso?: Map<string, "erro" | "aviso">,
-  conjuntos?: Conjunto[]
+  conjuntos?: Conjunto[],
+  tagsComerciais?: Map<string, TagComercial>
 ) {
   for (const g of geometriaConjunto(itens, alturas)) {
     desenharItemConjunto(ctx, g);
     const severidade = itensComAviso?.get(g.itemId);
     if (severidade) desenharDestaqueItem(ctx, g, severidade);
+    const tag = tagsComerciais?.get(g.itemId);
+    if (tag) desenharTagComercial(ctx, g, tag);
   }
 
   if (!conjuntos) return; // sem `conjuntos`, modo conjunto se comporta como nas Tasks 13.0/13.2a
@@ -663,6 +705,7 @@ interface BoxCanvasPropsItemUnico {
   itensComAviso?: undefined;
   conjuntos?: undefined;
   onToggleJuncao?: undefined;
+  tagsComerciais?: undefined;
   /** Modo bonito para cards do orçamento — sem bordas/rótulos técnicos, não interativo. */
   comercial?: boolean;
   modoSelecao?: ModoSelecao;
@@ -708,6 +751,15 @@ interface BoxCanvasPropsConjunto {
    * visuais (preserva o early-return da Task 13.0 quando as props novas não
    * são passadas). */
   onToggleJuncao?: (itemIdA: string, itemIdB: string) => void;
+  /** Task 2.28-2.30 (RF-37/Q-3) — itemId -> Linha de Proposta (agrupamento
+   * comercial) a que pertence (`AmbientesLab.tsx::derivarTagsComerciais`).
+   * Desenha um badge/chip SOMENTE LEITURA por cima do item, visualmente
+   * distinto do handle/bracket de Conjunto (`CONJUNTO_COR` = `informacao`
+   * `#2563EB`, linha+círculo) — usa `TAG_COR` (`accent`, Design-System Seção
+   * 2.3) num chip preenchido. Opcional: sem esta prop, o modo conjunto se
+   * comporta exatamente como antes desta task (nenhum consumidor existente —
+   * `LinhaPropostaCard.tsx`, `PropostaLab.tsx`, Editor de Item — a passa). */
+  tagsComerciais?: Map<string, TagComercial>;
   comercial?: undefined;
   modoSelecao?: undefined;
   vaosSelecionados?: undefined;
@@ -743,6 +795,7 @@ export function BoxCanvas(props: BoxCanvasProps) {
     itensComAviso,
     conjuntos,
     onToggleJuncao,
+    tagsComerciais,
     comercial: comercialProp = false,
     modoSelecao = "vaos",
     vaosSelecionados = [],
@@ -784,7 +837,7 @@ export function BoxCanvas(props: BoxCanvasProps) {
     ctx.clearRect(0, 0, W, H);
 
     if (itens && alturas) {
-      desenharConjunto(ctx, itens, alturas, itensComAviso, conjuntos);
+      desenharConjunto(ctx, itens, alturas, itensComAviso, conjuntos, tagsComerciais);
       return;
     }
     if (!box) return;
@@ -885,7 +938,7 @@ export function BoxCanvas(props: BoxCanvasProps) {
         ctx.strokeRect(rectPx.x + 2, rectPx.y + 2, rectPx.w - 4, rectPx.h - 4);
       }
     }
-  }, [box, itens, alturas, itensComAviso, conjuntos, comercial, modoSelecao, vaosSelecionados, divisaoSelecionada, portaSelecionada, vaoGavetaSelecionado, hoverId]);
+  }, [box, itens, alturas, itensComAviso, conjuntos, tagsComerciais, comercial, modoSelecao, vaosSelecionados, divisaoSelecionada, portaSelecionada, vaoGavetaSelecionado, hoverId]);
 
   function clique(e: React.MouseEvent<HTMLCanvasElement>) {
     // Task 13.2b — modo conjunto: a ÚNICA exceção ao "não interativo" da Task

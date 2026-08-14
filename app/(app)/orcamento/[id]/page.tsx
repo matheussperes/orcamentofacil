@@ -95,6 +95,7 @@ export default async function OrcamentoPage({ params }: { params: { id: string }
           orcamentoId={orcamento.id}
           estadoInicial={estadoAmbiente}
           presetsElementoParede={presetsElementoParede}
+          linhasProposta={linhasProposta.linhas}
         />
       }
       abaCorteMaterial={

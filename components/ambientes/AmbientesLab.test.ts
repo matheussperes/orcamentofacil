@@ -9,6 +9,7 @@ import { describe, expect, it } from "vitest";
 import {
   aplicarPresetElementoParede,
   definirAlturaOverride,
+  derivarTagsComerciais,
   montarEngrossamentoTampo,
   moverIdNaLista,
   recalcularValorAoTrocarRef,
@@ -21,6 +22,7 @@ import { valorParaCanonico } from "@/lib/engine/parede/referenciaMedida";
 import type { ElementoParede } from "@/lib/engine/parede";
 import type { ElementoParedePresetRow } from "@/lib/elemento-parede-preset/tipos";
 import type { AmbienteItem, ParedeComMeta } from "@/lib/ambiente/estado";
+import type { LinhaProposta } from "@/lib/linha-proposta/tipos";
 
 describe("recalcularValorAoTrocarRef", () => {
   it("trocar refX sem editar o valor exibido preserva o canônico (nunca move o elemento)", () => {
@@ -270,5 +272,46 @@ describe("montarEngrossamentoTampo", () => {
   it("modelo engrossado/dobrado sem espessuraFinal escolhida: undefined (nada pra montar)", () => {
     expect(montarEngrossamentoTampo({ modelo: "engrossado" })).toBeUndefined();
     expect(montarEngrossamentoTampo({ modelo: "dobrado" })).toBeUndefined();
+  });
+});
+
+// Task 2.28-2.30 (RF-37/Q-3) — derivação do mapa itemId -> Linha de Proposta
+// que alimenta o badge comercial de `ElevacaoParede`/`BoxCanvas` (modo
+// conjunto). Regra de ruído: só 2+ linhas justificam o badge (default D-17,
+// uma linha cobrindo tudo, deixaria o badge redundante em 100% dos itens).
+function linha(overrides: Partial<LinhaProposta> = {}): LinhaProposta {
+  return {
+    id: "linha-1",
+    titulo: "Linha 1",
+    itens: [],
+    imagemUrl: null,
+    descricao: "",
+    valorRateado: null,
+    ...overrides,
+  };
+}
+
+describe("derivarTagsComerciais", () => {
+  it("0 linhas: mapa vazio", () => {
+    expect(derivarTagsComerciais([]).size).toBe(0);
+  });
+
+  it("1 única linha (default D-17, cobre tudo): mapa vazio — badge seria redundante", () => {
+    const linhas = [linha({ id: "linha-unica", titulo: "Tudo", itens: ["item-a", "item-b"] })];
+    expect(derivarTagsComerciais(linhas).size).toBe(0);
+  });
+
+  it("2+ linhas: cada item ganha a tag da linha a que pertence", () => {
+    const linhas = [
+      linha({ id: "linha-a", titulo: "Cozinha Alta", itens: ["item-1", "item-2"] }),
+      linha({ id: "linha-b", titulo: "Cozinha Baixa", itens: ["item-3"] }),
+    ];
+
+    const mapa = derivarTagsComerciais(linhas);
+
+    expect(mapa.get("item-1")).toEqual({ linhaId: "linha-a", titulo: "Cozinha Alta" });
+    expect(mapa.get("item-2")).toEqual({ linhaId: "linha-a", titulo: "Cozinha Alta" });
+    expect(mapa.get("item-3")).toEqual({ linhaId: "linha-b", titulo: "Cozinha Baixa" });
+    expect(mapa.size).toBe(3);
   });
 });

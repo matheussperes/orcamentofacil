@@ -11,6 +11,7 @@ import type {
   ResultadoSalvarAmbiente,
 } from "@/lib/ambiente/estado";
 import type { ElementoParedePresetRow } from "@/lib/elemento-parede-preset/tipos";
+import type { LinhaProposta } from "@/lib/linha-proposta/tipos";
 
 // Task 13.3d (contrato .maestro/tmp/13.3d-contract.md) — o "dono de I/O"
 // Supabase de `/orcamento/[id]`: recebe o estado já carregado pelo Server
@@ -37,12 +38,18 @@ export interface AmbientesTabConectadaProps {
    * carregados server-side (`listarElementoParedePresets`) por
    * `app/(app)/orcamento/[id]/page.tsx` e só repassados adiante. */
   presetsElementoParede: ElementoParedePresetRow[];
+  /** Task 2.28-2.30 — Linhas de Proposta do orçamento (já carregadas pelo
+   * Server Component da rota, `carregarOuCriarLinhasProposta`), repassadas
+   * só para derivar o badge comercial somente-leitura da elevação (ver
+   * `AmbientesLab.tsx::derivarTagsComerciais`). */
+  linhasProposta: LinhaProposta[];
 }
 
 export function AmbientesTabConectada({
   orcamentoId,
   estadoInicial,
   presetsElementoParede,
+  linhasProposta,
 }: AmbientesTabConectadaProps) {
   const router = useRouter();
 
@@ -71,6 +78,7 @@ export function AmbientesTabConectada({
       onMutarAmbientes={onMutarAmbientes}
       orcamentoId={orcamentoId}
       presetsElementoParede={presetsElementoParede}
+      linhasProposta={linhasProposta}
     />
   );
 }

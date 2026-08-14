@@ -45,3 +45,12 @@ export interface PatchLinhaProposta {
   imagemUrl?: string | null;
   valorRateado?: number | null;
 }
+
+/** Task 2.28-2.30 (RF-37/Q-3) — badge somente leitura, na aba Ambientes,
+ * indicando a qual `LinhaProposta` (agrupamento comercial) um item
+ * posicionado pertence. Distinto do handle/bracket de `Conjunto` (físico,
+ * `lib/engine/conjunto`) — ver `ElevacaoParede.tsx`/`BoxCanvas.tsx`. */
+export interface TagComercial {
+  linhaId: string;
+  titulo: string;
+}
