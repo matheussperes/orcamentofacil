@@ -4,7 +4,7 @@
 // `bandasFaixas`, `retanguloParaPx`) é exercitada aqui — o SVG em si é
 // verificado visualmente no browser (breakpoints 375/768/1440px).
 import { describe, expect, it } from "vitest";
-import { bandasFaixas, layoutElevacao, retanguloParaPx, retangulosDosItens } from "./ElevacaoParede";
+import { bandasFaixas, cotasFaixas, layoutElevacao, retanguloParaPx, retangulosDosItens } from "./ElevacaoParede";
 import type { AlturasFaixas } from "@/lib/engine/parede";
 import type { ItemDoConjunto } from "@/app/components/BoxCanvas";
 import type { ModuloOrcamento } from "@/lib/orcamento";
@@ -77,6 +77,22 @@ describe("layoutElevacao", () => {
     const layout = layoutElevacao({ largura: 3000, altura: 2700 }, alturas, 480, 360);
     expect(layout.bandas).toHaveLength(3);
     expect(layout.bandas[0]).toEqual({ faixa: "inferior", y0: 0, y1: 900 });
+  });
+});
+
+describe("cotasFaixas", () => {
+  it("computa a altura (y1 - y0) de cada banda a partir das alturas configuradas (Task 2.27)", () => {
+    const cotas = cotasFaixas(bandasFaixas(alturas));
+
+    expect(cotas).toEqual([
+      { faixa: "inferior", altura: 900, yBase: 0, yTopo: 900 },
+      { faixa: "bancada", altura: 500, yBase: 900, yTopo: 1400 },
+      { faixa: "aereo", altura: 1300, yBase: 1400, yTopo: 2700 },
+    ]);
+  });
+
+  it("devolve lista vazia para lista de bandas vazia", () => {
+    expect(cotasFaixas([])).toEqual([]);
   });
 });
 
