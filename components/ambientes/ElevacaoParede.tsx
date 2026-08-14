@@ -60,6 +60,21 @@ export function retangulosDosItens(itens: ItemDoConjunto[], alturas: AlturasFaix
   }));
 }
 
+export interface CotaFaixa {
+  faixa: Faixa;
+  altura: number; // mm — y1 - y0 da banda
+  yBase: number; // mm
+  yTopo: number; // mm
+}
+
+// Task 2.27 (RF-27) — geometria pura das cotas de altura por faixa, extraída
+// para ser testável sem SVG: cada banda já traz seus limites (`bandasFaixas`
+// acima), aqui só empacota o valor cotado (`y1 - y0`) junto com os limites
+// em mm que o desenho usa pra posicionar linha/seta/rótulo.
+export function cotasFaixas(bandas: FaixaBanda[]): CotaFaixa[] {
+  return bandas.map((b) => ({ faixa: b.faixa, altura: b.y1 - b.y0, yBase: b.y0, yTopo: b.y1 }));
+}
+
 export interface LayoutElevacao {
   scale: number;
   larguraPx: number;
@@ -133,12 +148,16 @@ const SVG_W = 640;
 const SVG_H = 380;
 const MARGIN_LEFT = 92;
 const MARGIN_TOP = 40;
-const MARGIN_RIGHT = 56;
+// Task 2.27 — margem alargada de 56 para 100: 3 colunas de cota empilhadas
+// à direita da parede (altura total / altura de cada faixa / bracket da
+// torre), cada uma com linha + seta + rótulo rotacionado, sem colidir.
+const MARGIN_RIGHT = 100;
 const MARGIN_BOTTOM = 16;
 const AREA_W = SVG_W - MARGIN_LEFT - MARGIN_RIGHT;
 const AREA_H = SVG_H - MARGIN_TOP - MARGIN_BOTTOM;
 
 const CINZA_900 = "#0F172A";
+const CINZA_700 = "#334155";
 const CINZA_500 = "#64748B";
 const CINZA_400 = "#94A3B8";
 const CINZA_300 = "#CBD5E1";
@@ -232,14 +251,18 @@ export function ElevacaoParede({ parede, alturas, itens, onClicarElemento }: Ele
       {/* Contorno da parede */}
       <rect x={x0} y={y0} width={layout.larguraPx} height={layout.alturaPx} fill="none" stroke={CINZA_300} strokeWidth={2} />
 
-      {/* Bracket vertical indicando a faixa "torre" (chão -> pé-direito) —
-          não é uma banda horizontal (ver comentário de `bandasFaixas`). */}
+      {/* Cota de altura total da parede (Task 2.27, RF-27) — coluna mais
+          próxima do contorno. Fonte: `parede.altura` (altura física real),
+          não `alturas.peDireito` (que é só o limite de instalação do aéreo,
+          ver comentário de `TETO_DA_FAIXA` em lib/engine/parede/validar.ts —
+          os dois podem divergir). Mesmo padrão de linha/seta/rótulo da régua
+          de largura acima (linhas 187–204). */}
       <g>
         <line
           x1={x0 + layout.larguraPx + 16}
           y1={paraSvgY(0)}
           x2={x0 + layout.larguraPx + 16}
-          y2={paraSvgY(alturas.peDireito)}
+          y2={paraSvgY(parede.altura)}
           stroke={CINZA_400}
         />
         <line
@@ -251,17 +274,99 @@ export function ElevacaoParede({ parede, alturas, itens, onClicarElemento }: Ele
         />
         <line
           x1={x0 + layout.larguraPx + 12}
-          y1={paraSvgY(alturas.peDireito)}
+          y1={paraSvgY(parede.altura)}
           x2={x0 + layout.larguraPx + 20}
-          y2={paraSvgY(alturas.peDireito)}
+          y2={paraSvgY(parede.altura)}
           stroke={CINZA_400}
         />
         <text
           x={x0 + layout.larguraPx + 26}
+          y={(paraSvgY(0) + paraSvgY(parede.altura)) / 2}
+          fontSize={12}
+          fill={CINZA_700}
+          className="tabular-nums"
+          transform={`rotate(-90, ${x0 + layout.larguraPx + 26}, ${
+            (paraSvgY(0) + paraSvgY(parede.altura)) / 2
+          })`}
+          textAnchor="middle"
+        >
+          {parede.altura} mm
+        </text>
+      </g>
+
+      {/* Cota de altura de cada faixa (inferior/meio/aéreo) — Task 2.27,
+          coluna do meio, uma cota curta ao lado de cada banda. */}
+      {cotasFaixas(layout.bandas).map((c) => (
+        <g key={`cota-${c.faixa}`}>
+          <line
+            x1={x0 + layout.larguraPx + 40}
+            y1={paraSvgY(c.yBase)}
+            x2={x0 + layout.larguraPx + 40}
+            y2={paraSvgY(c.yTopo)}
+            stroke={CINZA_400}
+          />
+          <line
+            x1={x0 + layout.larguraPx + 36}
+            y1={paraSvgY(c.yBase)}
+            x2={x0 + layout.larguraPx + 44}
+            y2={paraSvgY(c.yBase)}
+            stroke={CINZA_400}
+          />
+          <line
+            x1={x0 + layout.larguraPx + 36}
+            y1={paraSvgY(c.yTopo)}
+            x2={x0 + layout.larguraPx + 44}
+            y2={paraSvgY(c.yTopo)}
+            stroke={CINZA_400}
+          />
+          <text
+            x={x0 + layout.larguraPx + 50}
+            y={(paraSvgY(c.yBase) + paraSvgY(c.yTopo)) / 2}
+            fontSize={11}
+            fill={CINZA_700}
+            className="tabular-nums"
+            transform={`rotate(-90, ${x0 + layout.larguraPx + 50}, ${
+              (paraSvgY(c.yBase) + paraSvgY(c.yTopo)) / 2
+            })`}
+            textAnchor="middle"
+          >
+            {c.altura} mm
+          </text>
+        </g>
+      ))}
+
+      {/* Bracket vertical indicando a faixa "torre" (chão -> pé-direito) —
+          não é uma banda horizontal (ver comentário de `bandasFaixas`).
+          Coluna mais externa, deslocada para não colidir com as cotas
+          novas acima (Task 2.27). */}
+      <g>
+        <line
+          x1={x0 + layout.larguraPx + 64}
+          y1={paraSvgY(0)}
+          x2={x0 + layout.larguraPx + 64}
+          y2={paraSvgY(alturas.peDireito)}
+          stroke={CINZA_400}
+        />
+        <line
+          x1={x0 + layout.larguraPx + 60}
+          y1={paraSvgY(0)}
+          x2={x0 + layout.larguraPx + 68}
+          y2={paraSvgY(0)}
+          stroke={CINZA_400}
+        />
+        <line
+          x1={x0 + layout.larguraPx + 60}
+          y1={paraSvgY(alturas.peDireito)}
+          x2={x0 + layout.larguraPx + 68}
+          y2={paraSvgY(alturas.peDireito)}
+          stroke={CINZA_400}
+        />
+        <text
+          x={x0 + layout.larguraPx + 78}
           y={(paraSvgY(0) + paraSvgY(alturas.peDireito)) / 2}
           fontSize={12}
           fill={CINZA_500}
-          transform={`rotate(-90, ${x0 + layout.larguraPx + 26}, ${
+          transform={`rotate(-90, ${x0 + layout.larguraPx + 78}, ${
             (paraSvgY(0) + paraSvgY(alturas.peDireito)) / 2
           })`}
           textAnchor="middle"
