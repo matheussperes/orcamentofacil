@@ -300,9 +300,9 @@ function numero(valor: string): number {
 // Seção 3.2.1), na mesma ordem já usada pelo card "Alturas do perfil".
 const CAMPOS_ALTURA: { campo: keyof AlturasFaixas; rotulo: string; id: string }[] = [
   { campo: "alturaRodape", rotulo: "Rodapé (mm)", id: "override-altura-rodape" },
-  { campo: "alturaBancada", rotulo: "Bancada (mm)", id: "override-altura-bancada" },
+  { campo: "alturaBancada", rotulo: "Meio (mm)", id: "override-altura-bancada" },
   { campo: "alturaInstalacaoAereo", rotulo: "Instalação aéreo (mm)", id: "override-altura-aereo" },
-  { campo: "peDireito", rotulo: "Pé-direito (mm)", id: "override-pe-direito" },
+  { campo: "peDireito", rotulo: "Limite superior do aéreo (mm)", id: "override-pe-direito" },
 ];
 
 export interface AmbientesLabProps {
@@ -1287,7 +1287,7 @@ export function AmbientesLab({
               />
             </div>
             <div>
-              <Label htmlFor="altura-bancada">Bancada (mm)</Label>
+              <Label htmlFor="altura-bancada">Meio (mm)</Label>
               <Input
                 id="altura-bancada"
                 type="number"
@@ -1307,7 +1307,7 @@ export function AmbientesLab({
               />
             </div>
             <div>
-              <Label htmlFor="pe-direito">Pé-direito (mm)</Label>
+              <Label htmlFor="pe-direito">Limite superior do aéreo (mm)</Label>
               <Input
                 id="pe-direito"
                 type="number"
@@ -2211,7 +2211,7 @@ export function AmbientesLab({
       </div>
 
       <section className="rounded-lg border border-cinza-200 bg-cinza-0 p-4 shadow-xs">
-        <h2 className="mb-3 text-titulo-secao text-cinza-900">Validação (Tier 1 + Tier 2)</h2>
+        <h2 className="mb-3 text-titulo-secao text-cinza-900">Validação</h2>
         {warnings.length === 0 ? (
           <Alert variant="sucesso">
             <AlertDescription>Nenhum problema encontrado.</AlertDescription>
