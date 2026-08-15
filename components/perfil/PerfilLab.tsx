@@ -201,6 +201,15 @@ export function confirmacaoExclusaoConfere(digitado: string, nomeOrganizacao: st
   return alvo.length > 0 && digitado.trim() === alvo;
 }
 
+/** Task 4.16-front — kerf físico não pode ser negativo (mesmo `check` da
+ * migration 4.16-back); `0` é valor válido e diferente de vazio (A-14,
+ * Modelo-de-Dominio 8.2). Entrada inválida (string vazia, "abc") vira `0`,
+ * nunca negativo — extraída para ser testável sem montar o formulário,
+ * mesmo padrão de `validarArquivoLogo` acima. */
+export function sanitizarKerf(valorDigitado: number): number {
+  return Number.isFinite(valorDigitado) ? Math.max(0, valorDigitado) : 0;
+}
+
 // Task 4.15 (Modelo-de-Dominio.md 7.3) — "excluir conta" apaga a ORGANIZAÇÃO
 // inteira, de forma imediata e irreversível. Confirmação explícita em `Dialog`
 // (nunca `window.confirm`).
@@ -398,10 +407,9 @@ function SecaoOrganizacao({
     organizacaoInicial.modoPrecificacaoPadrao ?? PRECIFICACAO_FALLBACK
   );
   const [montagem, setMontagem] = useState<ModoMontagem>(organizacaoInicial.modoMontagemPadrao ?? MONTAGEM_FALLBACK);
-  // Task 4.16-back: kerf (`espessuraSerraPadraoMm`) não tem campo nesta tela
-  // ainda (Task 4.16-front, fora de escopo aqui) — só precisa sobreviver ao
-  // round-trip do "Salvar alterações" desta seção sem ser zerado.
-  const espessuraSerraPadraoMm = organizacaoInicial.espessuraSerraPadraoMm;
+  const [espessuraSerraPadraoMm, setEspessuraSerraPadraoMm] = useState(
+    organizacaoInicial.espessuraSerraPadraoMm
+  );
 
   const [salvando, setSalvando] = useState(false);
   const [resultado, setResultado] = useState<ResultadoSalvarOrganizacao | null>(null);
@@ -521,6 +529,21 @@ function SecaoOrganizacao({
               <SelectItem value="cm">Centímetros (cm)</SelectItem>
             </SelectContent>
           </Select>
+        </div>
+
+        <div className="w-40">
+          <Label htmlFor="org-kerf">Espessura de serra — kerf (mm)</Label>
+          <Input
+            id="org-kerf"
+            type="number"
+            step="0.1"
+            min={0}
+            value={espessuraSerraPadraoMm}
+            onChange={(e) => setEspessuraSerraPadraoMm(sanitizarKerf(Number(e.target.value)))}
+          />
+          <p className="mt-1 text-corpo-pequeno text-cinza-500">
+            Muda o plano de corte de todo orçamento não congelado.
+          </p>
         </div>
 
         <div>

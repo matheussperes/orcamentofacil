@@ -1,3 +1,8 @@
 {
-  "agent": "maestro:maestro"
+  "agent": "maestro:maestro",
+  "permissions": {
+    "additionalDirectories": [
+      "C:\\Users\\teteu\\iCloudDrive\\iCloud~md~obsidian\\Obsidian-Claude"
+    ]
+  }
 }
