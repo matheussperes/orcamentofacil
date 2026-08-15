@@ -1,4 +1,10 @@
 import { createClient } from "@/lib/supabase/server";
+import { carregarEstadoAmbiente } from "@/lib/ambiente/carregar";
+import { calcularEngineOrcamento } from "@/lib/ambiente/calcularEngineOrcamento";
+import { carregarConfiguracaoPrecificacao } from "@/lib/precificacao/carregarConfiguracao";
+import { catalogoParaPrecos } from "@/lib/catalog";
+import { buscarCatalogoRealServer } from "@/lib/produto/buscarServer";
+import { ratearPrecificacao } from "@/lib/engine/precificacao";
 
 // Task 13.3b (contrato .maestro/tmp/13.3b-contract.md, "Parte A") — leitura
 // server-side dos orçamentos da organização para o Dashboard. É só um
@@ -9,17 +15,34 @@ import { createClient } from "@/lib/supabase/server";
 // presentational puro (recebe `DadosDashboard` como prop, sem saber de
 // Supabase) — o harness `/dev/preview` usa o mesmo presentational com dados
 // fabricados.
+//
+// Task 5.7-5.9 (contrato .maestro/state/contracts/5.7-5.9.md) — "Valor
+// final"/"Custo" substituem "Prazo de entrega" na tabela: mirror server-side
+// do pipeline de `components/orcamento/FinanceiroLab.tsx` (linhas 101–135),
+// um resumo financeiro derivado AO VIVO por orçamento (nunca persistido).
+// Simplificação deliberada autorizada pelo contrato: mesmo orçamento
+// congelado usa o cálculo ao vivo aqui (não soma `linhaProposta.valorRateado`
+// persistido) — o Dashboard é visão geral, a fonte de verdade congelada
+// continua sendo exclusivamente a aba Proposta/PDF, não tocada por esta
+// task. ponytail: se essa divergência incomodar (catálogo/kerf mudam após o
+// congelamento), upgrade é somar `linhaProposta.valorRateado` quando
+// `congeladoEm !== null` — não implementado agora, YAGNI.
 
 export type StatusOrcamento = "rascunho" | "enviado" | "aprovado" | "recusado";
 
 export interface OrcamentoDashboardRow {
   id: string;
   status: StatusOrcamento;
-  prazoEntrega: string | null;
   criadoEm: string;
   /** `orcamento` não tem coluna de título — o rótulo da linha é o nome do
    * cliente (`cliente.nome`), decisão do contrato desta task. */
   clienteNome: string;
+  /** `resumo.precoFinal` (Modelo-de-Domínio Seção 5.5) — `null` quando o
+   * orçamento ainda não tem ambientes/itens (engine `!ok`) ou o cálculo falha. */
+  valorFinal: number | null;
+  /** `resumo.custoMaterial` — custo de material, não o custo total
+   * (material + montagem + frete). Mesmo campo já exibido na aba Financeiro. */
+  custoMaterial: number | null;
 }
 
 export type ContagemPorStatus = Record<StatusOrcamento, number>;
@@ -50,6 +73,36 @@ function nomeDoCliente(cliente: ClienteAninhado): string {
   return nome && nome.length > 0 ? nome : "Cliente sem nome";
 }
 
+/** Calcula `valorFinal`/`custoMaterial` de um orçamento, mirror server-side
+ * do pipeline de `FinanceiroLab.tsx` (linhas 101–135): estado de Ambientes →
+ * engine → grupo único → `ratearPrecificacao`. `null`/`null` quando o
+ * orçamento ainda não tem ambientes/itens (engine `!ok`) ou qualquer etapa
+ * falha — isolado por `try/catch` para não derrubar os demais itens da
+ * lista (contrato 5.7-5.9). */
+async function calcularResumoDoOrcamento(
+  orcamentoId: string,
+  precos: ReturnType<typeof catalogoParaPrecos>
+): Promise<{ valorFinal: number | null; custoMaterial: number | null }> {
+  try {
+    const estado = await carregarEstadoAmbiente(orcamentoId);
+    const resultadoEngine = calcularEngineOrcamento(estado);
+    if (!resultadoEngine.ok) {
+      return { valorFinal: null, custoMaterial: null };
+    }
+
+    const configuracao = await carregarConfiguracaoPrecificacao(orcamentoId);
+    const grupoUnico = [
+      { id: "orcamento-inteiro", itemIds: resultadoEngine.engine.porModulo.map((m) => m.moduloId) },
+    ];
+    const snapshot = ratearPrecificacao(resultadoEngine.engine, grupoUnico, configuracao.config, precos);
+
+    return { valorFinal: snapshot.resumo.precoFinal, custoMaterial: snapshot.resumo.custoMaterial };
+  } catch (erro) {
+    console.error(`[dashboard] falha ao calcular resumo financeiro do orçamento ${orcamentoId}:`, erro);
+    return { valorFinal: null, custoMaterial: null };
+  }
+}
+
 /** Busca os orçamentos da organização atual (RLS escopa) + contagem por
  * status, para o Dashboard `/`. Nunca lança: em erro de leitura, devolve
  * listas vazias — o Server Component chamador decide como sinalizar (ver
@@ -59,7 +112,7 @@ export async function buscarDadosDashboard(): Promise<DadosDashboard> {
 
   const { data, error } = await supabase
     .from("orcamento")
-    .select("id,status,prazo_entrega,criado_em,cliente(nome)")
+    .select("id,status,criado_em,cliente(nome)")
     .order("atualizado_em", { ascending: false });
 
   if (error) {
@@ -67,13 +120,26 @@ export async function buscarDadosDashboard(): Promise<DadosDashboard> {
     return { orcamentos: [], contagemPorStatus: { ...CONTAGEM_VAZIA } };
   }
 
-  const orcamentos: OrcamentoDashboardRow[] = (data ?? []).map((row) => ({
-    id: row.id as string,
-    status: row.status as StatusOrcamento,
-    prazoEntrega: (row.prazo_entrega as string | null) ?? null,
-    criadoEm: row.criado_em as string,
-    clienteNome: nomeDoCliente(row.cliente as ClienteAninhado),
-  }));
+  // Catálogo buscado uma única vez por chamada — é o mesmo para todos os
+  // orçamentos da organização (RLS já escopa), buscar de novo por linha
+  // seria N+1 evitável (contrato 5.7-5.9).
+  const catalogo = await buscarCatalogoRealServer();
+  const precos = catalogoParaPrecos(catalogo);
+
+  const orcamentos: OrcamentoDashboardRow[] = await Promise.all(
+    (data ?? []).map(async (row) => {
+      const id = row.id as string;
+      const { valorFinal, custoMaterial } = await calcularResumoDoOrcamento(id, precos);
+      return {
+        id,
+        status: row.status as StatusOrcamento,
+        criadoEm: row.criado_em as string,
+        clienteNome: nomeDoCliente(row.cliente as ClienteAninhado),
+        valorFinal,
+        custoMaterial,
+      };
+    })
+  );
 
   const contagemPorStatus: ContagemPorStatus = { ...CONTAGEM_VAZIA };
   for (const o of orcamentos) {
