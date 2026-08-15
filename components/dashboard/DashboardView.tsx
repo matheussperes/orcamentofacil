@@ -12,6 +12,7 @@ import {
 import { KpiCard } from "./KpiCard";
 import { StatusOrcamentoBadge } from "./StatusOrcamentoBadge";
 import type { DadosDashboard } from "@/lib/dashboard/orcamentos";
+import { formatarMoeda } from "@/lib/format";
 
 // Task 13.3b (contrato .maestro/tmp/13.3b-contract.md) — Dashboard
 // PRESENTATIONAL (fetch e render separados de propósito): recebe
@@ -83,7 +84,8 @@ export function DashboardView({ orcamentos, contagemPorStatus }: DadosDashboard)
                 <TableRow>
                   <TableHead>Cliente</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Prazo de entrega</TableHead>
+                  <TableHead className="text-right">Valor final</TableHead>
+                  <TableHead className="text-right">Custo</TableHead>
                   <TableHead className="text-right">Criado em</TableHead>
                 </TableRow>
               </TableHeader>
@@ -104,7 +106,12 @@ export function DashboardView({ orcamentos, contagemPorStatus }: DadosDashboard)
                     <TableCell>
                       <StatusOrcamentoBadge status={o.status} />
                     </TableCell>
-                    <TableCell>{o.prazoEntrega ?? "—"}</TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {o.valorFinal !== null ? formatarMoeda(o.valorFinal) : "—"}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {o.custoMaterial !== null ? formatarMoeda(o.custoMaterial) : "—"}
+                    </TableCell>
                     <TableCell className="text-right tabular-nums">
                       {formatarData(o.criadoEm)}
                     </TableCell>
