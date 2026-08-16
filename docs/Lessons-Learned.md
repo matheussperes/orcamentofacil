@@ -327,3 +327,19 @@ A mais antiga dessas divergências datava de **2026-08-06/07/08** — todas fora
 **Escopo**
 Candidata a melhoria do framework — o padrão de sincronização de dois locais independentes para o mesmo estado (bullet de histórico + célula de tabela) é uma propriedade da estrutura de documentação deste projeto, reutilizável como lição para qualquer framework que mantenha redundância de estado em dois formatos diferentes (ex.: dados em texto narrativo + dados em tabela/lista estruturada). Proposta registrada em `.maestro/proposals/2026-08-14-memory-manager-checklist-duas-localizacoes.md`.
 
+---
+
+## 2026-08-16 — Task 5.10-front (Lote 5, nota de processo)
+
+**Achado objetivo**
+
+Durante a execução da Task 5.10-front, o Maestro deletou a branch `feature/5.10-front` antes de confirmar que o executor tinha commitado. `git checkout main && git merge --no-ff` reportou "Already up to date" porque a branch feature nunca teve commit próprio — as mudanças ficaram como working tree não commitado, carregadas junto no checkout. Recuperado sem perda: build/lint/typecheck/testes reconfirmados no estado exato que os 3 gates já tinham auditado (code-auditor, qa-engineer, ux-auditor aprovados 1ª tentativa cada), commit feito direto em `main` (4e4b1e8) com nota explícita no corpo mencionando a recuperação. Nenhum dado se perdeu porque nada tinha sido descartado — mas é evidência de que o protocolo de verificação antes de delete não foi seguido.
+
+**Ação proposta**
+
+Adicionar ao protocolo do Maestro um passo obrigatório de verificação antes de deletar uma branch de feature: confirmar `git log <branch-feature>` contra `git log main` e verificar existência de commits próprios da feature (diferença de commit sha, não só diferença de data) — nunca assumir que "executor reportou pronto" implica "commitou no branch". Se o branch não tiver commits próprios, questionar antes de deletar em vez de prosseguir com merge/delete.
+
+**Escopo**
+
+Candidata a melhoria do framework — item de checklist do Maestro para limpeza de branches (protocolo de segurança contra delete acidental de trabalho, mesmo que recuperável).
+
