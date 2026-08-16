@@ -104,7 +104,7 @@ export function DashboardView({ orcamentos, contagemPorStatus }: DadosDashboard)
                       </Link>
                     </TableCell>
                     <TableCell>
-                      <StatusOrcamentoBadge status={o.status} />
+                      <StatusOrcamentoBadge status={o.status} etapaEsteira={o.etapaEsteira} />
                     </TableCell>
                     <TableCell className="text-right tabular-nums">
                       {o.valorFinal !== null ? formatarMoeda(o.valorFinal) : "—"}

@@ -37,6 +37,9 @@ export default function DevPreviewOrcamentoPage() {
   return (
     <Shell user={{ nome: "Usuário de teste", organizacao: "Organização de teste" }}>
       <OrcamentoAbas
+        orcamentoId="preview-orcamento-1"
+        status="enviado"
+        etapaEsteiraInicial="projeto_3d"
         clienteNome="Marcenaria Boa Vista"
         clienteId="preview-cliente-1"
         clienteTelefone="(11) 99999-9999"

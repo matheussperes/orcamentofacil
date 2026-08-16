@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { modulosDeJson } from "@/lib/ambiente/mapear";
 import { idDoItem, type ModuloOrcamento } from "@/lib/orcamento";
+import type { EtapaEsteira } from "@/lib/orcamento/etapa-esteira";
 
 // Task 13.3c (contrato .maestro/tmp/13.3c-contract.md) — leitura server-side
 // de um orçamento por id para `/orcamento/[id]`. Mesmo espírito de
@@ -31,6 +32,9 @@ export interface OrcamentoDetalhe {
    * congelamento da proposta; `null` = nunca congelado. Ortogonal a
    * `status`. Gravado por `lib/orcamento/congelar.ts`. */
   congeladoEm: string | null;
+  /** Task 5.10-front (Modelo-de-Dominio.md §7.2) — etapa de esteira, insumo
+   * de `rotuloDoCard`/`SeletorEtapaEsteira` no topo de `/orcamento/[id]`. */
+  etapaEsteira: EtapaEsteira;
 }
 
 interface ClienteRow {
@@ -70,7 +74,7 @@ export async function buscarOrcamentoPorId(id: string): Promise<OrcamentoDetalhe
 
   const { data, error } = await supabase
     .from("orcamento")
-    .select("id, status, prazo_entrega, frete, congelado_em, cliente(id, nome, telefone, endereco)")
+    .select("id, status, prazo_entrega, frete, congelado_em, etapa_esteira, cliente(id, nome, telefone, endereco)")
     .eq("id", id)
     .maybeSingle();
 
@@ -86,6 +90,7 @@ export async function buscarOrcamentoPorId(id: string): Promise<OrcamentoDetalhe
     prazoEntrega: (data.prazo_entrega as string | null) ?? null,
     frete: (data.frete as number | null) ?? null,
     congeladoEm: (data.congelado_em as string | null) ?? null,
+    etapaEsteira: data.etapa_esteira as EtapaEsteira,
     clienteNome: nomeDoCliente(data.cliente as ClienteAninhado),
     clienteId: cliente?.id ?? "",
     clienteTelefone: cliente?.telefone ?? null,
@@ -124,7 +129,7 @@ export async function buscarItemDoOrcamento(
   const { data, error } = await supabase
     .from("orcamento")
     .select(
-      "id, status, prazo_entrega, frete, congelado_em, cliente(id, nome, telefone, endereco), itens"
+      "id, status, prazo_entrega, frete, congelado_em, etapa_esteira, cliente(id, nome, telefone, endereco), itens"
     )
     .eq("id", orcamentoId)
     .maybeSingle();
@@ -148,6 +153,7 @@ export async function buscarItemDoOrcamento(
       prazoEntrega: (data.prazo_entrega as string | null) ?? null,
       frete: (data.frete as number | null) ?? null,
       congeladoEm: (data.congelado_em as string | null) ?? null,
+      etapaEsteira: data.etapa_esteira as EtapaEsteira,
       clienteNome: nomeDoCliente(data.cliente as ClienteAninhado),
       clienteId: cliente?.id ?? "",
       clienteTelefone: cliente?.telefone ?? null,

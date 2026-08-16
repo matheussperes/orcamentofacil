@@ -7,7 +7,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AbaAtivaProvider } from "./AbaAtivaContext";
 import { usePageHeader } from "@/components/shell/PageHeaderContext";
 import { EditarClienteDialog } from "./EditarClienteDialog";
+import { SeletorEtapaEsteira } from "./SeletorEtapaEsteira";
+import { StatusOrcamentoBadge } from "@/components/dashboard/StatusOrcamentoBadge";
 import { normalizarAba } from "@/lib/orcamento/abaAtiva";
+import type { EtapaEsteira } from "@/lib/orcamento/etapa-esteira";
+import type { StatusOrcamento } from "@/lib/dashboard/orcamentos";
 
 // Task 13.3c (contrato .maestro/tmp/13.3c-contract.md) — shell de
 // `/orcamento/[id]`: 4 abas (Design-System Seção 7.8, estilo underline).
@@ -53,6 +57,16 @@ import { normalizarAba } from "@/lib/orcamento/abaAtiva";
 // (`<AbaPlaceholder titulo="Proposta" task="13.6" />`) que existia desde a
 // Task 13.3c.
 export interface OrcamentoAbasProps {
+  /** Task 5.10-front — necessário pra `SeletorEtapaEsteira` chamar
+   * `atualizarEtapaEsteira(orcamentoId, ...)`. */
+  orcamentoId: string;
+  /** Task 5.10-front (Modelo-de-Dominio.md §7.2, Q-15) — status comercial do
+   * orçamento, necessário junto com `etapaEsteiraInicial` para o badge
+   * `StatusOrcamentoBadge`/`rotuloDoCard` no topo da tela. */
+  status: StatusOrcamento;
+  /** Task 5.10-front — etapa de esteira atual (Modelo-de-Dominio.md §7.2),
+   * alimenta o badge e o valor inicial de `SeletorEtapaEsteira`. */
+  etapaEsteiraInicial: EtapaEsteira;
   clienteNome: string;
   /** Task 0.5b — necessários pra pré-popular/chamar `atualizarCliente` a
    * partir do diálogo de edição (`EditarClienteDialog`). */
@@ -94,6 +108,9 @@ export function OrcamentoAbas(props: OrcamentoAbasProps) {
 }
 
 function OrcamentoAbasInterno({
+  orcamentoId,
+  status,
+  etapaEsteiraInicial,
   clienteNome,
   clienteId,
   clienteTelefone,
@@ -113,6 +130,10 @@ function OrcamentoAbasInterno({
     telefone: clienteTelefone,
     endereco: clienteEndereco,
   });
+
+  // Task 5.10-front — mesmo espírito: etapa de esteira vive em estado local
+  // pra `SeletorEtapaEsteira` atualizar o badge ao lado sem F5.
+  const [etapaEsteira, setEtapaEsteira] = useState(etapaEsteiraInicial);
 
   // Sobrescreve a Topbar com o breadcrumb "Orçamentos / <nome do cliente>"
   // (Design-System Seção 6) enquanto esta página estiver montada — ver
@@ -142,7 +163,7 @@ function OrcamentoAbasInterno({
 
   return (
     <AbaAtivaProvider value={setAbaAtiva}>
-      <div className="mb-md flex items-center gap-1">
+      <div className="mb-md flex flex-wrap items-center gap-sm">
         <p className="text-corpo text-cinza-500">
           Cliente: <span className="font-medium text-cinza-900">{cliente.nome}</span>
         </p>
@@ -155,6 +176,12 @@ function OrcamentoAbasInterno({
             onSalvo={setCliente}
           />
         )}
+        <StatusOrcamentoBadge status={status} etapaEsteira={etapaEsteira} />
+        <SeletorEtapaEsteira
+          orcamentoId={orcamentoId}
+          etapaEsteiraInicial={etapaEsteira}
+          onAtualizado={setEtapaEsteira}
+        />
       </div>
       <Tabs value={abaAtiva} onValueChange={setAbaAtiva}>
         <TabsList>

@@ -22,6 +22,7 @@ const ORCAMENTOS_MOCK: DadosDashboard["orcamentos"] = [
   {
     id: "mock-1",
     status: "rascunho",
+    etapaEsteira: "novo",
     criadoEm: "2026-07-20T10:00:00.000Z",
     clienteNome: "Marcenaria Boa Vista",
     valorFinal: 4800,
@@ -30,6 +31,7 @@ const ORCAMENTOS_MOCK: DadosDashboard["orcamentos"] = [
   {
     id: "mock-2",
     status: "enviado",
+    etapaEsteira: "novo",
     criadoEm: "2026-07-22T14:30:00.000Z",
     clienteNome: "Ana Paula Ribeiro",
     valorFinal: 12500,
@@ -38,6 +40,7 @@ const ORCAMENTOS_MOCK: DadosDashboard["orcamentos"] = [
   {
     id: "mock-3",
     status: "aprovado",
+    etapaEsteira: "visita_agendada",
     criadoEm: "2026-07-18T09:15:00.000Z",
     clienteNome: "Construtora Alfa",
     valorFinal: 32000,
@@ -46,6 +49,7 @@ const ORCAMENTOS_MOCK: DadosDashboard["orcamentos"] = [
   {
     id: "mock-4",
     status: "recusado",
+    etapaEsteira: "novo",
     criadoEm: "2026-07-10T08:00:00.000Z",
     clienteNome: "João Carlos Menezes",
     valorFinal: null,
@@ -54,6 +58,7 @@ const ORCAMENTOS_MOCK: DadosDashboard["orcamentos"] = [
   {
     id: "mock-5",
     status: "aprovado",
+    etapaEsteira: "aguardando_aprovacao",
     criadoEm: "2026-07-25T16:45:00.000Z",
     clienteNome: "Studio Casa Nova",
     valorFinal: 7800,

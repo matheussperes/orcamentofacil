@@ -85,6 +85,9 @@ export default async function OrcamentoPage({ params }: { params: { id: string }
 
   return (
     <OrcamentoAbas
+      orcamentoId={orcamento.id}
+      status={orcamento.status}
+      etapaEsteiraInicial={orcamento.etapaEsteira}
       clienteNome={orcamento.clienteNome}
       clienteId={orcamento.clienteId}
       clienteTelefone={orcamento.clienteTelefone}

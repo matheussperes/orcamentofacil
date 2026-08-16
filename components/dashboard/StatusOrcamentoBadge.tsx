@@ -1,5 +1,6 @@
 import { Badge } from "@/components/ui/badge";
 import type { StatusOrcamento } from "@/lib/dashboard/orcamentos";
+import type { EtapaEsteira } from "@/lib/orcamento/etapa-esteira";
 
 // Task 13.3b — mapeia o status REAL de `orcamento` (banco, 4 valores:
 // supabase/migrations/20260727090300_orcamento.sql) para a variante de
@@ -29,6 +30,32 @@ const VARIANTE: Record<StatusOrcamento, "rascunho" | "enviado" | "aprovado" | "e
   recusado: "erro",
 };
 
-export function StatusOrcamentoBadge({ status }: { status: StatusOrcamento }) {
-  return <Badge variant={VARIANTE[status]}>{ROTULO[status]}</Badge>;
+// Task 5.10-front (Modelo-de-Dominio.md Seção 7.2, Q-15) — `rotuloDoCard`
+// decide qual dos 5 badges da Design-System §2.5 aparece: "Em andamento" e
+// "Fechado" vêm de `etapaEsteira`; "Rascunho"/"Enviado"/"Aprovado"/"Recusado"
+// continuam vindo de `status` quando `etapaEsteira === "novo"`. Função pura,
+// determinística, total — implementada exatamente conforme a tabela de
+// decisão do domínio, sem desvio.
+export function rotuloDoCard(
+  status: StatusOrcamento,
+  etapaEsteira: EtapaEsteira
+): { rotulo: string; variante: "rascunho" | "enviado" | "aprovado" | "erro" | "em-andamento" | "fechado" } {
+  if (etapaEsteira === "fechado") {
+    return { rotulo: "Fechado", variante: "fechado" };
+  }
+  if (etapaEsteira === "visita_agendada" || etapaEsteira === "projeto_3d" || etapaEsteira === "aguardando_aprovacao") {
+    return { rotulo: "Em andamento", variante: "em-andamento" };
+  }
+  return { rotulo: ROTULO[status], variante: VARIANTE[status] };
+}
+
+export function StatusOrcamentoBadge({
+  status,
+  etapaEsteira,
+}: {
+  status: StatusOrcamento;
+  etapaEsteira: EtapaEsteira;
+}) {
+  const { rotulo, variante } = rotuloDoCard(status, etapaEsteira);
+  return <Badge variant={variante}>{rotulo}</Badge>;
 }

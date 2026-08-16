@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import type { EtapaEsteira } from "@/lib/orcamento/etapa-esteira";
 import { carregarEstadoAmbiente } from "@/lib/ambiente/carregar";
 import { calcularEngineOrcamento } from "@/lib/ambiente/calcularEngineOrcamento";
 import { carregarConfiguracaoPrecificacao } from "@/lib/precificacao/carregarConfiguracao";
@@ -33,6 +34,9 @@ export type StatusOrcamento = "rascunho" | "enviado" | "aprovado" | "recusado";
 export interface OrcamentoDashboardRow {
   id: string;
   status: StatusOrcamento;
+  /** Task 5.10-front (Modelo-de-Dominio.md §7.2) — etapa de esteira, insumo
+   * de `rotuloDoCard` junto com `status` para decidir o badge do card. */
+  etapaEsteira: EtapaEsteira;
   criadoEm: string;
   /** `orcamento` não tem coluna de título — o rótulo da linha é o nome do
    * cliente (`cliente.nome`), decisão do contrato desta task. */
@@ -112,7 +116,7 @@ export async function buscarDadosDashboard(): Promise<DadosDashboard> {
 
   const { data, error } = await supabase
     .from("orcamento")
-    .select("id,status,criado_em,cliente(nome)")
+    .select("id,status,etapa_esteira,criado_em,cliente(nome)")
     .order("atualizado_em", { ascending: false });
 
   if (error) {
@@ -133,6 +137,7 @@ export async function buscarDadosDashboard(): Promise<DadosDashboard> {
       return {
         id,
         status: row.status as StatusOrcamento,
+        etapaEsteira: row.etapa_esteira as EtapaEsteira,
         criadoEm: row.criado_em as string,
         clienteNome: nomeDoCliente(row.cliente as ClienteAninhado),
         valorFinal,
