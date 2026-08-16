@@ -18,8 +18,8 @@ import { isRotaPublica } from "@/lib/auth/rotas";
 // as listadas em `lib/auth/rotas.ts` (`/login`, `/signup`) + os assets já
 // excluídos no `matcher` abaixo. Isso inclui os laboratórios `/modulo`,
 // `/ambientes`, `/biblioteca` — hoje públicos, passam a exigir login também.
-// Migrá-los para o shell autenticado v3 é a Task 13.3b; até lá funcionam
-// normalmente, só que atrás do gate.
+// `/biblioteca` migrou para o shell autenticado v3 na Task 13.7c, `/modulo`
+// migrou na Task 5.1-5.4 — ambos já rodam dentro do grupo de rota `(app)`.
 export async function middleware(request: NextRequest) {
   const { response, claims } = await updateSession(request);
 

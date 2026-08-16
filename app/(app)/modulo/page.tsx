@@ -10,7 +10,7 @@ import { carregarCatalogo, coresDisponiveis } from "@/lib/catalog";
 import { listarCategorias } from "@/lib/categorias";
 import type { ModuloOrcamento } from "@/lib/orcamento";
 import type { BoxModule } from "@/lib/engine/box/types";
-import { EditorItemNucleo, caixaInicial, placaInicial, type ResultadoSalvarItem } from "./EditorItemNucleo";
+import { EditorItemNucleo, caixaInicial, placaInicial, type ResultadoSalvarItem } from "@/app/modulo/EditorItemNucleo";
 
 // Task 13.3e (contrato .maestro/tmp/13.3e-contract.md) — este arquivo deixou
 // de conter o editor inteiro (accordion + custo + peças + plano de corte,
@@ -43,6 +43,18 @@ import { EditorItemNucleo, caixaInicial, placaInicial, type ResultadoSalvarItem 
 // padrão do catálogo). Isso reproduz o comportamento de antes (a mesma janela
 // de "patch pós-mount"), sem violar o contrato de `EditorItemNucleo` de só
 // ler `estadoInicial` na primeira renderização.
+//
+// Task 5.1-5.4 (contrato .maestro/state/contracts/5.1-5.4.md, RF-35): rota
+// migrada de `app/modulo/page.tsx` (fora do shell) para
+// `app/(app)/modulo/page.tsx` (dentro do shell autenticado v3) — URL
+// continua `/modulo`, grupo de rota `(app)` não aparece na URL. `page.tsx`
+// só troca de pasta; `EditorItemNucleo`/`*Card.tsx`/`secoes.ts` continuam em
+// `app/modulo/` como módulos compartilhados (também usados por
+// `/orcamento/[id]/item/[itemId]`), sem `page.tsx` próprio ali. O wrapper
+// `<div className="wrap"><header className="top">` e os 3 links de texto
+// legados ("← calculadora", "Biblioteca de módulos", "Catálogo") saíram —
+// `Shell` já dá container/padding, e a navegação passa a ser só pela
+// sidebar.
 export default function EditorModulo() {
   const [origemAtual, setOrigemAtual] = useState<ModuloOrcamento["origem"]>("custom_box");
   // `organizacaoId: null` = o gabarito sendo editado é da base GLOBAL
@@ -135,43 +147,38 @@ export default function EditorModulo() {
   }
 
   return (
-    <div className="wrap">
-      <header className="top">
-        <h1>Editor de item (módulo-caixa + placa)</h1>
-        <p>
-          Monte a caixa vazia, divida em vãos e aplique portas/gavetas nos vãos selecionados — ou
-          configure uma placa avulsa (prateleira, fechamento, painel).{" "}
-          <a href="/">← calculadora</a> · <a href="/biblioteca">Biblioteca de módulos</a> ·{" "}
-          <a href="/catalogo">Catálogo</a>
+    <div>
+      <p className="text-corpo text-cinza-600">
+        Monte a caixa vazia, divida em vãos e aplique portas/gavetas nos vãos selecionados — ou
+        configure uma placa avulsa (prateleira, fechamento, painel).
+      </p>
+      {presetEditando && origemAtual === "custom_box" && (
+        <p className="mt-xs text-legenda text-cinza-500">
+          {presetEditando.organizacaoId === null
+            ? "Editando um módulo da base global (somente leitura) — “Salvar este módulo” cria uma cópia própria na sua biblioteca, sem alterar o original."
+            : "Editando um módulo já cadastrado na sua biblioteca — “Salvar este módulo” atualiza esse gabarito (não cria um novo)."}
         </p>
-        {presetEditando && origemAtual === "custom_box" && (
-          <p className="muted" style={{ fontSize: 12, marginTop: -12 }}>
-            {presetEditando.organizacaoId === null
-              ? "Editando um módulo da base global (somente leitura) — “Salvar este módulo” cria uma cópia própria na sua biblioteca, sem alterar o original."
-              : "Editando um módulo já cadastrado na sua biblioteca — “Salvar este módulo” atualiza esse gabarito (não cria um novo)."}
-          </p>
-        )}
-        {/* Seletor de tipo de item: troca qual núcleo (custom_box × placa)
-            fica visível. Os dois ficam sempre montados (ver nota de escopo
-            no topo do arquivo) — trocar não reseta o progresso de nenhum
-            dos dois lados. */}
-        <div className="flex flex-wrap gap-sm" style={{ marginTop: 4 }}>
-          <Button
-            variant={origemAtual === "custom_box" ? "iconActive" : "ghost"}
-            size="sm"
-            onClick={() => setOrigemAtual("custom_box")}
-          >
-            Módulo-caixa
-          </Button>
-          <Button
-            variant={origemAtual === "placa" ? "iconActive" : "ghost"}
-            size="sm"
-            onClick={() => setOrigemAtual("placa")}
-          >
-            Placa
-          </Button>
-        </div>
-      </header>
+      )}
+      {/* Seletor de tipo de item: troca qual núcleo (custom_box × placa)
+          fica visível. Os dois ficam sempre montados (ver nota de escopo
+          no topo do arquivo) — trocar não reseta o progresso de nenhum
+          dos dois lados. */}
+      <div className="mt-sm flex flex-wrap gap-sm">
+        <Button
+          variant={origemAtual === "custom_box" ? "iconActive" : "ghost"}
+          size="sm"
+          onClick={() => setOrigemAtual("custom_box")}
+        >
+          Módulo-caixa
+        </Button>
+        <Button
+          variant={origemAtual === "placa" ? "iconActive" : "ghost"}
+          size="sm"
+          onClick={() => setOrigemAtual("placa")}
+        >
+          Placa
+        </Button>
+      </div>
 
       <div className={origemAtual === "custom_box" ? "" : "hidden"}>
         <EditorItemNucleo
