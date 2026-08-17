@@ -39,6 +39,11 @@
 // desta lista) com dados mock de organização/cliente/linhas de proposta,
 // sem Supabase.
 //
+// (Nota histórica: `/modulo`, junto de `/ambientes` e `/biblioteca`, era
+// citado aqui como laboratório público sem gate; hoje exige sessão como
+// qualquer outra rota — ver `ROTAS_PUBLICAS` abaixo, que lista só os
+// harnesses `/dev/preview/*`.)
+//
 // `/dev/preview/perfil` (Task 13.7a): mesmo espírito — harness de `/perfil`
 // (rota real, protegida, FORA desta lista) com dados mock de Organização e
 // Perfil pessoal, sem Supabase.
@@ -50,6 +55,10 @@
 // `/dev/preview/biblioteca` (Task 13.7c): mesmo espírito — harness de
 // `/biblioteca` (rota real, protegida, FORA desta lista, agora dentro do
 // grupo `(app)`) com gabaritos mock (global + próprios da org), sem Supabase.
+//
+// `/dev/preview/modulo` (Task 5.1-5.4, RF-35): mesmo espírito — harness de
+// `/modulo` (rota real, protegida, FORA desta lista, agora dentro do grupo
+// `(app)`), sem sessão real (usa `carregarCatalogo()` localStorage-first).
 export const ROTAS_PUBLICAS = [
   "/login",
   "/signup",
@@ -62,6 +71,7 @@ export const ROTAS_PUBLICAS = [
   "/dev/preview/perfil",
   "/dev/preview/catalogo",
   "/dev/preview/biblioteca",
+  "/dev/preview/modulo",
 ] as const;
 
 /** Rotas que NÃO passam pelo gate de sessão do middleware. */

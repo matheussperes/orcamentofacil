@@ -61,6 +61,15 @@ const TITULOS_POR_ROTA: Record<string, { titulo: string; subtitulo?: string }> =
     titulo: "Biblioteca de módulos",
     subtitulo: "Gabaritos prontos (base global + seus próprios) para usar nos orçamentos (preview com dados mock)",
   },
+  // Task 5.1-5.4 (contrato .maestro/state/contracts/5.1-5.4.md, RF-35)
+  "/modulo": {
+    titulo: "Editor de módulo",
+    subtitulo: "Monte a caixa, os vãos e as portas/gavetas — ou configure uma placa avulsa",
+  },
+  "/dev/preview/modulo": {
+    titulo: "Editor de módulo",
+    subtitulo: "Monte a caixa, os vãos e as portas/gavetas — ou configure uma placa avulsa (preview com dados mock)",
+  },
 };
 const TITULO_PADRAO = { titulo: "OrçaFácil" };
 
