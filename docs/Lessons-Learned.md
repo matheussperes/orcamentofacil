@@ -343,3 +343,50 @@ Adicionar ao protocolo do Maestro um passo obrigatório de verificação antes d
 
 Candidata a melhoria do framework — item de checklist do Maestro para limpeza de branches (protocolo de segurança contra delete acidental de trabalho, mesmo que recuperável).
 
+---
+
+## 2026-08-17 — Épico V2.1/Fase D (Pré-Lançamento), Lotes 0–5 fechados por completo
+
+Retrospectiva de fase inteira (63 tasks, 6 lotes, `docs/Backlog.md` linha 204 a 445). Cobre o que ainda não tinha entrada própria: a cauda do Lote 4 (Task 4.16-front) e o Lote 5 completo (5.5–5.6, 5.7–5.9, 5.10-back/front, 5.1–5.4). As entradas de 2026-08-08, 2026-08-13, 2026-08-14 e 2026-08-16 já cobrem Lote 0–2 e Lote 4 (cauda anterior) e o incidente de branch da Task 5.10-front — não repetidas aqui.
+
+**Métricas do período (fase inteira, 6 lotes)**
+- Tasks concluídas: 63 (Lote 0: 6/6, Lote 1: 7/7, Lote 2: 18/18, Lote 3: 14/14, Lote 4: 13/13, Lote 5: 5/5)
+- Vetos de UX: 1 (Task 4.15) | Segurança: 1 bloqueante (Task 4.15) — ambos já registrados na entrada de 2026-08-13 | Build/Lint: 0 vetos formais, 1 quebra de build real auto-corrigida antes de qualquer gate (Task 5.10-front, ver abaixo) | Testes: 0
+- Circuit Breakers: 0 em toda a fase (nenhuma menção em `docs/Backlog.md`, nenhum `REPROVADO`/`NÃO APROVADO` registrado no arquivo)
+
+**Padrão 1 — investigação prévia do Maestro reduz escopo do contrato em pelo menos 4 tasks da fase**
+
+Evidência, todas em `docs/Backlog.md`:
+- Task 2.14–2.17 (linha 280): "dos 4 itens do documento-fonte, 2 já estavam implementados... confirmados por teste existente sem reimplementação"
+- Task 2.24–2.26 (linha 283): "dos 3 itens do documento-fonte, item 2.25... já estava pronto desde Task 2.14–2.17 — confirmado, não retrabalhado"
+- Task 2.28–2.30 (linha 285): "investigação prévia (executor + code-auditor + qa-engineer) confirmou que 2.28... 2.29... e 2.30... já atendidos por código pré-existente. Gap real: badge comercial"
+- Task 5.1–5.4 (linha 443): "investigação prévia confirmou que `/biblioteca` já estava 100% migrada desde Task 13.7c... sem mudança necessária lá. Escopo real: `/modulo`"
+
+Quatro ocorrências em três lotes diferentes (2, 5), ao longo de toda a fase (2026-08-08 a 2026-08-17) — não é um acidente de uma sessão. Em cada caso, a investigação foi feita antes de o executor começar a implementar (ou pelo próprio Maestro antes do contrato, ou pelo executor+code-auditor+qa-engineer logo no início da execução), e o resultado documentado no Backlog é sempre a mesma estrutura: "X itens do escopo descrito já existiam, gap real é Y". Nenhuma dessas quatro tasks levou a retrabalho ou a uma segunda rodada de gate por escopo mal dimensionado.
+
+**Causa estrutural provável**: o Backlog é escrito a partir do documento-fonte (PRD/Modelo-de-Domínio) no momento do planejamento do lote, sem re-checar o estado real do código a cada task — código anterior do mesmo lote (ou de lotes anteriores, caso de 5.1–5.4 com a Task 13.7c) frequentemente já cobre parte do escopo descrito. Não há um passo formal documentado na definição do agente `maestro:maestro` pedindo essa investigação antes de escrever o contrato — ela aconteceu de forma ad hoc, mas com resultado positivo mensurável (zero retrabalho nas 4 tasks) toda vez que aconteceu.
+
+**Ação proposta**: formalizar na Seção de delegação do agente `maestro:maestro` um passo explícito de investigação de estado real do código antes de preencher o contrato de qualquer task cujo escopo descrito no Backlog tenha mais de um item — grep pelos símbolos/telas citados no documento-fonte e confirmar quais já existem, antes de escrever "o que falta" no contrato do executor. Já é prática ad hoc bem-sucedida; falta torná-la passo obrigatório e não uma decisão de julgamento por task.
+
+**Escopo**: Candidata a melhoria do framework — investigação de estado real antes de escrever contrato é uma prática de qualquer esteira orientada a Backlog derivado de PRD, não peculiar deste projeto. Proposta registrada em `.maestro/proposals/2026-08-17-maestro-investigacao-previa-antes-do-contrato.md`.
+
+**Padrão 2 (observação pontual, n=1, sem generalizar) — instrução de contrato "replique o padrão X" não previu diretiva de módulo do arquivo de referência**
+
+Evidência (`docs/Backlog.md` linha 442, Task 5.10-front): a Server Action `atualizarEtapaEsteira` usava `"use server"` inline dentro de um arquivo que também exportava funções síncronas (`lib/orcamento/etapa-esteira.ts`) — import por Client Component quebrou build real (regra do Next.js exige `"use server"` no topo do arquivo, ou arquivo dedicado só de Server Actions). O texto do Backlog registra explicitamente: "**Correção de arquitetura (não foi achado de gate)**" — ou seja, nenhum dos três gates (`code-auditor`, `qa-engineer`, `ux-auditor`) encontrou o problema; foi corrigido pelo próprio executor (extração para `lib/orcamento/atualizarEtapaEsteira.ts` com `"use server"` no topo) antes de qualquer gate rodar, e os três aprovaram de primeira depois da correção.
+
+Não há registro preservado (os `verify-<task>.log` guardam só o estado final aprovado) que permita confirmar se foi um `npm run build` de autoverificação do executor ou outro mecanismo que pegou o erro antes do gate — só que não foi um gate. Isso é insuficiente para generalizar uma causa estrutural do contrato do Maestro (não há um segundo caso na fase com o mesmo padrão de "replicar componente sem prever diretiva de módulo"), mas é evidência concreta de que erros desse tipo (diretiva de arquivo, não sintaxe/tipo) não são pegos por lint/typecheck — só por build real. Registrado como observação, não como padrão: se reaparecer em fase futura, dois casos já justificam entrada de padrão com ação estrutural.
+
+**Escopo**: Somente registro deste projeto (n=1, sem ação proposta — aguardando recorrência antes de virar padrão acionável).
+
+**Padrão 3 (observação pontual, testemunho direto do Maestro, sem trilha em log) — memory-manager escreveu conteúdo factualmente incorreto duas vezes na mesma sessão**
+
+Relatado pelo Maestro ao convocar esta retrospectiva (não há trilha em `git log` porque a correção foi feita antes do commit de sincronização — o Backlog em `main` já reflete o texto corrigido em ambos os casos): na Task 4.16-front, um bullet de histórico chegou a citar `lib/format.ts` como o arquivo que ganhou a função nova, quando o arquivo real era `components/perfil/PerfilLab.tsx`; na Task 5.7-5.9, um rascunho de bullet descreveu um caminho de upgrade futuro mencionando persistir `precoFinal`, quando o comentário `ponytail:` real no código (confirmado em `lib/dashboard/orcamentos.ts`, citado no bullet final da linha 441 do Backlog) descreve outra coisa (somar `linhaProposta.valorRateado` quando `congeladoEm !== null`). As duas foram corrigidas por conferência humana/Maestro antes de chegar ao commit, não pelo próprio `memory-manager` em auto-checagem.
+
+Isso é consistente com o padrão já registrado na entrada de 2026-08-14 deste mesmo arquivo (desync entre bullet e tabela-resumo em 8 de 18 linhas do Lote 2) — mas é uma classe de erro diferente: lá era desatualização de campo (Status/Tag não tocado), aqui é conteúdo inventado ou com caminho errado dentro de um campo que foi tocado. Duas ocorrências na mesma sessão, sem trilha de log independente para confirmar frequência fora dela — insuficiente para uma ação estrutural nova além da já registrada em 2026-08-14 (checklist de duas localizações), mas reforça que o `memory-manager` não tem etapa de autoverificação (reler o diff real da task antes de escrever o bullet) antes de escrever conteúdo factual, só antes de sincronizar Status/Tag.
+
+**Ação proposta**: ampliar a proposta já existente em `.maestro/proposals/2026-08-14-memory-manager-checklist-duas-localizacoes.md` (ainda não decidida) para incluir um segundo item de checklist: antes de escrever qualquer bullet de histórico de execução, o `memory-manager` deve confirmar caminho de arquivo e conteúdo técnico citado contra o diff real da branch mesclada (`git show <merge-commit> --stat` e leitura do comentário/trecho citado), não reconstruir de memória a partir do contrato original da task.
+
+**Escopo**: Somente este projeto para a ação (é uma extensão de proposta já existente); o padrão em si (agente de memória sem etapa de verificação contra a fonte real antes de escrever fato) é genérico, mas já coberto pela proposta de 2026-08-14 — não abre proposta nova.
+
+---
+
