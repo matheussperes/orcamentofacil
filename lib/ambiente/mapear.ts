@@ -81,7 +81,7 @@ export function linhaDeParede(input: {
     elementos: input.parede.elementos,
     itens: input.parede.itens,
     overrides_juncao: input.overrides,
-    alturas_override: input.parede.alturasOverride ?? null,
+    alturas_override: input.parede.alturasOverride ?? {},
   };
 }
 
