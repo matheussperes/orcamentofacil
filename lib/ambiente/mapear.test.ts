@@ -167,8 +167,21 @@ describe("linhaDeParede", () => {
       elementos: [],
       itens: [],
       overrides_juncao: overrides,
-      alturas_override: null,
+      alturas_override: {},
     });
+  });
+
+  it("grava alturas_override: {} quando parede.alturasOverride é undefined (parede recém-criada, sem override — bugfix-parede-alturas-override-null: a coluna é NOT NULL, null quebra o INSERT)", () => {
+    const parede = paredeInicial();
+
+    const linha = linhaDeParede({
+      organizacaoId: "org-1",
+      ambienteId: "ambiente-1",
+      parede,
+      overrides: [],
+    });
+
+    expect(linha.alturas_override).toEqual({});
   });
 
   it("grava alturas_override a partir de parede.alturasOverride quando preenchido (Task 2.3-2.6)", () => {
