@@ -465,6 +465,12 @@ passado pelo gatilho real e, se não for `admin`, sem conseguir sair dela de
 jeito nenhum. `docs/Modelo-de-Dominio.md` Seção 7.2 documenta `fechado` como
 deliberadamente inalcançável nesta fase pelas mesmas razões.*
 
+### Correções pós-Fase D
+
+**Bugs achados em produção após fechamento da Fase D (2026-08-24):**
+
+- **bugfix-parede-alturas-override-null** ✅ (2026-08-24) — Bug crítico: "Não foi possível salvar a parede" ao criar orçamento novo. Causa raiz: `lib/ambiente/mapear.ts` linha 84 gravava `alturas_override: input.parede.alturasOverride ?? null`, mas coluna `parede.alturas_override` é `jsonb not null default '{}'::jsonb` (migration `20260801100000`). Parede recém-criada nunca define `alturasOverride` (fica `undefined`), então `undefined ?? null` produzia `null`, violando constraint NOT NULL. Fix: `?? null` → `?? {}` (valor correto = "tudo herdado", conforme documentação da migration). Sem mudança de schema/migration. 641/641 testes (2 novos em `lib/ambiente/mapear.test.ts`: cenário do bug + preservação de override existente). `code-auditor` APROVADO (1ª), `qa-engineer` APROVADO (1ª). Sem `security-auditor` (lógica pura), sem `ux-auditor` (backend/persistência). Impacto Visual: Nenhum.
+
 ### Backlog futuro (pós-MVP — avaliado, não agendado)
 
 > Registrado em 2026-07-28 a pedido do operador. Nada aqui está autorizado
