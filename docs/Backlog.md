@@ -41,20 +41,20 @@ Escrever a Seção 0 — Direção de Arte — no topo de `docs/Design-System.md
 
 #### Task R.2a — Composição de Tela: 5 telas críticas
 
-- **Status**: ⏱️ Planejado
+- **Status**: ✅ Completo
 - **Executor**: product-designer
 - **Modelo Recomendado**: Sonnet (padrão do agente)
 - **Depende de**: R.1
-- **Referências**: `docs/Plano-Reparacao-orcamentofacil.md` R.2; `docs/Design-System.md` Seção 0 (nova)
+- **Referências**: `docs/Plano-Reparacao-orcamentofacil.md` R.2; `docs/Design-System.md` Seção 0 (nova); `docs/Screen-Composition.md` (novo)
 
 **Descrição**
 Escrever `docs/Screen-Composition.md` para as cinco telas críticas: Orçamento (`/orcamento/[id]`), Editor de Item (`/orcamento/[id]/item/[itemId]`), Catálogo (`/catalogo`), Biblioteca (`/biblioteca`) e Proposta impressa (`/proposta/[id]/pdf`, nível `vitrine`). Ancorar a composição no que existe de fato (Glob/Read nas telas reais), não no que foi planejado — o app divergiu do Mapa-de-Telas em pontos que o documento não capturou. Declarar densidade explícita e oposta: Catálogo e Biblioteca são telas de consulta densas; o Editor de Item é formulário em etapas, espaçoso na coluna de decisão e denso na coluna técnica — hoje as duas colunas competem pelo mesmo peso. O campo "Poda" é obrigatório em toda tela, especialmente no Editor de Item: dizer o que sai da tela e para onde vai.
 
 **Critérios de aceitação**
-- [ ] `docs/Screen-Composition.md` cobre as 5 telas, ancorado no código real (não no Mapa-de-Telas)
-- [ ] Densidade declarada explicitamente para Catálogo, Biblioteca e Editor de Item (as duas colunas do Editor com pesos distintos, não competindo)
-- [ ] Seção "Poda" presente em cada tela, com destino explícito do que sai
-- [ ] Proposta impressa marcada nível `vitrine`
+- [x] `docs/Screen-Composition.md` cobre as 5 telas, ancorado no código real (não no Mapa-de-Telas)
+- [x] Densidade declarada explicitamente para Catálogo, Biblioteca e Editor de Item (as duas colunas do Editor com pesos distintos, não competindo)
+- [x] Seção "Poda" presente em cada tela, com destino explícito do que sai
+- [x] Proposta impressa marcada nível `vitrine`
 
 ---
 
