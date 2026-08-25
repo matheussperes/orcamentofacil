@@ -108,7 +108,7 @@ Decompor `components/ambientes/AmbientesLab.tsx` (2.250 linhas) até nenhum arqu
 
 #### Task R.3b — Decompor `app/components/BoxCanvas.tsx`
 
-- **Status**: ⏱️ Planejado
+- **Status**: ✅ Completo
 - **Executor**: frontend-engineer
 - **Modelo Recomendado**: Sonnet (padrão do agente)
 - **Depende de**: nenhuma (branch própria — nunca na mesma rodada que R.3a/R.3c)
@@ -118,9 +118,12 @@ Decompor `components/ambientes/AmbientesLab.tsx` (2.250 linhas) até nenhum arqu
 Decompor `app/components/BoxCanvas.tsx` (1.086 linhas) até nenhum arquivo da árvore passar de 400 linhas. Decomposição pura: separar apresentação de lógica, extrair sub-componentes. Nenhuma mudança de comportamento, nenhuma mudança visual nesta task.
 
 **Critérios de aceitação**
-- [ ] Nenhum arquivo resultante da árvore acima de 400 linhas
-- [ ] Nenhuma mudança de comportamento ou de aparência (é refatoração pura)
-- [ ] qa-engineer roda os testes existentes: refatoração sem regressão é o critério
+- [x] Nenhum arquivo resultante da árvore acima de 400 linhas
+- [x] Nenhuma mudança de comportamento ou de aparência (é refatoração pura)
+- [x] qa-engineer roda os testes existentes: refatoração sem regressão é o critério
+
+**Resultado**
+`BoxCanvas.tsx` reduzido de 1.086 para 269 linhas (wrapper de composição); 5 arquivos extraídos: `BoxCanvas.types.ts` (107 linhas), `lib/engine/box/canvas-geometria.ts` (225 linhas), `canvas-desenho-partes.ts` (209 linhas), `canvas-desenho-item-unico.ts` (152 linhas), `canvas-desenho-conjunto.ts` (238 linhas). Decomposição pura sem mudança de comportamento/aparência. Consumidores preservados: `EditorItemNucleo.tsx`, `LinhaPropostaCard.tsx`, `SecaoElevacaoConjunto.tsx` (import path e assinatura intactos). Aprovações: `code-auditor` APROVADO (1ª tentativa), `qa-engineer` APROVADO (1ª tentativa, 641/641 testes, mesma contagem do baseline). Sem `security-auditor`/`ux-auditor` (refatoração pura, contrato dispensa). Nenhum Circuit Breaker. Impacto Visual: Nenhum.
 
 ---
 
