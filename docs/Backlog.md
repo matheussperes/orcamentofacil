@@ -87,7 +87,7 @@ Todos os 4 achados não bloqueiam esta task. Recomendação: registrar como obse
 
 #### Task R.3a — Decompor `components/ambientes/AmbientesLab.tsx`
 
-- **Status**: ⏱️ Planejado
+- **Status**: ✅ Completo
 - **Executor**: frontend-engineer
 - **Modelo Recomendado**: Sonnet (padrão do agente)
 - **Depende de**: nenhuma (branch própria — nunca na mesma rodada que R.3b/R.3c)
@@ -97,9 +97,12 @@ Todos os 4 achados não bloqueiam esta task. Recomendação: registrar como obse
 Decompor `components/ambientes/AmbientesLab.tsx` (2.250 linhas) até nenhum arquivo da árvore passar de 400 linhas. Decomposição pura: separar apresentação de lógica, extrair sub-componentes. Nenhuma mudança de comportamento, nenhuma mudança visual nesta task.
 
 **Critérios de aceitação**
-- [ ] Nenhum arquivo resultante da árvore acima de 400 linhas
-- [ ] Nenhuma mudança de comportamento ou de aparência (é refatoração pura)
-- [ ] qa-engineer roda os testes existentes: refatoração sem regressão é o critério
+- [x] Nenhum arquivo resultante da árvore acima de 400 linhas
+- [x] Nenhuma mudança de comportamento ou de aparência (é refatoração pura)
+- [x] qa-engineer roda os testes existentes: refatoração sem regressão é o critério
+
+**Resultado**
+`AmbientesLab.tsx` reduzido de 2.250 para 173 linhas (wrapper de composição); 24 arquivos extraídos (maior: 243 linhas); estado agrupado em 7 hooks de domínio + seções de apresentação (`Secao*.tsx`); funções puras/constantes/tipos em módulos irmãos. Aprovações: `code-auditor` APROVADO (1ª tentativa), `qa-engineer` APROVADO (1ª tentativa, 641/641 testes, mesma contagem do baseline). Sem `security-auditor`/`ux-auditor` (refatoração pura, contrato dispensa). Nenhum Circuit Breaker.
 
 ---
 
