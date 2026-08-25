@@ -911,17 +911,82 @@ explícito.
   rótulo centralizado (`nome curto` + `dimensão`) em `text-corpo-pequeno
   text-cinza-800`, truncado com reticências se não couber.
 - **Seta de sentido do veio** (Modelo de Domínio Seção 8): quando a peça
-  tem `sentidoVeio` definido, desenhar uma seta dupla fina
-  (`stroke-cinza-600`, `1.5px`) sobreposta ao centro da peça, na direção do
-  veio — clicável para inverter (cursor `pointer`, tooltip "Inverter
-  sentido do veio"). Sem veio (`temVeio: false` no material): sem seta.
+  tem `sentidoVeio` definido, desenhar uma seta dupla fina sobreposta ao
+  centro da peça, na direção do veio. Cor **adaptativa pelo preenchimento
+  da peça** (9.4.1 abaixo) — nunca um único `stroke-cinza-600` fixo, que
+  fica praticamente ilegível sobre `material.escuro` (contraste ≈1.7:1,
+  ver 9.4.1). **Read-only por decisão já tomada** (Task 3.2, 2026-08-11):
+  sem `cursor: pointer`, sem tooltip de inversão — a seta é indicador
+  visual, não controle. *(Correção desta revisão: a redação anterior desta
+  seção descrevia a seta como "clicável para inverter", o que nunca foi
+  implementado nem está no contrato da Task 3.2 — texto desatualizado,
+  corrigido aqui para refletir a decisão real.)* Sem veio
+  (`temVeio: false` no material): sem seta.
 - Área de sobra (não utilizada): `bg-cinza-100` hachurado (padrão diagonal
   `repeating-linear-gradient`, `cinza-200`/`cinza-100`, 4px), rótulo
   "Sobra" `text-legenda text-cinza-400`.
 - Barra de aproveitamento (7.21): `bg-sucesso` quando ≥70%, `bg-accent`
   entre 40–70%, `bg-erro` abaixo de 40% (limiares como decisão do Product
   Designer — não estavam explícitos no mockup, mas o produto já tem o dado
-  percentual e o operador pediu leitura rápida de eficiência).
+  percentual e o operador pediu leitura rápida de eficiência). Este
+  indicador **vive só no componente consumidor** (`CorteMaterialLab`, via
+  `Progress` — já implementado), nunca duplicado como legenda de texto
+  dentro do próprio `PlanoCorteCanvas` — ver 9.4.1 sobre a legenda
+  redundante encontrada na auditoria de 2026-08-24.
+
+### 9.4.1 Cor de peça por material real (auditoria de 2026-08-24 — RF pendente, ver Backlog)
+
+Achado: `PlanoCorteCanvas.tsx` desenha toda peça com hex fixo (`#bfdbfe`
+fundo azul claro / `#1e3a8a` contorno azul escuro), sem nenhum vínculo com
+o material real da peça — viola a regra de aplicação já definida em 9.2
+("a cor de cada peça vem do material real cadastrado no catálogo"). Esta
+subseção fecha a lacuna com uma tabela de mapeamento concreta, para o
+Frontend Engineer não precisar decidir heurística própria.
+
+**Função de mapeamento** (nova, `corParaTokenMaterial(cor: string):
+"claro" | "medio" | "escuro"`, isolada da `corParaHex()` de
+`ModulePreview.tsx` — a exceção de fonte única da Seção 9.6 vale só para
+`BoxCanvas`/`ModuleViewer`, não se estende a `PlanoCorteCanvas`, que já
+tinha sua própria regra de 3 tons em 9.2/9.4 antes desta função existir):
+
+| Substring em `cor` (case-insensitive) | Token | Hex |
+|---|---|---|
+| `branco`, `off white`, `gelo` | `material.claro` | `#F1E9DA` |
+| `freijó`/`freijo`, `carvalho`, `mel`, `madeirado`, `natural` | `material.medio` | `#D3A46C` |
+| `preto`, `fosco`, `grafite`/`graf`, `nogueira`, `imbuia`, `wenge` | `material.escuro` | `#9C6B3E` |
+| Sem correspondência (ex.: `"Cinza Sagrado"`) | `material.medio` (fallback, regra já definida em 9.2) | `#D3A46C` |
+
+Contorno da peça sempre `material.linha` `1px` (já especificado em 9.4),
+independente do tom de preenchimento.
+
+**Contraste do rótulo de texto sobre o preenchimento** — verificado, não
+estimado: `text-cinza-800` (`#1E293B`) sobre `material.claro`/
+`material.medio` passa AA para texto normal (≥4.5:1). Sobre
+`material.escuro` (`#9C6B3E`) o mesmo `cinza-800` cai para ≈3.2:1 —
+**insuficiente**. Regra adaptativa:
+
+- Preenchimento `material.claro` ou `material.medio` → rótulo e seta de
+  veio em `text-cinza-800`/`stroke-cinza-600` (como já especificado).
+- Preenchimento `material.escuro` → rótulo e seta de veio em `cinza-0`
+  (`#FFFFFF`, contraste ≈4.6:1 texto / ≈4.6:1 seta, ambos acima do mínimo
+  aplicável).
+
+**Legenda de material** (nova, ausente hoje): acima do conjunto de chapas
+de um mesmo grupo `cor|espessura_mm`, uma linha `flex items-center gap-md
+text-legenda text-cinza-500`: pastilha `12px rounded-sm` na cor do token
+mapeado (mesma convenção da pastilha `16px` da Seção 9.5, variante menor)
+seguida do nome real do material (`"Louro Freijó"`, não o nome do token) —
+uma pastilha por grupo de material presente naquela seção do plano de
+corte, não uma legenda genérica de 3 cores fixas (o produto só mostra os
+materiais que o orçamento realmente usa).
+
+**Escala visível**: o rótulo "escala 1:10" já existe como texto acima do
+conjunto (`CorteMaterialLab`) — mantém-se, mas passa a exibir também a
+régua de referência: um segmento `20mm` de comprimento real (`2px` na
+escala 1:10) com tick nas duas pontas, `stroke-cinza-400`, rótulo "20mm"
+`text-legenda text-cinza-400`, ancorado no canto inferior esquerdo do
+contêiner do conjunto de chapas (não por chapa individual — uma régua por
+grupo é suficiente, mais que isso polui).
 
 ### 9.5 Editor de Item — painel de "visualização" (2D, nunca 3D)
 
@@ -1307,3 +1372,129 @@ acima, consolidados num único lugar para conferência rápida:
 Este checklist não substitui os critérios de "não quebrar" da Seção 10
 (responsividade) — é adicional, focado em acabamento visual e vocabulário,
 não em quebra de layout.
+
+## 16. Formulário complexo em etapas — Editor de Item (auditoria de 2026-08-24)
+
+> **Contexto**: `EditorItemNucleo.tsx` (`app/modulo/`) nunca teve seção
+> própria neste documento — comentários no código (`SecaoHeader.tsx`)
+> já citavam "Design-System.md Seção 6.4/6.5" para o padrão de accordion e
+> Stepper, mas esse conteúdo nunca existiu aqui; o componente foi
+> construído a partir de uma decisão de implementação nunca registrada.
+> Esta seção formaliza o que já está no ar (a maior parte está correta) e
+> corrige o que a auditoria de 2026-08-24 encontrou divergente. Núcleo
+> compartilhado por `/modulo` e por `/orcamento/[id]/item/[itemId]` —
+> tudo abaixo vale para os dois.
+
+### 16.1 Diagnóstico (o que compete por atenção hoje)
+
+1. **Dois sistemas de título de card na mesma tela.** A coluna esquerda
+   (`CaixaCard`/`DivisoesCard`/`PortasCard`/`GavetasCard`/`PuxadorCard`)
+   usa `SecaoHeader` — título correto, tokens da Seção 3 (`text-titulo-card`
+   16px/600, `text-cinza-900`). A coluna direita ("Plano de corte", "Custo
+   ao vivo", "Peças (lista técnica)", "Vãos (clique para selecionar)",
+   "Placa (referência visual)") está dentro de `<div className="card">`
+   (CSS legado, `app/globals.css`) cujo `.card h2` força **caixa-alta,
+   12–13px efetivo, `letter-spacing 0.04em`, cor `--legacy-muted`** — o
+   oposto do padrão tipográfico desta mesma tela. Duas hierarquias de
+   título para o mesmo nível semântico ("título de card") lado a lado é a
+   causa raiz mais visível do relato "informação competindo".
+2. **Dois sistemas de botão coexistindo no mesmo card.** Dentro de um
+   único `PortasCard`/`GavetasCard`/`DivisoesCard`, o botão de alternância
+   de modo do canvas usa o componente `Button` (shadcn, Seção 7.1,
+   focus-visible definido) — mas "Aplicar"/"Salvar"/"Excluir"/"Cancelar"
+   usam `<button className="primary|ghost|danger">` do CSS legado, que
+   **não define nenhum estado de foco visível** (só `:hover` muda a cor da
+   borda). É violação de acessibilidade (Seção 7 exige foco visível em
+   todo componente) e mais uma fonte de inconsistência visual dentro do
+   mesmo componente.
+3. **Rótulo "Salvar" ambíguo, duplicado dentro do mesmo card.** Todo card
+   do accordion tem uma linha de ações do formulário (ex.: "Aplicar em
+   vãos selecionados" / "Excluir Portas") e, **abaixo dela, uma segunda
+   linha isolada com um botão "Salvar"** que na verdade só avança o
+   accordion para a próxima etapa (`avancarSecao`) — não persiste nenhum
+   valor pendente do formulário (isso já foi feito por "Aplicar"). Um
+   usuário lê "Salvar" duas vezes no mesmo card com efeitos diferentes.
+4. **Inputs/selects sem token nenhum.** `.campos input`/`.campos select`
+   (CSS legado) não correspondem a `Input`/`Select` da Seção 7.9: sem anel
+   de foco (`ring-2 ring-accent-subtle`), raio `6px` fixo em CSS (não
+   `rounded-sm` do Tailwind), sem estado de erro, sem estado disabled
+   visualmente distinto além de opacidade do navegador.
+5. **Grid de campos (`.campos`) sem relação com a escala de espaçamento.**
+   `grid-template-columns: repeat(auto-fit, minmax(90px, 1fr))` com
+   `gap: 8px` fixo em CSS — coincide por acaso com `gap-sm` (Seção 4), mas
+   não referencia o token, e o `minmax(90px, ...)` pode colapsar
+   "Recuo Lateral"/"Profundidade" em colunas estreitas demais para o
+   `label` não quebrar de forma legível.
+
+### 16.2 Seção colapsável (accordion card) — formalização
+
+Já implementado corretamente em `SecaoHeader.tsx`/`CaixaCard.tsx` (etc.) —
+esta é a especificação de referência, sem mudança de valor:
+
+- **Card, estado aberto**: `rounded-lg border border-cinza-200 bg-cinza-0
+  p-4 shadow-xs`. Header: `text-titulo-card font-semibold text-cinza-900`,
+  `border-b border-cinza-200 pb-3 mb-4`, `cursor-default`.
+- **Card, estado colapsado (etapa já preenchida)**: `rounded-lg border
+  border-cinza-200 bg-cinza-50 p-3 hover:bg-cinza-100 cursor-pointer`.
+  Header: `text-corpo font-medium text-cinza-600`, badge "editar" à
+  direita (`Pencil` 12px + `text-legenda text-accent`).
+- Transição de hover: `transition-colors duration-120` (Seção 12) — hoje
+  ausente (classe Tailwind sem `transition-colors` explícito); adicionar.
+- `gap-sm` (8px) entre os cards do accordion (já correto, reforça que são
+  etapas de um único fluxo — distinto do `gap-xl` de cards independentes).
+
+### 16.3 Stepper (`components/ui/stepper.tsx`)
+
+Já implementado (Task 7.1) e correto — token de referência para não
+regredir em retrofit futuro: passo concluído/atual em `bg-accent`, passo
+futuro em `bg-cinza-200`, rótulo do passo atual `text-cinza-900
+font-medium`, rótulos futuros `text-cinza-500`. Sem mudança nesta
+auditoria.
+
+### 16.4 Correções desta auditoria
+
+- **Título de card único.** Toda coluna direita do Editor de Item
+  (Plano de corte, Custo ao vivo, Peças, painel de visualização/Placa)
+  troca `<div className="card">` + `<h2>` (CSS legado) pelo `Card` shadcn
+  (Seção 7.2: `bg-cinza-0 border border-cinza-200 rounded-lg p-xl
+  shadow-xs`, título `CardTitle` `text-titulo-secao text-cinza-900`) — o
+  mesmo componente que `CorteMaterialLab.tsx` já usa para a mesma
+  informação (`Plano de corte`, ver Seção 9.4), eliminando a segunda
+  hierarquia de título.
+- **Um botão, um sistema.** Todo `<button className="primary|ghost|danger">`
+  desta árvore de componentes vira `Button` (Seção 7.1) com a variante
+  equivalente (`primary`→`default`, `ghost`→`ghost`,
+  `danger`→`destructive`). Fecha o gap de foco visível do item 2 do
+  diagnóstico.
+- **Uma linha de ação por card, um rótulo por efeito.** Cada card do
+  accordion passa a ter **uma única linha de ações**, na ordem [ação(ões)
+  de formulário específicas do card, quando houver] + [ação de avanço].
+  A ação de avanço nunca se chama "Salvar" quando o card já tem um botão
+  de commit próprio (ex.: `PortasCard` com grupo em edição): usa
+  **"Avançar"** (`variant="outline"`, ícone `ChevronRight` 14px à
+  direita) — reserva-se o rótulo "Salvar"/"Salvar alterações" só para o
+  botão que de fato persiste o valor do formulário no estado do módulo
+  (regra geral de rótulo de botão, Seção 11: verbo + efeito real, nunca
+  verbo genérico com dois significados na mesma tela).
+- **Inputs/selects migram para `Input`/`Select`/`Label` (Seção 7.9).**
+  `.campos input`/`.campos select`/`label` (CSS legado) somem desta árvore
+  de componentes — cada campo ganha foco visível (`ring-2
+  ring-accent-subtle`), raio `rounded-sm`, e o mesmo comportamento de
+  erro/disabled já especificado.
+- **Grid de campos tokenizado**: `.campos` vira `grid grid-cols-2 gap-md
+  sm:grid-cols-3` (Seção 4 — `gap-md` 12px, não os `8px` soltos do CSS
+  legado) — 2 colunas em telas estreitas do card (accordion aberto ocupa
+  a coluna esquerda do `legado-grid` 1.3fr, ainda estreita), 3 colunas a
+  partir de `sm` quando o card tiver espaço. `label` vira `Label` (Seção
+  7.9: `text-legenda text-cinza-500 mb-1`).
+- **`.legado-grid`/`.card`/`.campos`/`.acoes` saem de uso** nesta árvore de
+  componentes (não apenas ficam obsoletas — são removidas dos arquivos que
+  hoje as consomem). `app/globals.css` mantém as classes até o retrofit
+  cobrir os demais consumidores citados no comentário do arquivo
+  (`/biblioteca`, `/configuracoes/materiais`) — remover a classe do CSS
+  global não é escopo desta auditoria.
+
+Nenhum token novo de cor/espaçamento/raio foi necessário para fechar este
+diagnóstico — a causa raiz é sempre o mesmo par: CSS legado coexistindo
+com um token v3 equivalente já existente (Seção 5, `Design-System.md` §1),
+nunca uma lacuna de paleta.

@@ -11,6 +11,385 @@
 
 ## Pendente
 
+### Pipeline Stage — Reparação (fonte: `docs/Plano-Reparacao-orcamentofacil.md`)
+
+> **Precede qualquer task de funcionalidade nova.** Nenhuma task de feature
+> (nova tela, novo requisito, nova regra de domínio) entra na fila de
+> execução antes deste stage fechar via `/maestro-stage-close` (Task R.8,
+> com os seis critérios abaixo). As demais seções "Pendente" deste documento
+> (Dívida de segurança, upgrades major, gaps registrados, Épico V2.1) são
+> débito e observação pré-existentes, não bloqueadas por este stage — mas
+> nenhum stage novo de feature é aberto até R.8 fechar.
+
+#### Task R.1 — Direção de Arte (Seção 0 do Design System)
+
+- **Status**: ⏱️ Planejado
+- **Executor**: product-designer
+- **Modelo Recomendado**: Sonnet (padrão do agente)
+- **Depende de**: nenhuma
+- **Referências**: `docs/Plano-Reparacao-orcamentofacil.md` R.1; `docs/Design-System.md` (Seção 0 atual — paleta v3 preservada, não reaberta)
+
+**Descrição**
+Escrever a Seção 0 — Direção de Arte — no topo de `docs/Design-System.md`, antes da Seção 1 atual. O produto é orçamento e projeto de marcenaria para marceneiro; o vocabulário técnico 2D já presente no produto (elevação de parede, plano de corte, cota, hachura, medida) é candidato natural a decisão assinatura e deve ser avaliado antes de buscar identidade fora do domínio. A paleta v3 (navy da sidebar, accent laranja) já foi decidida pelo operador e não é reaberta — a Seção 0 nova explica por que ela é essa, e o que mais decorre dela.
+
+**Critérios de aceitação**
+- [ ] Teste de identidade aplicado e documentado: cobrindo a logo de uma captura, um marceneiro reconhece que é este produto — não "qualquer SaaS"
+- [ ] A tese visual não poderia abrir o Design System de um CRM, de um app de finanças ou de um sistema de RH sem trocar uma palavra
+- [ ] Paleta v3 preservada intacta, com justificativa nova de por que ela é essa
+
+---
+
+#### Task R.2a — Composição de Tela: 5 telas críticas
+
+- **Status**: ⏱️ Planejado
+- **Executor**: product-designer
+- **Modelo Recomendado**: Sonnet (padrão do agente)
+- **Depende de**: R.1
+- **Referências**: `docs/Plano-Reparacao-orcamentofacil.md` R.2; `docs/Design-System.md` Seção 0 (nova)
+
+**Descrição**
+Escrever `docs/Screen-Composition.md` para as cinco telas críticas: Orçamento (`/orcamento/[id]`), Editor de Item (`/orcamento/[id]/item/[itemId]`), Catálogo (`/catalogo`), Biblioteca (`/biblioteca`) e Proposta impressa (`/proposta/[id]/pdf`, nível `vitrine`). Ancorar a composição no que existe de fato (Glob/Read nas telas reais), não no que foi planejado — o app divergiu do Mapa-de-Telas em pontos que o documento não capturou. Declarar densidade explícita e oposta: Catálogo e Biblioteca são telas de consulta densas; o Editor de Item é formulário em etapas, espaçoso na coluna de decisão e denso na coluna técnica — hoje as duas colunas competem pelo mesmo peso. O campo "Poda" é obrigatório em toda tela, especialmente no Editor de Item: dizer o que sai da tela e para onde vai.
+
+**Critérios de aceitação**
+- [ ] `docs/Screen-Composition.md` cobre as 5 telas, ancorado no código real (não no Mapa-de-Telas)
+- [ ] Densidade declarada explicitamente para Catálogo, Biblioteca e Editor de Item (as duas colunas do Editor com pesos distintos, não competindo)
+- [ ] Seção "Poda" presente em cada tela, com destino explícito do que sai
+- [ ] Proposta impressa marcada nível `vitrine`
+
+---
+
+#### Task R.2b — Composição de Tela: demais telas
+
+- **Status**: ⏱️ Planejado
+- **Executor**: product-designer
+- **Modelo Recomendado**: Sonnet (padrão do agente)
+- **Depende de**: R.1
+- **Referências**: `docs/Plano-Reparacao-orcamentofacil.md` R.2; `docs/Design-System.md` Seção 0 (nova)
+
+**Descrição**
+Mesmo modo de composição da Task R.2a, para as telas restantes: Dashboard (`/`), Novo orçamento (`/orcamento/novo`), Perfil (`/perfil`), Materiais (`/configuracoes/materiais`), Proposta (`/proposta`), Login (`/login`) e Signup (`/signup`). Login e Signup entram já marcadas nível `vitrine`.
+
+**Critérios de aceitação**
+- [ ] `docs/Screen-Composition.md` ganha as 7 telas restantes, ancorado no código real
+- [ ] Seção "Poda" presente em cada tela, com destino explícito do que sai
+- [ ] Login e Signup marcadas nível `vitrine`
+
+---
+
+#### Task R.3a — Decompor `components/ambientes/AmbientesLab.tsx`
+
+- **Status**: ⏱️ Planejado
+- **Executor**: frontend-engineer
+- **Modelo Recomendado**: Sonnet (padrão do agente)
+- **Depende de**: nenhuma (branch própria — nunca na mesma rodada que R.3b/R.3c)
+- **Referências**: `docs/Plano-Reparacao-orcamentofacil.md` R.3; teto de arquivo `.maestro/config.json` (`maxUiFileLines: 400`)
+
+**Descrição**
+Decompor `components/ambientes/AmbientesLab.tsx` (2.250 linhas) até nenhum arquivo da árvore passar de 400 linhas. Decomposição pura: separar apresentação de lógica, extrair sub-componentes. Nenhuma mudança de comportamento, nenhuma mudança visual nesta task.
+
+**Critérios de aceitação**
+- [ ] Nenhum arquivo resultante da árvore acima de 400 linhas
+- [ ] Nenhuma mudança de comportamento ou de aparência (é refatoração pura)
+- [ ] qa-engineer roda os testes existentes: refatoração sem regressão é o critério
+
+---
+
+#### Task R.3b — Decompor `app/components/BoxCanvas.tsx`
+
+- **Status**: ⏱️ Planejado
+- **Executor**: frontend-engineer
+- **Modelo Recomendado**: Sonnet (padrão do agente)
+- **Depende de**: nenhuma (branch própria — nunca na mesma rodada que R.3a/R.3c)
+- **Referências**: `docs/Plano-Reparacao-orcamentofacil.md` R.3; teto de arquivo `.maestro/config.json` (`maxUiFileLines: 400`)
+
+**Descrição**
+Decompor `app/components/BoxCanvas.tsx` (1.086 linhas) até nenhum arquivo da árvore passar de 400 linhas. Decomposição pura: separar apresentação de lógica, extrair sub-componentes. Nenhuma mudança de comportamento, nenhuma mudança visual nesta task.
+
+**Critérios de aceitação**
+- [ ] Nenhum arquivo resultante da árvore acima de 400 linhas
+- [ ] Nenhuma mudança de comportamento ou de aparência (é refatoração pura)
+- [ ] qa-engineer roda os testes existentes: refatoração sem regressão é o critério
+
+---
+
+#### Task R.3c — Decompor `app/modulo/EditorItemNucleo.tsx`
+
+- **Status**: ⏱️ Planejado
+- **Executor**: frontend-engineer
+- **Modelo Recomendado**: Sonnet (padrão do agente)
+- **Depende de**: nenhuma (branch própria — nunca na mesma rodada que R.3a/R.3b)
+- **Referências**: `docs/Plano-Reparacao-orcamentofacil.md` R.3; teto de arquivo `.maestro/config.json` (`maxUiFileLines: 400`)
+
+**Descrição**
+Decompor `app/modulo/EditorItemNucleo.tsx` (1.003 linhas) até nenhum arquivo da árvore passar de 400 linhas. Decomposição pura: separar apresentação de lógica, extrair sub-componentes. Nenhuma mudança de comportamento, nenhuma mudança visual nesta task. O núcleo é compartilhado por `/modulo` e `/orcamento/[id]/item/[itemId]` — confirmar com `graphify explain` antes de mover qualquer coisa.
+
+**Critérios de aceitação**
+- [ ] Nenhum arquivo resultante da árvore acima de 400 linhas
+- [ ] Nenhuma mudança de comportamento ou de aparência (é refatoração pura)
+- [ ] `graphify explain` confirmado antes de mover código compartilhado entre `/modulo` e `/orcamento/[id]/item/[itemId]`
+- [ ] qa-engineer roda os testes existentes: refatoração sem regressão é o critério
+
+---
+
+#### Task R.4a — Erradicar CSS legado em `app/modulo/`
+
+- **Status**: ⏱️ Planejado
+- **Executor**: frontend-engineer
+- **Modelo Recomendado**: Sonnet (padrão do agente)
+- **Depende de**: R.3c
+- **Referências**: `docs/Plano-Reparacao-orcamentofacil.md` R.4; `docs/Design-System.md` §16.4 (correção já especificada item a item)
+
+**Descrição**
+Erradicar o CSS legado da árvore `app/modulo/` (11 arquivos, 59 ocorrências), executando as correções já especificadas em `docs/Design-System.md` §16.4.
+
+**Critérios de aceitação**
+- [ ] `scan-legacy` retorna 0 em `app/modulo/`
+- [ ] Nenhum `<button className="primary|ghost|danger">` resta: todos viram `Button` do shadcn com a variante equivalente (foco visível é requisito, não melhoria)
+- [ ] Todo `<div className="card">` vira `Card` do shadcn, com `CardTitle` na escala `text-titulo-secao` — elimina o segundo sistema de título da tela
+- [ ] Inputs e selects viram `Input`/`Select`/`Label` da Seção 7.9
+- [ ] O botão "Salvar" que apenas avança o accordion vira "Avançar" (§16.4)
+- [ ] `app/globals.css` mantém as classes até R.4b fechar — a remoção do CSS morto é a última linha de R.4b, não desta task
+
+---
+
+#### Task R.4b — Erradicar CSS legado em Materiais/Proposta e remover definições mortas
+
+- **Status**: ⏱️ Planejado
+- **Executor**: frontend-engineer
+- **Modelo Recomendado**: Sonnet (padrão do agente)
+- **Depende de**: R.4a
+- **Referências**: `docs/Plano-Reparacao-orcamentofacil.md` R.4; `docs/Design-System.md` §16.4
+
+**Descrição**
+Erradicar o CSS legado de `app/configuracoes/materiais/page.tsx` (7 ocorrências) e `app/proposta/page.tsx` (1 ocorrência), mesmas correções especificadas em §16.4. Ao final, remover as 59 definições legadas de `app/globals.css` — última linha da task, só depois de confirmado que nenhum consumidor resta.
+
+**Critérios de aceitação**
+- [ ] `scan-legacy` retorna 0 no projeto inteiro
+- [ ] Botões, cards, inputs e selects de `app/configuracoes/materiais/page.tsx` e `app/proposta/page.tsx` seguem os mesmos critérios de R.4a (Button/Card/Input/Select do shadcn, foco visível)
+- [ ] As 59 definições legadas removidas de `app/globals.css`
+
+---
+
+#### Task R.5a — Composição e acabamento terminal — Orçamento
+
+- **Status**: ⏱️ Planejado
+- **Executor**: frontend-engineer
+- **Modelo Recomendado**: Sonnet (padrão do agente)
+- **Depende de**: R.2a, R.3a, R.3b, R.3c, R.4a, R.4b
+- **Tela-alvo**: Orçamento — `/orcamento/[id]`
+- **Nível de acabamento**: release
+- **Referências**: `docs/Plano-Reparacao-orcamentofacil.md` R.5; `docs/Screen-Composition.md` seção Orçamento (inteira)
+
+**Descrição**
+Fechar a tela do Orçamento como unidade: composição conforme a seção da tela em `docs/Screen-Composition.md`, lida inteira, um único sistema de título/botão/campo/card, quatro estados no mesmo nível de acabamento, `scan-legacy` zerado nos caminhos da tela. Definição de pronto: veredito APROVADO do `art-director` para esta tela — convocado logo após esta task, reaproveitando as capturas do `ux-auditor` já em `.maestro/tmp/screenshots/`.
+
+**Critérios de aceitação**
+- [ ] `art-director` APROVADO para esta tela
+- [ ] Composição conforme a seção da tela em `docs/Screen-Composition.md`
+- [ ] Um único sistema de título, botão, campo e card na tela
+- [ ] Quatro estados no mesmo nível de acabamento
+- [ ] `scan-legacy` retorna 0 nos caminhos da tela
+- [ ] Nenhum arquivo de UI da tela acima de 400 linhas
+
+---
+
+#### Task R.5b — Composição e acabamento terminal — Editor de Item
+
+- **Status**: ⏱️ Planejado
+- **Executor**: frontend-engineer
+- **Modelo Recomendado**: Sonnet (padrão do agente)
+- **Depende de**: R.2a, R.3a, R.3b, R.3c, R.4a, R.4b
+- **Tela-alvo**: Editor de Item — `/orcamento/[id]/item/[itemId]`
+- **Nível de acabamento**: release
+- **Referências**: `docs/Plano-Reparacao-orcamentofacil.md` R.5; `docs/Screen-Composition.md` seção Editor de Item (inteira)
+
+**Descrição**
+Fechar o Editor de Item como unidade: composição conforme a seção da tela em `docs/Screen-Composition.md`, lida inteira, um único sistema de título/botão/campo/card, quatro estados no mesmo nível de acabamento, `scan-legacy` zerado nos caminhos da tela. Definição de pronto: veredito APROVADO do `art-director` para esta tela — convocado logo após esta task, reaproveitando as capturas do `ux-auditor` já em `.maestro/tmp/screenshots/`.
+
+**Critérios de aceitação**
+- [ ] `art-director` APROVADO para esta tela
+- [ ] Composição conforme a seção da tela em `docs/Screen-Composition.md`
+- [ ] Um único sistema de título, botão, campo e card na tela
+- [ ] Quatro estados no mesmo nível de acabamento
+- [ ] `scan-legacy` retorna 0 nos caminhos da tela
+- [ ] Nenhum arquivo de UI da tela acima de 400 linhas
+
+---
+
+#### Task R.5c — Composição e acabamento terminal — Catálogo
+
+- **Status**: ⏱️ Planejado
+- **Executor**: frontend-engineer
+- **Modelo Recomendado**: Sonnet (padrão do agente)
+- **Depende de**: R.2a, R.3a, R.3b, R.3c, R.4a, R.4b
+- **Tela-alvo**: Catálogo — `/catalogo`
+- **Nível de acabamento**: release
+- **Referências**: `docs/Plano-Reparacao-orcamentofacil.md` R.5; `docs/Screen-Composition.md` seção Catálogo (inteira)
+
+**Descrição**
+Fechar o Catálogo como unidade: composição conforme a seção da tela em `docs/Screen-Composition.md`, lida inteira, um único sistema de título/botão/campo/card, quatro estados no mesmo nível de acabamento, `scan-legacy` zerado nos caminhos da tela. Definição de pronto: veredito APROVADO do `art-director` para esta tela — convocado logo após esta task, reaproveitando as capturas do `ux-auditor` já em `.maestro/tmp/screenshots/`.
+
+**Critérios de aceitação**
+- [ ] `art-director` APROVADO para esta tela
+- [ ] Composição conforme a seção da tela em `docs/Screen-Composition.md`
+- [ ] Um único sistema de título, botão, campo e card na tela
+- [ ] Quatro estados no mesmo nível de acabamento
+- [ ] `scan-legacy` retorna 0 nos caminhos da tela
+- [ ] Nenhum arquivo de UI da tela acima de 400 linhas
+
+---
+
+#### Task R.5d — Composição e acabamento terminal — Biblioteca
+
+- **Status**: ⏱️ Planejado
+- **Executor**: frontend-engineer
+- **Modelo Recomendado**: Sonnet (padrão do agente)
+- **Depende de**: R.2a, R.3a, R.3b, R.3c, R.4a, R.4b
+- **Tela-alvo**: Biblioteca — `/biblioteca`
+- **Nível de acabamento**: release
+- **Referências**: `docs/Plano-Reparacao-orcamentofacil.md` R.5; `docs/Screen-Composition.md` seção Biblioteca (inteira)
+
+**Descrição**
+Fechar a Biblioteca como unidade: composição conforme a seção da tela em `docs/Screen-Composition.md`, lida inteira, um único sistema de título/botão/campo/card, quatro estados no mesmo nível de acabamento, `scan-legacy` zerado nos caminhos da tela. Definição de pronto: veredito APROVADO do `art-director` para esta tela — convocado logo após esta task, reaproveitando as capturas do `ux-auditor` já em `.maestro/tmp/screenshots/`.
+
+**Critérios de aceitação**
+- [ ] `art-director` APROVADO para esta tela
+- [ ] Composição conforme a seção da tela em `docs/Screen-Composition.md`
+- [ ] Um único sistema de título, botão, campo e card na tela
+- [ ] Quatro estados no mesmo nível de acabamento
+- [ ] `scan-legacy` retorna 0 nos caminhos da tela
+- [ ] Nenhum arquivo de UI da tela acima de 400 linhas
+
+---
+
+#### Task R.5e — Composição e acabamento terminal — Proposta impressa (vitrine)
+
+- **Status**: ⏱️ Planejado
+- **Executor**: frontend-engineer
+- **Modelo Recomendado**: Sonnet (padrão do agente)
+- **Depende de**: R.2a, R.3a, R.3b, R.3c, R.4a, R.4b
+- **Tela-alvo**: Proposta impressa — `/proposta/[id]/pdf`
+- **Nível de acabamento**: vitrine
+- **Referências**: `docs/Plano-Reparacao-orcamentofacil.md` R.5, R.6; `docs/Screen-Composition.md` seção Proposta impressa (inteira)
+
+**Descrição**
+Fechar a Proposta impressa como unidade, no nível `vitrine`: composição conforme a seção da tela em `docs/Screen-Composition.md`, lida inteira, um único sistema de título/botão/campo/card, quatro estados no mesmo nível de acabamento, `scan-legacy` zerado nos caminhos da tela. É o documento que o marceneiro envia ao cliente dele. Definição de pronto: veredito APROVADO do `art-director` para esta tela — convocado logo após esta task, reaproveitando as capturas do `ux-auditor` já em `.maestro/tmp/screenshots/`. Se esta task fechar a tela por completo, a Task R.6c fica sem objeto (registrar como concluída por esta task, não repetir trabalho).
+
+**Critérios de aceitação**
+- [ ] `art-director` APROVADO para esta tela, nível `vitrine`
+- [ ] Composição conforme a seção da tela em `docs/Screen-Composition.md`
+- [ ] Um único sistema de título, botão, campo e card na tela
+- [ ] Quatro estados no mesmo nível de acabamento
+- [ ] `scan-legacy` retorna 0 nos caminhos da tela
+- [ ] Nenhum arquivo de UI da tela acima de 400 linhas
+
+---
+
+#### Task R.6a — Tela vitrine — Login
+
+- **Status**: ⏱️ Planejado
+- **Executor**: frontend-engineer
+- **Modelo Recomendado**: Sonnet (padrão do agente)
+- **Depende de**: R.2b
+- **Tela-alvo**: Login — `/login`
+- **Nível de acabamento**: vitrine
+- **Referências**: `docs/Plano-Reparacao-orcamentofacil.md` R.6; `docs/Screen-Composition.md` seção Login (inteira)
+
+**Descrição**
+Fechar a tela de Login no nível `vitrine`: momento visual próprio, entrada orquestrada, copy de venda, resistência ao zoom — bateria adicional do `art-director` além dos critérios de composição padrão. Definição de pronto: veredito APROVADO do `art-director` para esta tela.
+
+**Critérios de aceitação**
+- [ ] `art-director` APROVADO para esta tela, nível `vitrine` (momento visual próprio, entrada orquestrada, copy de venda, resistência ao zoom)
+- [ ] Composição conforme a seção da tela em `docs/Screen-Composition.md`
+- [ ] `scan-legacy` retorna 0 nos caminhos da tela
+- [ ] Nenhum arquivo de UI da tela acima de 400 linhas
+
+---
+
+#### Task R.6b — Tela vitrine — Signup
+
+- **Status**: ⏱️ Planejado
+- **Executor**: frontend-engineer
+- **Modelo Recomendado**: Sonnet (padrão do agente)
+- **Depende de**: R.2b
+- **Tela-alvo**: Signup — `/signup`
+- **Nível de acabamento**: vitrine
+- **Referências**: `docs/Plano-Reparacao-orcamentofacil.md` R.6; `docs/Screen-Composition.md` seção Signup (inteira)
+
+**Descrição**
+Fechar a tela de Signup no nível `vitrine`: momento visual próprio, entrada orquestrada, copy de venda, resistência ao zoom — bateria adicional do `art-director` além dos critérios de composição padrão. Definição de pronto: veredito APROVADO do `art-director` para esta tela.
+
+**Critérios de aceitação**
+- [ ] `art-director` APROVADO para esta tela, nível `vitrine` (momento visual próprio, entrada orquestrada, copy de venda, resistência ao zoom)
+- [ ] Composição conforme a seção da tela em `docs/Screen-Composition.md`
+- [ ] `scan-legacy` retorna 0 nos caminhos da tela
+- [ ] Nenhum arquivo de UI da tela acima de 400 linhas
+
+---
+
+#### Task R.6c — Tela vitrine — Proposta impressa (se não fechada em R.5e)
+
+- **Status**: ⏱️ Planejado
+- **Executor**: frontend-engineer
+- **Modelo Recomendado**: Sonnet (padrão do agente)
+- **Depende de**: R.2b, R.5e
+- **Tela-alvo**: Proposta impressa — `/proposta/[id]/pdf`
+- **Nível de acabamento**: vitrine
+- **Referências**: `docs/Plano-Reparacao-orcamentofacil.md` R.6; `docs/Screen-Composition.md` seção Proposta impressa (inteira)
+
+**Descrição**
+Bateria adicional do `art-director` sobre a Proposta impressa — momento visual próprio, entrada orquestrada, copy de venda, resistência ao zoom — **somente se R.5e não tiver fechado a tela por completo no nível vitrine**. É o material de venda do cliente do marceneiro; um PDF bonito associa a qualidade ao produto toda vez que é enviado. Se R.5e já cobriu estes critérios, esta task é encerrada sem execução, com nota cruzando para R.5e.
+
+**Critérios de aceitação**
+- [ ] `art-director` APROVADO para esta tela, nível `vitrine` (momento visual próprio, entrada orquestrada, copy de venda, resistência ao zoom) — ou nota registrada de que R.5e já supriu o critério
+
+---
+
+#### Task R.7 — Fechar o cemitério do Backlog
+
+- **Status**: ⏱️ Planejado
+- **Executor**: nenhum (conduzida por Maestro + operador — não é task de código)
+- **Modelo Recomendado**: — (decisão humana, não geração de código)
+- **Depende de**: nenhuma
+- **Referências**: `docs/Plano-Reparacao-orcamentofacil.md` R.7; as três seções deste documento intituladas "Gaps … registrados, sem task própria ainda" (Gaps de schema, Gaps de lógica/design, Gaps de rótulo/UI)
+
+**Descrição**
+Percorrer as três seções "Gaps … registrados, sem task própria ainda" do Backlog (~15 itens). Para cada item, apresentar ao operador: o que é em uma linha, o custo estimado da correção, se afeta alguma tela do stage de Reparação — e pedir a decisão, item a item. Duas saídas possíveis, nenhuma terceira: (1) vira task de acabamento neste stage, ou (2) vira recusa explícita registrada como "aceito lançar com isto — `<motivo>` — `<data>` — autorizado por Matheus". Nenhum item pode ficar arquivado como "candidato a task futura".
+
+**Critérios de aceitação**
+- [ ] Todos os itens das três seções "Gaps … sem task própria ainda" resolvidos em uma das duas saídas (task nova ou recusa explícita com data e autorização)
+- [ ] Nenhum item permanece com o rótulo "candidato a task futura"
+
+---
+
+#### Task R.8 — Fechar o stage
+
+- **Status**: ⏱️ Planejado
+- **Executor**: nenhum (Maestro, via comando)
+- **Modelo Recomendado**: — (comando, não geração de código)
+- **Depende de**: R.1, R.2a, R.2b, R.3a, R.3b, R.3c, R.4a, R.4b, R.5a, R.5b, R.5c, R.5d, R.5e, R.6a, R.6b, R.6c, R.7
+- **Referências**: `docs/Plano-Reparacao-orcamentofacil.md` R.8
+
+**Descrição**
+Executar `/maestro-stage-close`. O stage não fecha sem os seis critérios: (1) tasks R.1 a R.7 mescladas; (2) suíte completa verde (`npm run test`); (3) `art-director` APROVADO em cada uma das telas tocadas; (4) `scan-legacy` = 0 nas telas do stage; (5) zero dívida arquivada em silêncio (R.7 resolvida); (6) teto de arquivo respeitado — nenhum `.tsx` de UI acima de 400 linhas.
+
+**Critérios de aceitação**
+- [ ] Tasks mescladas: R.1 a R.7
+- [ ] Suíte completa verde: `npm run test`
+- [ ] `art-director` APROVADO em cada uma das telas tocadas
+- [ ] `scan-legacy` = 0 nas telas do stage
+- [ ] Zero dívida arquivada em silêncio (R.7 resolvida)
+- [ ] Teto de arquivo respeitado: nenhum `.tsx` de UI acima de 400 linhas
+
+---
+
+**Nota do stage — achados operacionais, responsabilidade do operador, sem task de execução:**
+
+- **Arquivar propostas resolvidas** (`docs/Plano-Reparacao-orcamentofacil.md` R.6b): das 14 propostas em `.maestro/proposals/`, 13 estão resolvidas (quatro promovidas ao plugin em versões anteriores nunca arquivadas; nove entraram na 3.9.1; a de cobertura de teste de interação foi resolvida por decisão de não investir na camada de teste). Mover para `.maestro/proposals/aplicadas/`. Fica em aberto apenas `2026-08-05-executor-nao-deve-cacar-credencial-supabase.md`, pelos dois itens operacionais abaixo.
+- **Pendências operacionais do Supabase** (`docs/Plano-Reparacao-orcamentofacil.md` R.6c): (1) chaves potencialmente comprometidas desde 05/08, rotação adiada duas vezes — decisão do operador de adiar de novo precisa de data ou gatilho registrado no Backlog ("aceito adiar a rotação das chaves do Supabase — `<motivo>` — decidido em 2026-08-25 — autorizado por Matheus — reavaliar em: `<DATA>`"); (2) CLI sem privilégio na conta do projeto real (`LegacyLinkProjectStatusError`) e sandbox bloqueia `db push` — não trava a Reparação (R.1–R.8 são só interface), mas trava a primeira task de backend depois dela; resolver por relink da CLI ou por registrar em `docs/Status.md` que migration real é sempre passo manual do operador pelo SQL Editor.
+
+---
+
 ### Dívida de segurança — Stage 3 (avaliação de 2026-07-21, nunca executada)
 
 | Task | O que é | Status | Modelo |
