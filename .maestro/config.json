@@ -1,15 +1,47 @@
 {
-  "schemaVersion": 2,
+  "schemaVersion": 5,
   "framework": {
     "plugin": "maestro",
-    "version": "3.3.0"
+    "version": "3.9.1"
   },
+
+  "deliveryStandard": "release",
+
+  "screenLevels": {
+    "/login": "vitrine",
+    "/signup": "vitrine",
+    "/proposta/[id]/pdf": "vitrine"
+  },
+
+  "docs": {
+    "prd": "docs/PRD.md",
+    "blueprints": "docs/Mapa-de-Telas.md",
+    "composition": "docs/Screen-Composition.md",
+    "designSystem": "docs/Design-System.md",
+    "domain": "docs/Modelo-de-Dominio.md",
+    "businessStrategy": "docs/Business-Strategy.md",
+    "backlog": "docs/Backlog.md",
+    "status": "docs/Status.md",
+    "lessons": "docs/Lessons-Learned.md"
+  },
+
   "conventions": {
     "platforms": {
       "web": "ativo",
       "mobile": "nao_iniciado"
     },
     "mobileComponentLibrary": null,
+    "legacyPatterns": [
+      "legado-grid",
+      "className=\"card",
+      "className=\"campos",
+      "className=\"acoes",
+      "className=\"primary",
+      "className=\"ghost\"",
+      "className=\"danger",
+      "--legacy-"
+    ],
+    "maxUiFileLines": 400,
     "enginePath": "engine",
     "sourcePath": "app",
     "migrationsPath": "supabase/migrations",
@@ -28,12 +60,50 @@
     },
     "mainBranch": "main"
   },
+
   "gates": {
     "maxAttemptsPerGate": 2,
     "uxAuditRequiresScreenshots": true,
-    "qaGateEnabled": true
+    "artDirectorEnabled": true,
+    "artAuditRequiresComposition": true,
+    "maxScreensPerArtAudit": 2,
+    "qaGateEnabled": true,
+    "foreground": [
+      "code-auditor",
+      "security-auditor",
+      "qa-engineer",
+      "spec-auditor",
+      "memory-manager"
+    ]
   },
+
+  "guards": {
+    "blockMainThreadAppWrites": true,
+    "appPaths": [
+      "src",
+      "lib",
+      "app",
+      "components",
+      "pages",
+      "hooks",
+      "styles",
+      "supabase",
+      "engine"
+    ]
+  },
+
+  "graph": {
+    "enabled": true,
+    "tool": "graphify",
+    "outputDir": "graphify-out",
+    "report": "graphify-out/GRAPH_REPORT.md",
+    "data": "graphify-out/graph.json"
+  },
+
   "obsidian": {
-    "vaultPathFallback": "C:\\Users\\teteu\\iCloudDrive\\iCloud~md~obsidian\\Obsidian-Claude\\00 - Inbox"
+    "askOnRoundEnd": true,
+    "useObsidianPlugin": true,
+    "vaultPathFallback": "C:\\Users\\teteu\\iCloudDrive\\iCloud~md~obsidian\\Obsidian-Claude\\00 - Inbox",
+    "notesSubfolder": "Maestro"
   }
 }
