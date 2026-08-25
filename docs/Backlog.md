@@ -60,19 +60,28 @@ Escrever `docs/Screen-Composition.md` para as cinco telas críticas: Orçamento 
 
 #### Task R.2b — Composição de Tela: demais telas
 
-- **Status**: ⏱️ Planejado
+- **Status**: ✅ Completo
 - **Executor**: product-designer
 - **Modelo Recomendado**: Sonnet (padrão do agente)
 - **Depende de**: R.1
-- **Referências**: `docs/Plano-Reparacao-orcamentofacil.md` R.2; `docs/Design-System.md` Seção 0 (nova)
+- **Referências**: `docs/Plano-Reparacao-orcamentofacil.md` R.2; `docs/Design-System.md` Seção 0 (nova); `docs/Screen-Composition.md` (expandido)
 
 **Descrição**
 Mesmo modo de composição da Task R.2a, para as telas restantes: Dashboard (`/`), Novo orçamento (`/orcamento/novo`), Perfil (`/perfil`), Materiais (`/configuracoes/materiais`), Proposta (`/proposta`), Login (`/login`) e Signup (`/signup`). Login e Signup entram já marcadas nível `vitrine`.
 
 **Critérios de aceitação**
-- [ ] `docs/Screen-Composition.md` ganha as 7 telas restantes, ancorado no código real
-- [ ] Seção "Poda" presente em cada tela, com destino explícito do que sai
-- [ ] Login e Signup marcadas nível `vitrine`
+- [x] `docs/Screen-Composition.md` ganha as 7 telas restantes, ancorado no código real
+- [x] Seção "Poda" presente em cada tela, com destino explícito do que sai
+- [x] Login e Signup marcadas nível `vitrine`
+- [x] Documento completo e coerente com as 12 telas (5 R.2a + 7 R.2b)
+
+**Achados não bloqueantes**
+1. `/configuracoes/materiais` é código V2 órfão (fora do shell `(app)`, localStorage em vez de Supabase, já sucedido por `/catalogo` conforme Mapa-de-Telas §3.4) — recomendação: remoção ou redirect permanente, decisão pendente de data-architect/product-strategist por causa de campos sem equivalente 1:1 em `/catalogo` (fita de borda, montagem, frete).
+2. `/proposta` (app, distinta de `/proposta/[id]/pdf`) é código morto (lê `sessionStorage` que nada grava mais, marca antiga "Budget Planner AI") — recomendação: remoção do arquivo `app/proposta/page.tsx` e CSS associado, decisão pendente de operador.
+3. Dashboard e Novo orçamento duplicam título de página que a Topbar do shell já renderiza — poda registrada, correção é remover o `h2` interno, candidato a task futura de acabamento (não desta task).
+4. Login/Signup (par vitrine) divergem em ícone embutido nos campos (Login usa, Signup não) — achado de consistência para frontend-engineer corrigir em task futura de acabamento vitrine.
+
+Todos os 4 achados não bloqueiam esta task. Recomendação: registrar como observações formais no Maestro para decisão explícita sobre virarem task formal, não arquivar em silêncio.
 
 ---
 
