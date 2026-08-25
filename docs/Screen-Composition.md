@@ -418,6 +418,505 @@ que em qualquer tela interna do produto.
 
 ---
 
+### Dashboard — /
+
+**Nível**: release
+**Referência nomeada**: Stripe Dashboard — tabela "Orçamentos recentes" com
+`tabular-nums` e hierarquia por peso (nome do cliente `font-medium
+text-cinza-900`, única cor de destaque no nome), mesma regra já registrada
+em 0.3/Catálogo; Linear — o nome do cliente como único elemento clicável de
+peso na tabela (`hover:text-accent hover:underline`), sem decoração extra
+em volta.
+**Densidade**: espaçosa (decisão e leitura) — painel de chegada e ponto de
+partida para criar algo novo, não superfície de comparação exaustiva (essa
+categoria já existe em Catálogo/Biblioteca).
+**Padrão de tela**: dashboard
+
+**Grade**
+- Shell: sidebar 264px + topbar 72px + conteúdo (`bg-cinza-50`, `p-xl`,
+  1536px de referência) — Design System §6, sem alteração.
+- Conteúdo: `flex flex-col gap-xl` — cabeçalho de página → faixa de KPI →
+  card único "Orçamentos recentes".
+- KPI: `grid grid-cols-1 gap-xl sm:grid-cols-2 xl:grid-cols-4` (4
+  posições fixas).
+- Card da tabela: `section` única `rounded-lg border border-cinza-200
+  bg-cinza-0 p-xl shadow-xs`.
+- Breakpoint: abaixo de `sm`, KPI vira 1 coluna; abaixo de `md`, tabela
+  ganha `overflow-x-auto` próprio (§7.7, mesmo padrão do Catálogo).
+
+**Regiões** — região sem propósito declarado não existe
+| Região | Propósito | O que vive aqui | O que NUNCA vive aqui |
+|---|---|---|---|
+| Cabeçalho de página | Orientar e oferecer a ação de criar | Parágrafo de apoio + botão `primary` "Novo orçamento" | Título de página duplicado (a Topbar do shell já mostra "Dashboard"/"Visão geral dos seus orçamentos" — ver Poda) |
+| Faixa de KPI | Panorama rápido (quantos orçamentos, aprovados, em aberto, faturamento) | 4 `KpiCard` | Ação de edição, link para detalhe de um orçamento |
+| Orçamentos recentes | Trabalho real: retomar um orçamento existente | Tabela cliente/status/valor final/custo/criado em | Formulário de edição inline; criação (isso é a ação do cabeçalho) |
+
+**Hierarquia — três níveis, cada um com o mecanismo**
+1. DOMINA — a tabela "Orçamentos recentes" — mecanismo: nome do cliente
+   `font-medium text-cinza-900` com `hover:text-accent hover:underline` é o
+   único texto clicável de peso alto da tela; a tabela ocupa toda a largura
+   e o resto da altura disponível, é a única região com múltiplos eixos de
+   leitura simultâneos (cliente/status/valor/custo/data).
+2. APOIA — faixa de KPI — números em `text-valor-destaque`, mas contidos em
+   cards pequenos (`p-lg`) fixos no topo — panorama, não trabalho (mesmo
+   raciocínio 0.3 já aplicado ao Catálogo).
+3. RECUA — `StatusOrcamentoBadge` (pill) dentro da tabela — menor peso
+   visual da tela; cor carrega status semântico, nunca hierarquia de
+   importância genérica.
+
+> Cor não é mecanismo de hierarquia aqui: o único uso de cor com função de
+> destaque é o `accent` do hover no nome do cliente (afordance de link) e a
+> cor semântica do badge de status — nenhum dos dois "pinta" a tela para
+> chamar atenção genericamente.
+
+**Ordem de leitura**: 1º cabeçalho (o que esta tela é e como eu crio algo
+novo) → 2º faixa de KPI (panorama) → 3º tabela (retomar um orçamento
+existente).
+**Ação primária**: "Novo orçamento" — botão no cabeçalho de página,
+topo-direita (`justify-between`), repetido no estado vazio da tabela
+(mesmo padrão §8) — nunca na Topbar do shell, que aqui só carrega
+título/subtítulo e "Sair".
+**Poda**: título de página duplicado — `Topbar.tsx`
+(`TITULOS_POR_ROTA["/"]`) já renderiza "Dashboard" (`text-display`) +
+"Visão geral dos seus orçamentos" (subtítulo); o `<h2
+className="text-titulo-secao">Visão geral</h2>` interno de
+`DashboardView.tsx` repete a mesma leitura com outra palavra, em telas
+consecutivas. Correção: remover esse `h2`, manter só o parágrafo de apoio
+("Acompanhe seus orçamentos e o status de cada um.") ao lado do botão —
+mesmo padrão que `PerfilLab` já segue (nenhum título de página duplicando
+a Topbar, só cabeçalhos de seção). Os gráficos (linha/donut) cogitados no
+direcionamento original (Design-System §0.9) seguem podados: o motor de
+precificação ainda não alimenta "Faturamento" (hoje "—") — gráfico sem
+esse dado real seria decoração vazia (Antipadrão §0.7).
+**Agrupamento**: faixa de KPI e card "Orçamentos recentes" são grupos
+irmãos (`gap-xl`, nunca aninhados); o `h2` "Orçamentos recentes" dentro do
+card é cabeçalho de seção (não duplica a Topbar, é o único título daquele
+nível na tela) e permanece.
+**Eixos de alinhamento**: cabeçalho de página = 1 eixo
+(`items-center justify-between`, texto à esquerda, botão à direita); faixa
+de KPI = 1 eixo por card (ícone → rótulo → valor); tabela = 2 eixos
+(cliente/status à esquerda, valor/custo/data `tabular-nums` à direita) —
+mesma tese do Catálogo.
+**Vazio e erro**: vazio já implementado em `DashboardView.tsx` (`FileText`
+32px `cinza-300` + "Nenhum orçamento ainda" + descrição + botão "Novo
+orçamento") — já bate com Design-System §8, nenhuma correção necessária.
+Erro: `buscarDadosDashboard()` (`lib/dashboard/orcamentos.ts`) não tem
+hoje um caminho de falha tratado na `DashboardView` — falta um `Alert`
+variante erro substituindo faixa+tabela quando a consulta falhar (mesmo
+padrão §8); registrado como lacuna de implementação, não resolvido nesta
+composição.
+**Assinatura**: `mb-3` sob "Orçamentos recentes" hoje é só margem, sem
+divisor — aplicar o traço de cota (§0.2) neste ponto é a manifestação
+específica desta tela: é o primeiro título de seção que qualquer usuário vê
+depois do login.
+
+---
+
+### Novo orçamento — /orcamento/novo
+
+**Nível**: release
+**Referência nomeada**: Stripe — formulário de captura curto, um campo por
+linha, rótulo acima do input, erro inline abaixo dos campos, antes do
+botão; Linear — card único, sem distração, começando um fluxo sem exigir
+contexto extra antes da primeira ação.
+**Densidade**: espaçosa (decisão) — captura de um cliente novo antes de
+abrir o orçamento, uma decisão só.
+**Padrão de tela**: formulário simples (passo único — sem stepper, sem
+accordion; distinto do "formulário em etapas" do Editor de Item).
+
+**Grade**
+- Shell padrão, sem alteração.
+- Conteúdo: card único `max-w-xl rounded-lg border border-cinza-200
+  bg-cinza-0 p-xl shadow-xs`, alinhado à esquerda do `content` (sem
+  `mx-auto`) — decisão consciente: o card não ocupa a largura toda, então
+  centralizá-lo soltaria a tela do alinhamento com o resto da IA
+  (Antipadrão §0.7 "tudo centralizado por falta de decisão").
+- Formulário interno: `flex flex-col gap-md` (16px), um campo por linha.
+- Breakpoint: `max-w-xl` (576px) já é mais estreito que qualquer
+  breakpoint de referência — o card nunca precisa de reflow próprio.
+
+**Regiões** — região sem propósito declarado não existe
+| Região | Propósito | O que vive aqui | O que NUNCA vive aqui |
+|---|---|---|---|
+| Cabeçalho do card | Contexto e limite de escopo | Parágrafo avisando que a seleção de cliente existente não está disponível | Título de página duplicado (ver Poda) |
+| Formulário | Capturar os dados do cliente | Nome* / Telefone / Endereço / Prazo de entrega | Seleção de cliente existente (fora de escopo, documentado no próprio texto) |
+| Feedback | Confirmar erro antes de tentar de novo | `Alert` erro (mensagem do Server Action) | Alert de sucesso permanente — sucesso navega direto para `/orcamento/[id]` |
+
+**Hierarquia — três níveis, cada um com o mecanismo**
+1. DOMINA — campo "Nome do cliente *" — mecanismo: primeiro campo do
+   formulário, único com `*`/`required`; o resto da tela existe para
+   viabilizá-lo.
+2. APOIA — telefone/endereço/prazo de entrega — mesmo peso visual entre si
+   (`Label`+`Input` padrão), na ordem do DOM logo depois do campo
+   obrigatório.
+3. RECUA — segunda frase do parágrafo de abertura ("A seleção de um
+   cliente já existente não está disponível...") — `text-corpo
+   text-cinza-500`, contexto, não decisão.
+
+**Ordem de leitura**: 1º título+aviso de escopo → 2º nome do cliente
+(obrigatório) → 3º demais campos → 4º botão "Criar orçamento".
+**Ação primária**: "Criar orçamento" — botão `primary`, rodapé do
+formulário, único botão sólido da tela.
+**Poda**: mesmo achado do Dashboard — `Topbar.tsx`
+(`TITULOS_POR_ROTA["/orcamento/novo"]`) já mostra "Novo orçamento"; o
+`<h2 className="text-titulo-secao">Novo orçamento</h2>` dentro do card
+duplica esse título. Correção: remover o `h2` interno, manter só o
+parágrafo de aviso de escopo como abertura do card. Seleção de cliente
+existente permanece fora de escopo — decisão de produto já registrada no
+comentário do componente, não desta composição.
+**Agrupamento**: um único grupo (o card inteiro) — os 4 campos não se
+subdividem em seções, é um formulário plano.
+**Eixos de alinhamento**: 1 eixo (label acima do input, ambos à esquerda —
+não há dado tabular nesta tela, sem coluna à direita).
+**Vazio e erro**: não há estado vazio — o formulário em branco é o próprio
+estado inicial, não um estado à parte. Erro: `Alert` variante erro abaixo
+dos campos, acima do botão — mensagem vem de `criarOrcamento` (Server
+Action), nunca erro cru do Postgres (Design-System §11, já seguido pelo
+componente).
+**Assinatura**: nenhum divisor nesta tela hoje (card sem seção interna) —
+sem ponto natural para o traço de cota; não forçar (mesmo critério já
+registrado na composição da Biblioteca, R.2a).
+
+---
+
+### Perfil — /perfil
+
+**Nível**: release
+**Referência nomeada**: Stripe Dashboard — formulário de configurações em
+seções empilhadas, cada seção com seu próprio botão de salvar ("Business
+settings"); Linear — confirmação destrutiva com campo de digitação
+exigido ("type to confirm") antes de excluir um workspace inteiro.
+**Densidade**: espaçosa (decisão e leitura) — configuração pontual, não
+consulta/comparação.
+**Padrão de tela**: formulário em seções (variação sem stepper do
+"formulário em etapas": as seções não têm ordem obrigatória de
+progressão, todas ficam sempre visíveis e cada uma se salva sozinha).
+
+**Grade**
+- Shell padrão, sem alteração.
+- Conteúdo: `flex flex-col gap-xl` com as seções empilhadas (Organização,
+  Perfil pessoal, Segurança, Excluir conta — só para `admin`) — cada
+  `section` = `rounded-lg border border-cinza-200 bg-cinza-0 p-xl
+  shadow-xs`, exceto Excluir conta (`border-erro-border`, ver Hierarquia).
+- Dentro de cada seção: `grid grid-cols-1 gap-md sm:grid-cols-2` quando o
+  par de campos cabe lado a lado (nome+CNPJ, telefone+endereço), campo
+  único quando não há par (logo, unidade, kerf, precificação, montagem).
+- Breakpoint: abaixo de `sm`, todo grid de 2 colunas vira 1 — padrão já
+  usado no resto do produto (§10).
+
+**Regiões** — região sem propósito declarado não existe
+| Região | Propósito | O que vive aqui | O que NUNCA vive aqui |
+|---|---|---|---|
+| Organização | Dados que aparecem na proposta + padrões de orçamentos novos | Nome/CNPJ/telefone/endereço/logo/unidade/kerf/precificação padrão/montagem padrão | Dado pessoal do usuário, senha |
+| Perfil pessoal | Identidade do usuário logado | Nome/telefone/foto | CNPJ, dado de organização |
+| Segurança | Credencial de acesso | E-mail (somente leitura) + trocar senha + definir nova senha (condicional) | Dado de organização/perfil |
+| Excluir conta (só `admin`) | Ação destrutiva irreversível, isolada do resto | Botão "Excluir organização" + `Dialog` com campo de digitação | Qualquer outro dado/ação — vive sozinha, última seção |
+
+**Hierarquia — três níveis, cada um com o mecanismo**
+1. DOMINA — nenhuma seção domina por escala sobre as outras (todas
+   `ícone+h2+p-xl`, mesmo peso); a hierarquia aqui é posicional:
+   Organização primeiro (afeta todo orçamento novo), Perfil pessoal e
+   Segurança no meio, Excluir conta por último — e é a única seção que usa
+   cor como sinalizador (`border-erro-border`, ícone `AlertTriangle
+   text-erro`), uso semântico de perigo, não hierarquia de importância.
+2. APOIA — o campo obrigatório de cada seção (nome da organização, nome do
+   perfil) — mesmo peso do resto dos campos, primeiro na ordem do DOM.
+3. RECUA — texto de apoio abaixo de campo (`mt-1 text-corpo-pequeno
+   text-cinza-500`, ex.: "Muda o plano de corte de todo orçamento não
+   congelado.") — contexto, não decisão.
+
+**Ordem de leitura**: 1º Organização (o que mais orçamentos futuros
+herdam) → 2º Perfil pessoal → 3º Segurança → 4º Excluir conta (só quando
+`admin`, sempre por último).
+**Ação primária**: não há uma única ação de página — cada seção tem a sua
+("Salvar alterações" em Organização e em Perfil pessoal, "Trocar
+senha"/"Salvar nova senha" em Segurança, "Excluir organização" em Excluir
+conta) — decisão já registrada no componente (`PerfilLab.tsx`) e validada
+aqui: coerente com o padrão de abas do Orçamento (R.2a), onde cada
+superfície de trabalho salva o que é dela.
+**Poda**: "Tema: Claro" do mockup original não existe no código
+(Design-System §2.9 já documenta essa decisão — dark mode fora de escopo),
+nada a podar aqui, nunca foi construído. Alturas padrão de faixa
+(rodapé/bancada/aéreo/pé-direito, citadas no Mapa-de-Telas §3.3) ficam de
+fora desta tela por decisão já registrada no componente — vivem só na aba
+Ambientes, para não duplicar validação entre duas cópias; poda confirmada,
+não desta composição.
+**Agrupamento**: cada `section` é uma responsabilidade fechada (mesmo
+critério do Orçamento/Editor de Item: 1 seção = 1 pergunta — "o que a
+organização é", "quem sou eu", "como eu acesso", "e se eu quiser sair de
+vez").
+**Eixos de alinhamento**: 1 eixo por seção (label acima do input, campos
+pareados em grid 2 colunas, sem coluna de valor à direita — esta tela não
+tem dado tabular/monetário).
+**Vazio e erro**: organização não resolvível vira `Alert` erro dentro da
+própria seção "Organização" (Perfil pessoal continua utilizável) — já
+implementado, coerente com Design-System §8. Não há um "vazio" de
+preenchimento (formulário de configuração sempre mostra os campos). Erro:
+`Alert` inline por seção, sempre abaixo do botão daquela seção, nunca
+substituindo a seção inteira (diferente do cenário "organização não
+resolvível", que substitui o formulário por não haver `id` para salvar).
+**Assinatura**: o divisor sob "Definir nova senha" (`border-t
+border-cinza-200 pt-md`, dentro de Segurança) hoje é uma borda lisa —
+ponto natural para o traço de cota (§0.2), mesmo raciocínio já aplicado a
+"Ambientes orçados" na Proposta impressa.
+
+---
+
+### Materiais — /configuracoes/materiais
+
+**Nível**: release (não citada em `screenLevels`)
+**Referência nomeada**: nenhuma nova — esta composição não propõe
+redesenho (ver Poda). A referência que já cobre este conteúdo é a de
+Catálogo (R.2a): Stripe Dashboard, tabela densa com `tabular-nums`.
+**Densidade**: densa (consulta/comparação de preço por linha) — mesma
+categoria de Catálogo, citada só para registrar que esta nunca deveria ter
+sido uma segunda superfície de preço fora do shell.
+**Padrão de tela**: nenhum — rota órfã fora da arquitetura de informação
+principal.
+
+**Achado de arquitetura (antes de qualquer decisão de composição)**
+`app/configuracoes/materiais/page.tsx` é código V2 sobrevivente:
+- Fora do route group `(app)` — sem sidebar/topbar do shell; o próprio
+  `app/(app)/layout.tsx` (comentário, linhas 11-18) documenta essa
+  exclusão deliberada.
+- Sem link em `components/shell/Sidebar.tsx` — `ITENS_NAV` lista
+  "Configurações" com `href: null` (placeholder inativo); esta rota não é
+  o destino desse item.
+- Persiste em `localStorage` (`lib/catalog.ts`,
+  `carregarCatalogo`/`salvarCatalogo`), não em Supabase.
+- Usa 100% dos padrões em `legacyPatterns` do `.maestro/config.json`
+  (`className="wrap"/"top"/"toolbar"/"card"/"campos"`,
+  `className="primary"/"ghost"/"danger"`).
+- `docs/Mapa-de-Telas.md` §3.4 já documenta o destino:
+  **"Sucede a tela atual de materiais"** — `/catalogo` (Supabase, shadcn,
+  já composta em R.2a) é a evolução declarada desta tela, não uma tela
+  irmã dela.
+
+**Hierarquia (estado atual, registrada só para instruir a remoção, não
+como alvo de redesenho)**
+1. DOMINA — tabela "Chapas de MDF" — primeira, maior, único CRUD com todos
+   os campos editáveis inline.
+2. APOIA — tabela "Ferragens e acessórios" — mesma estrutura, mas só preço
+   é editável.
+3. RECUA — card "Outros custos" — 3 inputs numéricos soltos (fita de
+   borda, montagem, frete), menor densidade de dado.
+
+**Poda**: a tela inteira é a poda. Recomendação ao Maestro: registrar no
+Backlog a remoção de `app/configuracoes/materiais/page.tsx` (e
+`lib/catalog.ts`, se não tiver outro consumidor) ou, no mínimo, transformar
+a rota num redirect para `/catalogo` — nunca reconstruir esta tela com
+tokens novos, isso duplicaria de forma permanente a superfície de preço
+que `/catalogo` já cobre (chapas MDF → filtro "Chapas"; ferragens → filtro
+"Ferragens"). Os três campos de "Outros custos" (fita de borda R$/m,
+montagem R$/m², frete fixo R$) não têm equivalente 1:1 hoje: fita de borda
+é um insumo sem categoria própria em Catálogo; montagem e frete já têm um
+modo equivalente em `/perfil` → Organização → "Modo de precificação
+padrão"/"Modo de montagem padrão" (`SeletorModoPrecificacao`/
+`SeletorModoMontagem`, já implementados) — o valor fixo desta tela legada
+provavelmente já está obsoleto frente ao modo percentual que o substituiu.
+Isso é achado de modelo de domínio, não de composição visual: reportado ao
+Maestro para `data-architect`/`product-strategist` decidirem se "fita de
+borda" precisa de campo próprio em Catálogo antes desta tela ser removida,
+para não perder o único lugar onde esse preço é hoje editável.
+**Assinatura**: não se aplica — a tela não recebe a identidade do produto
+porque não deve continuar existindo como está.
+
+---
+
+### Proposta (aplicativo) — /proposta
+
+**Nível**: release (não citada em `screenLevels`; a variante vitrine já
+existe e é `/proposta/[id]/pdf`, composta em R.2a)
+**Referência nomeada**: nenhuma nova — ver Poda. A referência que cobre
+este conteúdo já foi registrada na composição da Proposta impressa (R.2a):
+Stripe (bloco de total isolado) + Apple (respiro editorial).
+**Densidade**: espaçosa (leitura) — mesma categoria da Proposta impressa,
+citada só para registro.
+**Padrão de tela**: nenhum — rota órfã e, na prática, inalcançável (ver
+achado).
+
+**Achado de arquitetura**
+`app/proposta/page.tsx` é o predecessor direto que `docs/Mapa-de-Telas.md`
+§3.8 nomeia explicitamente: "Evolução de `/proposta` atual +
+`proposta.css`" → `/proposta/[id]/pdf` (já implementada e composta em
+R.2a). A tela lê `sessionStorage.getItem("proposta")`; nenhum código atual
+grava essa chave — `app/(app)/page.tsx` (o Dashboard que substituiu o
+editor V1/V2 single-page) documenta no próprio comentário que o botão
+"Gerar proposta (PDF)" responsável por gravar essa chave foi aposentado
+junto com o editor antigo e ainda não tem equivalente. Resultado: em uso
+normal esta rota **sempre** cai no estado vazio ("Nenhuma proposta
+carregada... Volte à calculadora"), com link para `/` — que hoje é o
+Dashboard, não mais "a calculadora" citada no texto (evidência adicional
+de código morto). A tela também usa a marca antiga "Budget Planner AI"
+(`<div className="marca">Budget Planner AI</div>`), não "OrçaFácil" —
+confirma que este arquivo nunca foi atualizado para v3.
+
+**Poda**: a tela inteira é a poda, com prioridade maior que Materiais —
+esta rota é código morto de fato (inalcançável em uso normal), não só
+desalinhada de IA. Recomendação ao Maestro: remover `app/proposta/page.tsx`
+e `app/proposta/proposta.css` do repositório. A funcionalidade real de
+"montar e revisar a proposta antes de gerar" já vive na aba "Proposta" de
+`/orcamento/[id]` (composta em R.2a); a versão para impressão/cliente já
+vive em `/proposta/[id]/pdf` (vitrine, composta em R.2a) — nada desta tela
+precisa sobreviver.
+**Assinatura**: não se aplica.
+
+---
+
+### Login — /login
+
+**Nível**: vitrine
+**Referência nomeada**: Linear — split-panel de autenticação (metade marca
+escura, metade formulário claro), sem decoração supérflua; Stripe — input
+com ícone embutido à esquerda, foco visível, formulário mínimo que já
+transmite confiança antes de qualquer dado ser digitado.
+**Densidade**: espaçosa (decisão simples: entrar) — vitrine aqui não é
+sobre densidade de dado, é sobre respiro e confiança.
+**Padrão de tela**: tela de entrada (split-panel: marca + formulário)
+
+**Grade**
+- Duas colunas 50/50 em `≥md` (768px): esquerda `bg-marinho-900 p-2xl`
+  (painel de marca), direita `bg-cinza-0` centralizando um card
+  `max-w-[400px]`.
+- Abaixo de `md`: painel esquerdo `hidden`, painel direito ocupa 100% da
+  tela, logo variante fundo claro assume o topo do formulário — nunca as
+  duas variantes de logo visíveis ao mesmo tempo (já implementado via
+  `hidden ... md:flex` / `md:hidden`).
+- Sem shell (sidebar/topbar) — rota pré-autenticação, fora do `(app)`
+  route group, correto por definição (Design-System §6: estrutura de
+  shell presente "em toda tela autenticada... exceto login/cadastro/PDF").
+
+**Regiões** — região sem propósito declarado não existe
+| Região | Propósito | O que vive aqui | O que NUNCA vive aqui |
+|---|---|---|---|
+| Painel de marca (esquerda, ≥md) | Primeira impressão, prova de identidade antes de qualquer campo | Logo (fundo escuro) no topo, frase de posicionamento + subtítulo no meio, copyright no rodapé | Qualquer campo de formulário, qualquer CTA |
+| Formulário (direita) | Autenticar | Logo (fundo claro, só `<md`), h1 "Bem-vindo de volta", e-mail, senha (toggle mostrar/ocultar), erro, botão "Entrar", link "Criar conta" | Dado de marca institucional (isso é o painel esquerdo) |
+
+**Hierarquia — três níveis, cada um com o mecanismo**
+1. DOMINA — o formulário como bloco (h1+campos+botão) — mecanismo: é a
+   única coluna sempre visível em qualquer largura; o painel de marca é
+   contexto que desaparece em mobile — a informação que não pode faltar é
+   o formulário.
+2. APOIA — a frase de posicionamento no painel de marca ("Orçamentos
+   rápidos. Decisões seguras.") — `text-display font-bold`, mesmo peso do
+   h1 do formulário, mas só visível em `≥md`, reforço de marca, não ação.
+3. RECUA — copyright do painel esquerdo, link "Criar conta" no rodapé do
+   formulário — `text-corpo-pequeno`, menor peso, presentes mas não
+   competem com o botão "Entrar".
+
+**Ordem de leitura**: 1º logo (identidade) → 2º h1 "Bem-vindo de volta"
+(contexto da tela) → 3º campos e-mail/senha → 4º botão "Entrar".
+**Ação primária**: "Entrar" — botão `primary w-full`, único botão sólido
+da tela, sempre no fim do formulário, nunca disputando com o painel de
+marca (que não tem nenhum CTA).
+**Poda**: nenhum campo de "lembrar-me" ou "esqueci minha senha" — não há
+fluxo de recuperação de senha documentado para usuário deslogado (a troca
+de senha existe via `/perfil` → Segurança, só para quem já está logado);
+adicionar aqui seria funcionalidade nova fora do escopo desta composição —
+reportado como lacuna de produto, não resolvido nesta composição. Nenhum
+provedor social (Google etc.) — o domínio não tem esse requisito (Supabase
+Auth configurado só para e-mail/senha), então nenhum espaço reservado para
+botão de terceiro é necessário.
+**Agrupamento**: um grupo por coluna — painel de marca autocontido
+(logo/frase/copyright, `justify-between` distribuindo os três ao longo da
+altura), formulário autocontido (logo mobile + h1 + form + link, tudo em
+`max-w-[400px]`).
+**Eixos de alinhamento**: painel de marca = 1 eixo vertical (logo → frase
+→ copyright, `flex-col justify-between`); formulário = 1 eixo (label
+acima do input, ícone `Mail`/`Lock` alinhado opticamente ao centro
+vertical do input via `top-1/2 -translate-y-1/2`, não à borda).
+**Vazio e erro**: não há estado vazio (formulário sempre pronto para
+digitar). Erro: `Alert` variante erro entre os campos e o botão, cobrindo
+dois casos — credencial inválida (`mensagemErroLogin`) e link de
+confirmação expirado (`?erro=confirmacao`, mensagem já diz o que aconteceu
+e a ação seguinte, "peça um novo cadastro... ou tente entrar", já segue a
+regra de UX Writing §11).
+**Assinatura**: o painel `bg-marinho-900` já é a assinatura de marca
+(mesma cor da sidebar autenticada). Para reforçar a tese 0.1
+especificamente aqui — primeira tela que qualquer pessoa vê do produto —
+o traço de cota (§0.2) pode assinar o separador entre a frase de
+posicionamento e o copyright no rodapé do painel esquerdo (hoje só espaço
+via `justify-between`, sem nenhum divisor).
+
+---
+
+### Signup — /signup
+
+**Nível**: vitrine
+**Referência nomeada**: mesma dupla do Login (Linear/Stripe), aplicada a
+um formulário mais longo — Stripe também cobre aqui o padrão de "revelar
+só o próximo passo quando o anterior existe": a tela de confirmação de
+e-mail substitui o formulário inteiro, nunca aparece ao lado dele.
+**Densidade**: espaçosa (decisão) — mesmo com 5 campos (mais que o Login),
+o objetivo continua sendo uma decisão única ("criar conta").
+**Padrão de tela**: tela de entrada (split-panel: marca + formulário) —
+mesmo padrão e mesma decisão assinatura do Login.
+
+**Grade**
+- Idêntica ao Login (2 colunas 50/50 `≥md`, painel some `<md`) — único
+  ajuste: o card do formulário ganha `py-xl` (5 campos + 2 links, mais
+  alto que o do Login).
+- O estado "Confira seu e-mail" não é um passo dentro do mesmo layout de 2
+  colunas: substitui a tela inteira por `flex min-h-screen items-center
+  justify-center`, sem painel de marca (ver Assinatura).
+
+**Regiões** — região sem propósito declarado não existe
+| Região | Propósito | O que vive aqui | O que NUNCA vive aqui |
+|---|---|---|---|
+| Painel de marca (esquerda, ≥md) | Mesmo papel do Login, copy própria de conversão ("Comece agora seu controle profissional de orçamentos") | Logo + frase + subtítulo + copyright | Formulário |
+| Formulário | Criar a conta (organização + pessoa) | Nome da marcenaria, nome completo, e-mail, senha, confirmar senha, erro, botão "Criar conta e iniciar", link "Fazer login" | CNPJ/telefone/endereço/cidade/estado do mockup original (podados, ver abaixo) |
+| Confirmação de e-mail (estado substituto) | Fechar o loop "conta criada, falta confirmar" | Logo + h1 "Confira seu e-mail" + e-mail digitado em destaque + link "Voltar para o login" | Qualquer campo do formulário — a conta já existe, não há o que reeditar aqui |
+
+**Hierarquia — três níveis, cada um com o mecanismo**
+1. DOMINA — o formulário (mesmo mecanismo do Login: única coluna sempre
+   visível).
+2. APOIA — frase de posicionamento do painel de marca (mesmo mecanismo do
+   Login, copy diferente).
+3. RECUA — texto de apoio ("Preencha os dados para criar sua
+   marcenaria."), link "Fazer login".
+
+**Ordem de leitura**: 1º logo → 2º h1 "Crie sua conta" → 3º nome da
+marcenaria (primeiro campo — é o que distingue este cadastro de um
+cadastro pessoal genérico) → 4º demais campos → 5º botão.
+**Ação primária**: "Criar conta e iniciar" — único botão sólido, rótulo
+verbo+objeto+consequência (o "e iniciar" já comunica que a próxima tela é
+o produto de fato, reforço do UX Writing §7/11 "verbo + objeto quando
+houver ambiguidade").
+**Poda**: campos de CNPJ, telefone, endereço, cidade/estado do mockup
+original (`docs/Imagem das Telas/Cadastro-Singup.png`) já podados no
+código, com justificativa registrada no próprio componente (o trigger
+`handle_new_user` só lê `organizacao_nome`/`nome`) — esta composição
+confirma que a poda é a decisão certa também do ponto de vista de
+hierarquia: um formulário de vitrine mais longo aumentaria o custo de
+decisão logo na primeira impressão, contra a própria tese de "decisão
+simples" desta tela. Achado de consistência entre as duas telas-irmãs de
+vitrine: diferente do Login, os campos desta tela não têm ícone embutido
+(`Mail`/`Lock`) — 5 campos sem esse reforço quebram o ritmo visual já
+estabelecido no Login (Princípio Impeccable #4, ritmo consistente); ação
+recomendada ao frontend-engineer: adicionar ícone em e-mail e nas duas
+senhas, mesmo posicionamento do Login (`absolute left-3 top-1/2
+-translate-y-1/2`, ícone `text-cinza-400`).
+**Agrupamento**: mesmo critério do Login — painel de marca autocontido,
+formulário autocontido; o estado "Confira seu e-mail" é um terceiro grupo,
+mutuamente exclusivo com o formulário (troca de estado, nunca os dois
+juntos).
+**Eixos de alinhamento**: mesmo padrão do Login quando os ícones forem
+adicionados (ver Poda); até lá, 1 eixo (label acima do input, sem ícone —
+inconsistência registrada acima, não desta composição resolver em texto).
+**Vazio e erro**: não há vazio (formulário sempre pronto). Erro: `Alert`
+variante erro entre "Confirmar senha" e o botão — cobre validação
+client-side (senha curta, senhas não conferem) e erro do Supabase
+(`mensagemErroSignup`), nunca mensagem crua.
+**Assinatura**: mesmo painel `marinho-900` do Login. A especificidade do
+Signup é o estado "Confira seu e-mail", que perde o painel de marca
+inteiro — quebra deliberada do split-panel bem no momento de maior
+confiança necessária (conta acabou de ser criada). O traço de cota (§0.2)
+aplicado como separador sutil entre o h1 "Confira seu e-mail" e o
+parágrafo abaixo dele reforçaria a assinatura de marca justamente onde ela
+ficou momentaneamente ausente (sem o painel esquerdo).
+
+---
+
 ## Índice — Tela → Rota → Nível
 
 | Tela | Rota | Nível |
@@ -427,3 +926,10 @@ que em qualquer tela interna do produto.
 | Catálogo | `/catalogo` | release |
 | Biblioteca | `/biblioteca` | release |
 | Proposta impressa | `/proposta/[id]/pdf` | vitrine |
+| Dashboard | `/` | release |
+| Novo orçamento | `/orcamento/novo` | release |
+| Perfil | `/perfil` | release |
+| Materiais (órfã, candidata a remoção) | `/configuracoes/materiais` | release |
+| Proposta (aplicativo, órfã, candidata a remoção) | `/proposta` | release |
+| Login | `/login` | vitrine |
+| Signup | `/signup` | vitrine |
