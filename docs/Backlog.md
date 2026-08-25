@@ -23,7 +23,7 @@
 
 #### Task R.1 — Direção de Arte (Seção 0 do Design System)
 
-- **Status**: ⏱️ Planejado
+- **Status**: ✅ Completo
 - **Executor**: product-designer
 - **Modelo Recomendado**: Sonnet (padrão do agente)
 - **Depende de**: nenhuma
