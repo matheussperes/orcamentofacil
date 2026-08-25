@@ -20,7 +20,157 @@
 > raio, sombra ou tamanho de fonte fora do que está aqui. Ambiguidade aqui
 > gera veto de UX mais tarde.
 
-## 0. Direcionamento do operador (não reinterpretar)
+## 0. Direção de Arte
+
+> Escrita a posteriori (Task R.1, 2026-08-25) sobre um documento que já
+> tinha ~1.500 linhas de tokens e nenhuma frase de identidade — a paleta
+> (Seção 2), a tipografia (Seção 3) e o canvas técnico (Seção 9) já
+> existiam e **não são reabertos aqui**. Esta seção explica por que esses
+> valores são esses, amarra-os a uma tese única e fixa o que decorre dela
+> para telas ainda não construídas. O antigo conteúdo da Seção 0
+> ("Direcionamento do operador") continua abaixo, intacto, em 0.9.
+
+### 0.1 Tese visual
+
+**OrçaFácil parece uma prancheta de bancada que ganhou tela de gestão em
+volta, não um SaaS de gestão com um desenho técnico anexado.** O produto
+já fala a língua certa onde importa — elevação de parede com régua e
+ticks, plano de corte com hachura de sobra, cota com seta de sentido de
+veio, número monetário em `tabular-nums` alinhado como medida — mas essa
+língua para na borda do canvas (Seção 9) e o resto da interface (cards de
+KPI, tabela, formulário) fica em vocabulário de dashboard genérico. A tese
+desta revisão é levar o vocabulário de desenho técnico para fora do
+canvas, como método de construção da UI, não como decoração pontual.
+
+Teste de falseabilidade: uma tela em que os números não estão alinhados
+como medida (`tabular-nums`, alinhamento à direita em coluna numérica), em
+que um divisor de seção é uma linha reta genérica sem nenhuma referência
+ao traço de cota, ou em que um ícone poderia vir de qualquer biblioteca de
+dashboard sem relação com ferramenta/oficina — contraria a tese, mesmo que
+use a paleta navy/laranja correta. Paleta certa não é tese cumprida; tese
+cumprida é a tela inteira, não só o canvas, ler como instrumento de
+medição.
+
+### 0.2 Decisão assinatura — traço de cota (dimension line)
+
+O candidato óbvio já existe dentro do domínio e é avaliado antes de
+qualquer identidade emprestada de fora: a **régua com ticks** e a
+**seta dupla de sentido de veio** já especificadas na Seção 9.3/9.4 para o
+canvas técnico. A decisão assinatura generaliza esse traço para um único
+motivo gráfico reutilizável em toda a interface, não só no canvas:
+
+> **Traço de cota**: uma linha fina (`1.5px`) terminada em pequenos traços
+> perpendiculares nas duas pontas (`⊢───⊣`), exatamente o desenho de uma
+> linha de cota de desenho técnico. Usado, fora do canvas, como: divisor
+> sob título de seção (`text-titulo-secao`) em vez de uma borda inferior
+> lisa; conector entre etapas do Stepper (Seção 16.3, se aplicável) em vez
+> de uma linha reta simples; indicador de item ativo da sidebar em vez de
+> uma barra sólida lateral genérica — a barra já usa `accent-vivid`
+> (Seção 2.3), o traço de cota é o que faz essa barra ler como "marca de
+> medida", não como decoração de menu qualquer.
+
+É **um** elemento, aplicado com consistência: qualquer divisor, conector
+ou indicador linear novo que uma tela precisar usa este traço antes de se
+inventar uma borda genérica — a régua com ticks do canvas (9.3) e este
+traço de cota são a mesma forma em duas escalas, não dois motivos
+diferentes. Um marceneiro reconhece a forma porque é a mesma linha que ele
+lê na fita métrica e no desenho de corte todo santo dia.
+
+### 0.3 Referências nomeadas
+
+- **Linear**: o estado de foco como cidadão de primeira classe (nunca
+  decoração opcional) e a densidade de painel de navegação escura — é de
+  onde vem o padrão de que a sidebar `marinho` (Seção 2.2) tem hierarquia
+  de texto própria (`marinho-300` para inativo, branco para ativo) em vez
+  de ser só "fundo escuro com ícones".
+- **Stripe Dashboard**: números monetários densos, alinhados, em
+  `tabular-nums`, com hierarquia de KPI resolvida por peso e tamanho de
+  fonte (Seção 3) e não por caixa colorida — é o raciocínio já aplicado
+  nos cards de KPI da Seção 2.6 (cor tintada de fundo do ícone, nunca do
+  card inteiro) e é o mesmo raciocínio que rege a leitura do plano de
+  corte (Seção 9.4): a cor identifica material/categoria, o peso
+  tipográfico identifica importância.
+
+### 0.4 Par tipográfico
+
+A família de UI é só **Inter** (Seção 3) — decisão herdada, não reaberta
+aqui — mas o produto não usa uma única família para tudo: a logo oficial
+(Seção 2.9) usa uma segunda família geométrica bold ("visual tipo
+Poppins/Montserrat Bold") como elemento de marca isolado, nunca como fonte
+de corpo. O par é **Inter para dado e interface** (a família precisa
+render bem `tabular-nums` em coluna de medida e de dinheiro — é o
+requisito funcional que a escolhe, não estética) e **a geométrica bold da
+logo, só para a marca** (ícone/wordmark, nunca corpo de texto, nunca
+título de card). Isso já satisfaz o princípio de não usar uma sans única
+para tudo sem abrir um terceiro token de fonte nesta revisão — se uma tela
+futura precisar de uma terceira família utilitária (ex.: monoespaçada para
+código/JSON de exportação), isso é decisão de uma task futura, não desta.
+
+### 0.5 Neutro com viés de matiz
+
+A escala `cinza` (Seção 2.1, valores de `#F8FAFC` a `#0F172A`) não é cinza
+puro — tem viés frio, levemente azulado (é a família "slate", não
+"neutral"/"gray" puro). Isso não é acidente de escolha de biblioteca: é o
+mesmo viés de matiz do `marinho` da sidebar (Seção 2.2), então superfície
+clara e superfície escura pertencem à mesma família de cor, só em
+luminosidades opostas — e o viés frio-azulado é o que faz o fundo de
+página lembrar papel de prancheta/vegetal, reforçando a tese sem depender
+de nenhuma cor nova.
+
+### 0.6 Assinatura de movimento
+
+A curva de entrada de modal/drawer/toast já registrada na Seção 12 —
+`cubic-bezier(0.16, 1, 0.3, 1)`, ease-out com leve overshoot — é a
+assinatura deste produto, não um easing genérico de biblioteca: o
+pequeno overshoot é o mesmo comportamento físico de uma trena que
+extrapola um milímetro antes de assentar na medida, não um "bounce" de
+UI decorativo. Todo elemento novo que precisar de uma curva de entrada
+perceptível (dropdown, popover, painel lateral) usa esta mesma curva antes
+de se propor outra — a Seção 12 já é normativa para duração, esta seção só
+fixa a leitura de por que essa curva e não outra.
+
+### 0.7 Antipadrões nomeados
+
+```
+- Sans única para tudo + cinza puro + azul saturado de biblioteca + tudo
+  arredondado no mesmo raio + sombra média genérica em todo card
+- Ícone pastel dentro de círculo colorido como recurso de hierarquia
+- Card com barrinha de accent na lateral só para "dar destaque" sem
+  significado (a barra lateral que este produto usa é sempre o traço de
+  cota de 0.2 ou o indicador de status de 2.5 — nunca decoração vazia)
+- Gradiente de duas cores em cabeçalho ou herói sem função semântica
+- Emoji como marcador de seção ou de estado
+- Tudo centralizado por falta de decisão de alinhamento
+- Textura de madeira fotográfica, sombra volumétrica ou qualquer resíduo
+  de "render 3D" fora do canvas ou dentro dele (proibição já fixada na
+  Seção 9, reforçada aqui como antipadrão de identidade, não só de
+  engenharia)
+- Ícone de régua/ferramenta genérico de biblioteca de ícones (estilo
+  emoji/clipart) onde o produto já tem vocabulário próprio de régua com
+  ticks e traço de cota — usar a forma própria, não o ícone de estoque
+- Número monetário ou medida sem `tabular-nums`, alinhado à esquerda como
+  se fosse texto solto — quebra a leitura de "coluna de medida" que é a
+  tese inteira
+```
+
+### 0.8 Teste de identidade
+
+*Cubra a logo de uma captura de tela do OrçaFácil. Um marceneiro reconhece
+que é este produto, ou poderia ser qualquer SaaS de gestão?*
+
+Aplicado contra o estado atual do documento (Seções 2, 3 e 9 já
+existentes): a sidebar navy com indicador laranja é distintiva mas, sozinha,
+poderia ser qualquer produto com paleta de marca escura — o que fecha o
+teste é a combinação com o canvas técnico (régua, cota, cor por material
+real) **e** a extensão dessa linguagem para fora do canvas via o traço de
+cota (0.2). Com as três em conjunto — paleta de marca, canvas técnico já
+existente, traço de cota generalizado — a resposta é **sim**: nenhum SaaS
+genérico tem régua com ticks e cor de peça por material real na tela de
+edição de item, e nenhum produto de marcenaria concorrente documentado usa
+esse traço como motivo estrutural do resto da UI. Teste: **passou** na
+primeira redação, sem necessidade de reescrita.
+
+### 0.9 Direcionamento do operador (não reinterpretar)
 
 1. **Nova direção visual (2026-07-28)**: adotar o visual das 12 imagens de
    referência como padrão — **sidebar escura navy/quase-preto** com item
