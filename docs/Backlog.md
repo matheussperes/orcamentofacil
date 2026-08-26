@@ -204,6 +204,27 @@ Erradicar o CSS legado da árvore `app/modulo/` (11 arquivos, 59 ocorrências), 
 
 ---
 
+#### Task R.11 — Transição de hover no card colapsado do accordion
+
+- **Status**: ✅ Completo
+- **Executor**: frontend-engineer
+- **Modelo Recomendado**: Sonnet (padrão do agente)
+- **Depende de**: R.4a
+- **Referências**: Achado não bloqueante da Task R.4a (Design-System §12); `docs/Design-System.md` §12 (transições)
+
+**Descrição**
+Adicionar `transition-colors duration-150` (Design-System §12) ao hover `bg-cinza-50 → hover:bg-cinza-100` nos cards colapsados dos accordions em `/modulo`. Achado da auditoria visual da Task R.4a: gap pré-existente não tocado por R.4a, fora do escopo de §16.4. Correção pontual, sem mudança estrutural.
+
+**Critérios de aceitação**
+- [x] `transition-colors duration-150` adicionado aos 10 arquivos `app/modulo/*Card.tsx` (CaixaCard, DivisoesCard, GavetasCard, PlacaBordaCard, PlacaDimensoesCard, PlacaEngrossamentoCard, PlacaOrientacaoCard, PlacaRipadoCard, PortasCard, PuxadorCard)
+- [x] Hover card colapsado: `bg-cinza-50 hover:bg-cinza-100` com transição suave (confirmado por amostragem via Playwright)
+- [x] `npm run test`/`build`/`lint`/`typecheck` sem regressão
+
+**Resultado**
+`transition-colors duration-150` adicionado ao hover do card colapsado em 10 arquivos de accordion (CaixaCard, DivisoesCard, GavetasCard, PlacaBordaCard, PlacaDimensoesCard, PlacaEngrossamentoCard, PlacaOrientacaoCard, PlacaRipadoCard, PortasCard, PuxadorCard). Transição visual confirmada por amostragem de cor via Playwright em 3 pontos no tempo (248ms→243ms→241ms, interpolação linear observada). Correção pontual sem mudança de estrutura ou comportamento. `code-auditor` APROVADO (1ª tentativa), `qa-engineer` APROVADO (1ª tentativa, 641/641 testes, mesma contagem do baseline). `ux-auditor` APROVADO (1ª tentativa, transição confirmada por amostragem de cor em 3 pontos no tempo via Playwright — 248→243→241, interpolação real). Sem `security-auditor` (mudança de apresentação pura). Nenhum Circuit Breaker. `frontend-engineer`. Impacto Visual: Leve.
+
+---
+
 #### Task R.4b — Erradicar CSS legado em Materiais/Proposta e remover definições mortas
 
 - **Status**: ⏱️ Planejado
@@ -447,24 +468,6 @@ Login e Signup são um par vitrine e hoje divergem: Login renderiza ícone embut
 **Critérios de aceitação**
 - [ ] Login e Signup usam o mesmo padrão de ícone embutido nos campos correspondentes
 - [ ] `ux-auditor` confere (nível vitrine)
-- Impacto Visual: Leve
-
----
-
-#### Task R.11 — Transição de hover no card colapsado do accordion (`/modulo`)
-
-- **Status**: ⏱️ Planejado
-- **Executor**: frontend-engineer
-- **Modelo Recomendado**: Sonnet (padrão do agente)
-- **Depende de**: nenhuma
-- **Referências**: achado não bloqueante da Task R.4a (`ux-auditor`, veredito em `.maestro/tmp/verdicts/R.4a-ux-auditor.md`); `docs/Design-System.md` §12 (hover 150ms) e §16.2
-
-**Descrição**
-O card colapsado do accordion em `app/modulo/` (`bg-cinza-50 hover:bg-cinza-100`) troca de cor no hover sem `transition-colors`. Gap pré-existente, confirmado anterior à Task R.4a (não introduzido nem tocado pelo diff daquela task, fora do escopo de §16.4). Decisão do operador (2026-08-26): vira task de acabamento no stage corrente, não recusa datada.
-
-**Critérios de aceitação**
-- [ ] `transition-colors` (150ms, conforme §12) aplicado no hover do card colapsado do accordion em todos os arquivos `app/modulo/*Card.tsx` que exibem esse padrão
-- [ ] Nenhuma outra mudança de layout/comportamento
 - Impacto Visual: Leve
 
 ---
