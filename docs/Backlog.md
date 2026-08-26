@@ -200,9 +200,7 @@ Erradicar o CSS legado da árvore `app/modulo/` (11 arquivos, 59 ocorrências), 
 15 arquivos em `app/modulo/` migrados de padrões legados (`.card`, `.legado-grid`, `.campos`, `.acoes`, `button.primary/ghost/danger`) para componentes shadcn (`Card`/`CardHeader`/`CardTitle`/`CardContent` — novo primitivo `components/ui/card.tsx`; `Button` com nova variante `outline` para o botão "Avançar"; `Input`/`Select`/`Label` já existentes). Tela-alvo compartilhada: `/modulo` e `/orcamento/[id]/item/[itemId]` (Editor de Item, via `EditorItemNucleo` decomposto na Task R.3c). Botões de avanço que não persistem (Caixa/Divisões/Portas/Gavetas/Puxador/seções de Placa) viraram uniformemente "Avançar" (`variant="outline"`, `ChevronRight`); "Salvar"/"Salvar item" preservado só nos dois pontos reais de persistência. Grid `.campos` → `grid grid-cols-2 gap-md sm:grid-cols-3`. Composição do Editor de Item ajustada: grade `1fr/1fr` (era `.legado-grid` 1.3fr/1fr) e Plano de Corte migrado da coluna de decisão para a coluna de revisão técnica (Poda já prevista em `docs/Screen-Composition.md`). `app/globals.css` intocado (remoção das 59 definições legadas é escopo da Task R.4b). Aprovações: `code-auditor` APROVADO (1ª tentativa), `qa-engineer` APROVADO (1ª tentativa, 641/641 testes, mesma contagem do baseline), `ux-auditor` APROVADO (1ª tentativa, capturas nas duas rotas em 3 breakpoints, varredura de padrão legado zerada, tokens §7.1/7.2/7.9/4/11 conformes). Sem `security-auditor` (mudança de apresentação pura). Nenhum Circuit Breaker — 2 tentativas do executor por estouro de limite de turnos em background sem perda de trabalho na 2ª (progresso preservado via retomada por SendMessage), não conta como reprovação de gate. `frontend-engineer`. Impacto Visual: Completo.
 
 **Achados não bloqueantes**
-1. `transition-colors` ausente no hover do card colapsado do accordion (`bg-cinza-50 hover:bg-cinza-100`) — gap pré-existente confirmado anterior a esta task (não introduzido, não tocado pelo diff, fora do escopo de §16.4), aguardando decisão do operador (task futura vs recusa datada).
-
-Achado não bloqueado. Recomendação: registrar como observação formal no Maestro para decisão explícita sobre virar task formal, não arquivar em silêncio.
+1. `transition-colors` ausente no hover do card colapsado do accordion (`bg-cinza-50 hover:bg-cinza-100`) — gap pré-existente confirmado anterior a esta task (não introduzido, não tocado pelo diff, fora do escopo de §16.4). Decisão do operador (2026-08-26): virou **Task R.11** (nova, no Backlog), no stage corrente — não é recusa datada.
 
 ---
 
@@ -453,19 +451,37 @@ Login e Signup são um par vitrine e hoje divergem: Login renderiza ícone embut
 
 ---
 
+#### Task R.11 — Transição de hover no card colapsado do accordion (`/modulo`)
+
+- **Status**: ⏱️ Planejado
+- **Executor**: frontend-engineer
+- **Modelo Recomendado**: Sonnet (padrão do agente)
+- **Depende de**: nenhuma
+- **Referências**: achado não bloqueante da Task R.4a (`ux-auditor`, veredito em `.maestro/tmp/verdicts/R.4a-ux-auditor.md`); `docs/Design-System.md` §12 (hover 150ms) e §16.2
+
+**Descrição**
+O card colapsado do accordion em `app/modulo/` (`bg-cinza-50 hover:bg-cinza-100`) troca de cor no hover sem `transition-colors`. Gap pré-existente, confirmado anterior à Task R.4a (não introduzido nem tocado pelo diff daquela task, fora do escopo de §16.4). Decisão do operador (2026-08-26): vira task de acabamento no stage corrente, não recusa datada.
+
+**Critérios de aceitação**
+- [ ] `transition-colors` (150ms, conforme §12) aplicado no hover do card colapsado do accordion em todos os arquivos `app/modulo/*Card.tsx` que exibem esse padrão
+- [ ] Nenhuma outra mudança de layout/comportamento
+- Impacto Visual: Leve
+
+---
+
 #### Task R.8 — Fechar o stage
 
 - **Status**: ⏱️ Planejado
 - **Executor**: nenhum (Maestro, via comando)
 - **Modelo Recomendado**: — (comando, não geração de código)
-- **Depende de**: R.1, R.2a, R.2b, R.3a, R.3b, R.3c, R.3d, R.4a, R.4b, R.5a, R.5b, R.5c, R.5d, R.5e, R.6a, R.6b, R.6c, R.7, R.9, R.10
+- **Depende de**: R.1, R.2a, R.2b, R.3a, R.3b, R.3c, R.3d, R.4a, R.4b, R.5a, R.5b, R.5c, R.5d, R.5e, R.6a, R.6b, R.6c, R.7, R.9, R.10, R.11
 - **Referências**: `docs/Plano-Reparacao-orcamentofacil.md` R.8
 
 **Descrição**
-Executar `/maestro-stage-close`. O stage não fecha sem os seis critérios: (1) tasks R.1 a R.10 mescladas; (2) suíte completa verde (`npm run test`); (3) `art-director` APROVADO em cada uma das telas tocadas; (4) `scan-legacy` = 0 nas telas do stage; (5) zero dívida arquivada em silêncio (R.7 resolvida); (6) teto de arquivo respeitado — nenhum `.tsx` de UI acima de 400 linhas.
+Executar `/maestro-stage-close`. O stage não fecha sem os seis critérios: (1) tasks R.1 a R.11 mescladas; (2) suíte completa verde (`npm run test`); (3) `art-director` APROVADO em cada uma das telas tocadas; (4) `scan-legacy` = 0 nas telas do stage; (5) zero dívida arquivada em silêncio (R.7 resolvida); (6) teto de arquivo respeitado — nenhum `.tsx` de UI acima de 400 linhas.
 
 **Critérios de aceitação**
-- [ ] Tasks mescladas: R.1 a R.10
+- [ ] Tasks mescladas: R.1 a R.11
 - [ ] Suíte completa verde: `npm run test`
 - [ ] `art-director` APROVADO em cada uma das telas tocadas
 - [ ] `scan-legacy` = 0 nas telas do stage
