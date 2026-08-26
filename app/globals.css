@@ -46,27 +46,6 @@
     --input: 214.3 31.8% 91.4%; /* cinza-200 #E2E8F0 */
     --ring: 26 90% 37%; /* accent #B45309 (anel de foco) */
     --radius: 0.75rem; /* Seção 5 — 12px = rounded-lg */
-
-    /*
-     * Variáveis do tema legado, renomeadas de --bg/--panel/--panel-2/
-     * --border/--text/--muted/--accent/--green/--red/--amber para
-     * --legacy-* porque os nomes --border e --muted colidiam com as
-     * variáveis semânticas do shadcn acima (mesmo arquivo, mesmo :root —
-     * shadcn exige exatamente esses nomes).
-     *
-     * R.4a/R.4b erradicaram os seletores legados (`.card`, `.modulo`,
-     * `.kpi`, `.campos`, `label`/`input`/`select`/`table`/`th`/`td`/`a`,
-     * `.slider-row`, `.aviso`, `.muted`, `.tempo`, `.footer`, `.wrap`,
-     * `header.top`) — só `--legacy-panel-2`/`--legacy-border`/
-     * `--legacy-text`/`--legacy-accent` sobrevivem, porque `button`
-     * (seletor de elemento sem classe) e `.toolbar` ainda têm consumidor
-     * real fora do raio das duas tasks: `app/components/LayoutVisualizer.tsx`
-     * (ver comentário acima da regra `.toolbar`).
-     */
-    --legacy-panel-2: #f8fafc; /* cinza-50 */
-    --legacy-border: #e2e8f0; /* cinza-200 */
-    --legacy-text: #0f172a; /* cinza-900 */
-    --legacy-accent: #b45309; /* accent (v3, laranja) */
   }
 }
 
@@ -81,39 +60,4 @@ body {
   padding: 0;
   font-size: 16px;
   line-height: 1.5;
-}
-
-/*
- * `.toolbar` e o seletor `button` abaixo (sem classe) continuam com
- * consumidor real fora do raio desta task: `app/components/LayoutVisualizer.tsx`
- * (usado por `app/(app)/page.tsx`, a calculadora principal) alterna
- * `className` entre `"primary"` e `""` — quando `""`, o botão depende
- * inteiramente do estilo de elemento nativo abaixo, e o grupo de abas
- * depende de `.toolbar`. Task R.4b não migrou esse arquivo (tela fora do
- * escopo do contrato); reportado ao Maestro para decidir task futura.
- */
-.toolbar {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  margin-bottom: 16px;
-}
-
-button {
-  background: var(--legacy-panel-2);
-  color: var(--legacy-text);
-  border: 1px solid var(--legacy-border);
-  border-radius: 8px;
-  padding: 8px 12px;
-  cursor: pointer;
-  font-size: 14px;
-}
-button:hover {
-  border-color: var(--legacy-accent);
-}
-button.primary {
-  background: var(--legacy-accent);
-  border-color: var(--legacy-accent);
-  color: #fff;
-  font-weight: 600;
 }
