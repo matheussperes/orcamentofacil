@@ -179,7 +179,7 @@ Página morta `app/proposta/page.tsx` removida (lê `sessionStorage.getItem("pro
 
 #### Task R.4a — Erradicar CSS legado em `app/modulo/`
 
-- **Status**: ⏱️ Planejado
+- **Status**: ✅ Completo
 - **Executor**: frontend-engineer
 - **Modelo Recomendado**: Sonnet (padrão do agente)
 - **Depende de**: R.3c
@@ -189,12 +189,20 @@ Página morta `app/proposta/page.tsx` removida (lê `sessionStorage.getItem("pro
 Erradicar o CSS legado da árvore `app/modulo/` (11 arquivos, 59 ocorrências), executando as correções já especificadas em `docs/Design-System.md` §16.4.
 
 **Critérios de aceitação**
-- [ ] `scan-legacy` retorna 0 em `app/modulo/`
-- [ ] Nenhum `<button className="primary|ghost|danger">` resta: todos viram `Button` do shadcn com a variante equivalente (foco visível é requisito, não melhoria)
-- [ ] Todo `<div className="card">` vira `Card` do shadcn, com `CardTitle` na escala `text-titulo-secao` — elimina o segundo sistema de título da tela
-- [ ] Inputs e selects viram `Input`/`Select`/`Label` da Seção 7.9
-- [ ] O botão "Salvar" que apenas avança o accordion vira "Avançar" (§16.4)
-- [ ] `app/globals.css` mantém as classes até R.4b fechar — a remoção do CSS morto é a última linha de R.4b, não desta task
+- [x] `scan-legacy` retorna 0 em `app/modulo/`
+- [x] Nenhum `<button className="primary|ghost|danger">` resta: todos viram `Button` do shadcn com a variante equivalente (foco visível é requisito, não melhoria)
+- [x] Todo `<div className="card">` vira `Card` do shadcn, com `CardTitle` na escala `text-titulo-secao` — elimina o segundo sistema de título da tela
+- [x] Inputs e selects viram `Input`/`Select`/`Label` da Seção 7.9
+- [x] O botão "Salvar" que apenas avança o accordion vira "Avançar" (§16.4)
+- [x] `app/globals.css` mantém as classes até R.4b fechar — a remoção do CSS morto é a última linha de R.4b, não desta task
+
+**Resultado**
+15 arquivos em `app/modulo/` migrados de padrões legados (`.card`, `.legado-grid`, `.campos`, `.acoes`, `button.primary/ghost/danger`) para componentes shadcn (`Card`/`CardHeader`/`CardTitle`/`CardContent` — novo primitivo `components/ui/card.tsx`; `Button` com nova variante `outline` para o botão "Avançar"; `Input`/`Select`/`Label` já existentes). Tela-alvo compartilhada: `/modulo` e `/orcamento/[id]/item/[itemId]` (Editor de Item, via `EditorItemNucleo` decomposto na Task R.3c). Botões de avanço que não persistem (Caixa/Divisões/Portas/Gavetas/Puxador/seções de Placa) viraram uniformemente "Avançar" (`variant="outline"`, `ChevronRight`); "Salvar"/"Salvar item" preservado só nos dois pontos reais de persistência. Grid `.campos` → `grid grid-cols-2 gap-md sm:grid-cols-3`. Composição do Editor de Item ajustada: grade `1fr/1fr` (era `.legado-grid` 1.3fr/1fr) e Plano de Corte migrado da coluna de decisão para a coluna de revisão técnica (Poda já prevista em `docs/Screen-Composition.md`). `app/globals.css` intocado (remoção das 59 definições legadas é escopo da Task R.4b). Aprovações: `code-auditor` APROVADO (1ª tentativa), `qa-engineer` APROVADO (1ª tentativa, 641/641 testes, mesma contagem do baseline), `ux-auditor` APROVADO (1ª tentativa, capturas nas duas rotas em 3 breakpoints, varredura de padrão legado zerada, tokens §7.1/7.2/7.9/4/11 conformes). Sem `security-auditor` (mudança de apresentação pura). Nenhum Circuit Breaker — 2 tentativas do executor por estouro de limite de turnos em background sem perda de trabalho na 2ª (progresso preservado via retomada por SendMessage), não conta como reprovação de gate. `frontend-engineer`. Impacto Visual: Completo.
+
+**Achados não bloqueantes**
+1. `transition-colors` ausente no hover do card colapsado do accordion (`bg-cinza-50 hover:bg-cinza-100`) — gap pré-existente confirmado anterior a esta task (não introduzido, não tocado pelo diff, fora do escopo de §16.4), aguardando decisão do operador (task futura vs recusa datada).
+
+Achado não bloqueado. Recomendação: registrar como observação formal no Maestro para decisão explícita sobre virar task formal, não arquivar em silêncio.
 
 ---
 
