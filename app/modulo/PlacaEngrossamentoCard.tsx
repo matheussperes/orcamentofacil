@@ -1,5 +1,10 @@
 "use client";
 
+import { ChevronRight } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { Engrossamento, NivelEngrossamento } from "@/lib/engine/placa/types";
 import { SecaoHeader } from "./SecaoHeader";
 
@@ -73,37 +78,48 @@ export function PlacaEngrossamentoCard({
       <SecaoHeader titulo="Engrossamento" aberta={aberta} onAbrir={onAbrir} />
       {aberta && (
         <>
-          <div className="campos">
+          <div className="grid grid-cols-2 gap-md sm:grid-cols-3">
             <div>
-              <label>Técnica</label>
-              <select
+              <Label htmlFor="engrossamento-tecnica">Técnica</Label>
+              <Select
                 value={tecnica}
-                onChange={(e) => mudarTecnica(e.target.value as "nenhum" | "engrossada" | "dobrada")}
+                onValueChange={(v) => mudarTecnica(v as "nenhum" | "engrossada" | "dobrada")}
               >
-                <option value="nenhum">Nenhum</option>
-                <option value="engrossada">Engrossada (sarrafos nas bordas)</option>
-                <option value="dobrada">Dobrada (placas laminadas)</option>
-              </select>
+                <SelectTrigger id="engrossamento-tecnica">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="nenhum">Nenhum</SelectItem>
+                  <SelectItem value="engrossada">Engrossada (sarrafos nas bordas)</SelectItem>
+                  <SelectItem value="dobrada">Dobrada (placas laminadas)</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             {engrossamento && (
               <div>
-                <label>Nível</label>
-                <select
-                  value={engrossamento.nivel}
-                  onChange={(e) => mudarNivel(Number(e.target.value) as NivelEngrossamento)}
+                <Label htmlFor="engrossamento-nivel">Nível</Label>
+                <Select
+                  value={String(engrossamento.nivel)}
+                  onValueChange={(v) => mudarNivel(Number(v) as NivelEngrossamento)}
                 >
-                  {niveisDisponiveis.map((n) => (
-                    <option key={n} value={n}>
-                      Nível {n} ({espessuraBase * (1 + n)}mm)
-                    </option>
-                  ))}
-                </select>
+                  <SelectTrigger id="engrossamento-nivel">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {niveisDisponiveis.map((n) => (
+                      <SelectItem key={n} value={String(n)}>
+                        Nível {n} ({espessuraBase * (1 + n)}mm)
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             )}
             {engrossamento?.tecnica === "engrossada" && (
               <div>
-                <label>Largura do sarrafo (mm)</label>
-                <input
+                <Label htmlFor="engrossamento-sarrafo">Largura do sarrafo (mm)</Label>
+                <Input
+                  id="engrossamento-sarrafo"
                   type="number"
                   min={1}
                   value={engrossamento.larguraSarrafo ?? SARRAFO_LARGURA_PADRAO}
@@ -114,14 +130,14 @@ export function PlacaEngrossamentoCard({
           </div>
 
           {engrossamento?.tecnica === "engrossada" && (
-            <div style={{ marginTop: 10 }}>
-              <label>Lados selecionados</label>
+            <div className="mt-md">
+              <Label>Lados selecionados</Label>
               {ladosSelecionados.length === 0 ? (
-                <p className="muted" style={{ fontSize: 12, marginTop: 2 }}>
+                <p className="text-corpo-pequeno text-cinza-500">
                   Nenhum lado selecionado ainda — clique na referência visual à direita.
                 </p>
               ) : (
-                <div className="flex flex-wrap gap-1" style={{ marginTop: 4 }}>
+                <div className="flex flex-wrap gap-1">
                   {ladosSelecionados.map((l) => (
                     <span
                       key={l}
@@ -135,10 +151,11 @@ export function PlacaEngrossamentoCard({
             </div>
           )}
 
-          <div className="acoes" style={{ display: "flex", gap: 8, marginTop: 12 }}>
-            <button className="primary" onClick={onSalvar}>
-              Salvar
-            </button>
+          <div className="mt-md flex items-center gap-xs">
+            <Button variant="outline" onClick={onSalvar}>
+              Avançar
+              <ChevronRight size={14} />
+            </Button>
           </div>
         </>
       )}

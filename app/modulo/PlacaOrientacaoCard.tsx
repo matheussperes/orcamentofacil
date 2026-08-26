@@ -1,5 +1,9 @@
 "use client";
 
+import { ChevronRight } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { OrientacaoPlaca } from "@/lib/engine/placa/types";
 import { SecaoHeader } from "./SecaoHeader";
 
@@ -31,20 +35,26 @@ export function PlacaOrientacaoCard({
       <SecaoHeader titulo="Orientação" aberta={aberta} onAbrir={onAbrir} />
       {aberta && (
         <>
-          <div className="campos">
+          <div className="grid grid-cols-2 gap-md sm:grid-cols-3">
             <div>
-              <label>Orientação</label>
-              <select value={orientacao} onChange={(e) => onChange(e.target.value as OrientacaoPlaca)}>
-                <option value="horizontal">Horizontal</option>
-                <option value="vertical">Vertical</option>
-                <option value="alinhada_parede">Alinhada à parede</option>
-              </select>
+              <Label htmlFor="placa-orientacao">Orientação</Label>
+              <Select value={orientacao} onValueChange={(v) => onChange(v as OrientacaoPlaca)}>
+                <SelectTrigger id="placa-orientacao">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="horizontal">Horizontal</SelectItem>
+                  <SelectItem value="vertical">Vertical</SelectItem>
+                  <SelectItem value="alinhada_parede">Alinhada à parede</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
-          <div className="acoes" style={{ display: "flex", gap: 8, marginTop: 12 }}>
-            <button className="primary" onClick={onSalvar}>
-              Salvar
-            </button>
+          <div className="mt-md flex items-center gap-xs">
+            <Button variant="outline" onClick={onSalvar}>
+              Avançar
+              <ChevronRight size={14} />
+            </Button>
           </div>
         </>
       )}

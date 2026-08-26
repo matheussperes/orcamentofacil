@@ -33,6 +33,9 @@ const buttonVariants = cva(
           "bg-transparent border border-cinza-300 text-cinza-700 hover:bg-cinza-100 disabled:text-cinza-400 disabled:border-cinza-200",
         danger:
           "bg-transparent border border-cinza-300 text-cinza-700 hover:border-erro hover:text-erro hover:bg-erro-subtle disabled:text-cinza-400 disabled:border-cinza-200",
+        // Design-System.md Seção 7.1 — ação secundária de avanço (§16.4).
+        outline:
+          "bg-cinza-0 border border-cinza-300 text-cinza-700 hover:bg-cinza-100 disabled:text-cinza-400 disabled:border-cinza-200",
         iconActive: "bg-accent-subtle border border-accent-border text-accent",
       },
     },

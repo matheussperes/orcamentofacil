@@ -1,5 +1,10 @@
 "use client";
 
+import { ChevronRight } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { Catalogo } from "@/lib/catalog";
 import { espessurasDaCor } from "@/lib/catalog";
 import type { Placa } from "@/lib/engine/placa/types";
@@ -39,22 +44,28 @@ export function PlacaDimensoesCard({
       <SecaoHeader titulo="Dimensões e material" aberta={aberta} onAbrir={onAbrir} />
       {aberta && (
         <>
-          <div className="campos">
+          <div className="grid grid-cols-2 gap-md sm:grid-cols-3">
             <div>
-              <label>Nome</label>
-              <input value={placa.nome} onChange={(e) => onChange({ nome: e.target.value })} />
+              <Label htmlFor="placa-nome">Nome</Label>
+              <Input
+                id="placa-nome"
+                value={placa.nome}
+                onChange={(e) => onChange({ nome: e.target.value })}
+              />
             </div>
             <div>
-              <label>Largura (mm)</label>
-              <input
+              <Label htmlFor="placa-largura">Largura (mm)</Label>
+              <Input
+                id="placa-largura"
                 type="number"
                 value={placa.largura}
                 onChange={(e) => onChange({ largura: Number(e.target.value) })}
               />
             </div>
             <div>
-              <label>Altura (mm)</label>
-              <input
+              <Label htmlFor="placa-altura">Altura (mm)</Label>
+              <Input
+                id="placa-altura"
                 type="number"
                 value={placa.altura}
                 onChange={(e) => onChange({ altura: Number(e.target.value) })}
@@ -62,53 +73,69 @@ export function PlacaDimensoesCard({
             </div>
           </div>
 
-          <div className="campos" style={{ marginTop: 8 }}>
+          <div className="mt-md grid grid-cols-2 gap-md sm:grid-cols-3">
             <div>
-              <label>Cor</label>
-              <select
+              <Label htmlFor="placa-cor">Cor</Label>
+              <Select
                 value={placa.material.cor}
-                onChange={(e) => onChange({ material: { ...placa.material, cor: e.target.value } })}
+                onValueChange={(v) => onChange({ material: { ...placa.material, cor: v } })}
               >
-                {cores.map((c) => (
-                  <option key={c} value={c}>
-                    {c}
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger id="placa-cor">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {cores.map((c) => (
+                    <SelectItem key={c} value={c}>
+                      {c}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div>
-              <label>Espessura (base)</label>
-              <select
-                value={placa.material.espessura}
-                onChange={(e) =>
-                  onChange({ material: { ...placa.material, espessura: Number(e.target.value) } })
+              <Label htmlFor="placa-espessura">Espessura (base)</Label>
+              <Select
+                value={String(placa.material.espessura)}
+                onValueChange={(v) =>
+                  onChange({ material: { ...placa.material, espessura: Number(v) } })
                 }
               >
-                {(catalogo ? espessurasDaCor(catalogo, placa.material.cor) : [15, 18]).map((esp) => (
-                  <option key={esp} value={esp}>
-                    {esp} mm
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger id="placa-espessura">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {(catalogo ? espessurasDaCor(catalogo, placa.material.cor) : [15, 18]).map((esp) => (
+                    <SelectItem key={esp} value={String(esp)}>
+                      {esp} mm
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div>
-              <label>Material tem veio</label>
-              <select
+              <Label htmlFor="placa-veio">Material tem veio</Label>
+              <Select
                 value={placa.material.temVeio ? "s" : "n"}
-                onChange={(e) =>
-                  onChange({ material: { ...placa.material, temVeio: e.target.value === "s" } })
+                onValueChange={(v) =>
+                  onChange({ material: { ...placa.material, temVeio: v === "s" } })
                 }
               >
-                <option value="n">Não</option>
-                <option value="s">Sim</option>
-              </select>
+                <SelectTrigger id="placa-veio">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="n">Não</SelectItem>
+                  <SelectItem value="s">Sim</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
-          <div className="acoes" style={{ display: "flex", gap: 8, marginTop: 12 }}>
-            <button className="primary" onClick={onSalvar}>
-              Salvar
-            </button>
+          <div className="mt-md flex items-center gap-xs">
+            <Button variant="outline" onClick={onSalvar}>
+              Avançar
+              <ChevronRight size={14} />
+            </Button>
           </div>
         </>
       )}

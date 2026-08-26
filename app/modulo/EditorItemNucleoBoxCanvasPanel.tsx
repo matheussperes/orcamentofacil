@@ -6,6 +6,7 @@
 import dynamic from "next/dynamic";
 import { Box, RectangleHorizontal, PanelTop, PanelLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { ModuleViewerAngulo } from "@/components/modulo/ModuleViewer";
@@ -96,81 +97,83 @@ export function EditorItemNucleoBoxCanvasPanel({
   resultadoSalvar,
 }: EditorItemNucleoBoxCanvasPanelProps) {
   return (
-    <div className="card">
-      <Tabs value={modoVisualizacao} onValueChange={(v) => onChangeModoVisualizacao(v as "2d" | "3d")}>
-        <TabsList>
-          <TabsTrigger value="2d">2D técnico</TabsTrigger>
-          <TabsTrigger value="3d">3D estático</TabsTrigger>
-        </TabsList>
-        <TabsContent value="2d">
-          <h2>Vãos (clique para selecionar)</h2>
-          <div className="flex flex-wrap gap-sm mb-sm">
-            <Button
-              variant={modoSelecao === "vaos" ? "iconActive" : "ghost"}
-              size="sm"
-              onClick={onClicarSelecionarVaos}
-            >
-              Selecionar vãos{modoSelecao === "vaos" && multiSelecaoVaos ? " (múltiplos)" : ""}
-            </Button>
-          </div>
-          <BoxCanvas
-            box={box}
-            modoSelecao={modoSelecao}
-            vaosSelecionados={vaosSelecionados}
-            onToggleVao={onToggleVao}
-            divisaoSelecionada={divisaoSelecionada}
-            onSelecionarDivisoria={onSelecionarDivisoria}
-            portaSelecionada={portaSelecionada}
-            onSelecionarPorta={onSelecionarPorta}
-            vaoGavetaSelecionado={vaoGavetaSelecionado}
-            onSelecionarVaoGaveta={onSelecionarVaoGaveta}
-          />
-        </TabsContent>
-        <TabsContent value="3d">
-          <div className="flex flex-wrap gap-sm mb-sm">
-            {ANGULOS_MODULE_VIEWER.map(({ view, rotulo, Icone }) => (
+    <Card>
+      <CardContent>
+        <Tabs value={modoVisualizacao} onValueChange={(v) => onChangeModoVisualizacao(v as "2d" | "3d")}>
+          <TabsList>
+            <TabsTrigger value="2d">2D técnico</TabsTrigger>
+            <TabsTrigger value="3d">3D estático</TabsTrigger>
+          </TabsList>
+          <TabsContent value="2d">
+            <h3 className="mb-sm text-corpo font-medium text-cinza-700">Vãos (clique para selecionar)</h3>
+            <div className="flex flex-wrap gap-sm mb-sm">
               <Button
-                key={view}
-                variant={anguloModuleViewer === view ? "iconActive" : "ghost"}
-                size="icon"
-                aria-label={rotulo}
-                title={rotulo}
-                onClick={() => onChangeAnguloModuleViewer(view)}
+                variant={modoSelecao === "vaos" ? "iconActive" : "ghost"}
+                size="sm"
+                onClick={onClicarSelecionarVaos}
               >
-                <Icone aria-hidden />
+                Selecionar vãos{modoSelecao === "vaos" && multiSelecaoVaos ? " (múltiplos)" : ""}
               </Button>
-            ))}
-          </div>
-          <div className="aspect-square max-w-full rounded-md border border-cinza-200 bg-cinza-50 p-2">
-            <ModuleViewer
-              width={box.largura}
-              height={box.altura}
-              depth={box.profundidade}
-              view={anguloModuleViewer}
-              color={corModuleViewer}
-              textureUrl={texturaUrlModuleViewer}
+            </div>
+            <BoxCanvas
+              box={box}
+              modoSelecao={modoSelecao}
+              vaosSelecionados={vaosSelecionados}
+              onToggleVao={onToggleVao}
+              divisaoSelecionada={divisaoSelecionada}
+              onSelecionarDivisoria={onSelecionarDivisoria}
+              portaSelecionada={portaSelecionada}
+              onSelecionarPorta={onSelecionarPorta}
+              vaoGavetaSelecionado={vaoGavetaSelecionado}
+              onSelecionarVaoGaveta={onSelecionarVaoGaveta}
             />
-          </div>
-        </TabsContent>
-      </Tabs>
-      <div className="acoes" style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap" }}>
-        {exibirAcaoSalvar && (
-          <button className="primary" onClick={onSalvar} disabled={salvando}>
-            {salvando ? "Salvando…" : rotuloBotaoSalvar}
-          </button>
+          </TabsContent>
+          <TabsContent value="3d">
+            <div className="flex flex-wrap gap-sm mb-sm">
+              {ANGULOS_MODULE_VIEWER.map(({ view, rotulo, Icone }) => (
+                <Button
+                  key={view}
+                  variant={anguloModuleViewer === view ? "iconActive" : "ghost"}
+                  size="icon"
+                  aria-label={rotulo}
+                  title={rotulo}
+                  onClick={() => onChangeAnguloModuleViewer(view)}
+                >
+                  <Icone aria-hidden />
+                </Button>
+              ))}
+            </div>
+            <div className="aspect-square max-w-full rounded-md border border-cinza-200 bg-cinza-50 p-2">
+              <ModuleViewer
+                width={box.largura}
+                height={box.altura}
+                depth={box.profundidade}
+                view={anguloModuleViewer}
+                color={corModuleViewer}
+                textureUrl={texturaUrlModuleViewer}
+              />
+            </div>
+          </TabsContent>
+        </Tabs>
+        <div className="mt-md flex flex-wrap items-center gap-xs">
+          {exibirAcaoSalvar && (
+            <Button onClick={onSalvar} disabled={salvando}>
+              {salvando ? "Salvando…" : rotuloBotaoSalvar}
+            </Button>
+          )}
+          <Button variant="ghost" onClick={onLimpar}>Limpar</Button>
+          <Button variant="danger" onClick={onResetar}>Resetar</Button>
+        </div>
+        {resultadoSalvar && (
+          <Alert variant={resultadoSalvar.ok ? "sucesso" : "erro"} className="mt-3">
+            <AlertDescription>
+              {resultadoSalvar.ok
+                ? (resultadoSalvar.mensagem ?? "Salvo com sucesso.")
+                : (resultadoSalvar.erro ?? "Não foi possível salvar.")}
+            </AlertDescription>
+          </Alert>
         )}
-        <button className="ghost" onClick={onLimpar}>Limpar</button>
-        <button className="danger" onClick={onResetar}>Resetar</button>
-      </div>
-      {resultadoSalvar && (
-        <Alert variant={resultadoSalvar.ok ? "sucesso" : "erro"} className="mt-3">
-          <AlertDescription>
-            {resultadoSalvar.ok
-              ? (resultadoSalvar.mensagem ?? "Salvo com sucesso.")
-              : (resultadoSalvar.erro ?? "Não foi possível salvar.")}
-          </AlertDescription>
-        </Alert>
-      )}
-    </div>
+      </CardContent>
+    </Card>
   );
 }

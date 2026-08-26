@@ -1,10 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { ChevronRight } from "lucide-react";
 import type { Catalogo } from "@/lib/catalog";
 import { espessurasDaCor } from "@/lib/catalog";
 import type { GrupoPortas, SentidoAbrir, SentidoCorrer } from "@/lib/engine/box/types";
 import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
 import { SecaoHeader } from "./SecaoHeader";
 
 export interface ConfigPortas {
@@ -110,74 +114,99 @@ export function PortasCard({
           </div>
 
           {grupoEmEdicao && (
-            <p className="muted" style={{ fontSize: 12, marginTop: -4 }}>
+            <p className="mb-sm text-corpo-pequeno text-cinza-500">
               Editando a porta selecionada no desenho.
             </p>
           )}
 
-          <div className="campos">
+          <div className="grid grid-cols-2 gap-md sm:grid-cols-3">
             <div>
-              <label>Tipos</label>
-              <select value={tipoAbertura} onChange={(e) => trocarTipoAbertura(e.target.value as "abrir" | "correr")}>
-                <option value="abrir">Abrir</option>
-                <option value="correr">Correr</option>
-              </select>
+              <Label htmlFor="portas-tipo">Tipos</Label>
+              <Select value={tipoAbertura} onValueChange={(v) => trocarTipoAbertura(v as "abrir" | "correr")}>
+                <SelectTrigger id="portas-tipo">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="abrir">Abrir</SelectItem>
+                  <SelectItem value="correr">Correr</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <div>
-              <label>Sentido</label>
-              <select value={sentido} onChange={(e) => setSentido(e.target.value as SentidoAbrir | SentidoCorrer)}>
-                {opcoesSentido.map((o) => (
-                  <option key={o.value} value={o.value}>{o.label}</option>
-                ))}
-              </select>
+              <Label htmlFor="portas-sentido">Sentido</Label>
+              <Select value={sentido} onValueChange={(v) => setSentido(v as SentidoAbrir | SentidoCorrer)}>
+                <SelectTrigger id="portas-sentido">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {opcoesSentido.map((o) => (
+                    <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
-          <div className="campos" style={{ marginTop: 8 }}>
+          <div className="mt-md grid grid-cols-2 gap-md sm:grid-cols-3">
             <div>
-              <label>Quantidade</label>
-              <input type="number" min={1} value={qtd} onChange={(e) => setQtd(Number(e.target.value))} />
+              <Label htmlFor="portas-qtd">Quantidade</Label>
+              <Input
+                id="portas-qtd"
+                type="number"
+                min={1}
+                value={qtd}
+                onChange={(e) => setQtd(Number(e.target.value))}
+              />
             </div>
             <div>
-              <label>Cor</label>
-              <select value={cor} onChange={(e) => setCor(e.target.value)}>
-                {cores.map((c) => <option key={c} value={c}>{c}</option>)}
-              </select>
+              <Label htmlFor="portas-cor">Cor</Label>
+              <Select value={cor} onValueChange={setCor}>
+                <SelectTrigger id="portas-cor">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {cores.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                </SelectContent>
+              </Select>
             </div>
             <div>
-              <label>Espessura</label>
-              <select value={espessura} onChange={(e) => setEspessura(Number(e.target.value))}>
-                {(catalogo ? espessurasDaCor(catalogo, cor) : [15, 18]).map((esp) => (
-                  <option key={esp} value={esp}>{esp} mm</option>
-                ))}
-              </select>
+              <Label htmlFor="portas-espessura">Espessura</Label>
+              <Select value={String(espessura)} onValueChange={(v) => setEspessura(Number(v))}>
+                <SelectTrigger id="portas-espessura">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {(catalogo ? espessurasDaCor(catalogo, cor) : [15, 18]).map((esp) => (
+                    <SelectItem key={esp} value={String(esp)}>{esp} mm</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
-          <div className="acoes" style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap" }}>
+          <div className="mt-md flex flex-wrap items-center gap-xs">
             {grupoEmEdicao ? (
               <>
-                <button className="primary" onClick={() => onSalvarEdicao(grupoEmEdicao.id, cfg())}>
+                <Button onClick={() => onSalvarEdicao(grupoEmEdicao.id, cfg())}>
                   Salvar alterações
-                </button>
-                <button className="danger" onClick={() => onExcluirGrupo(grupoEmEdicao.id)}>Excluir</button>
-                <button className="ghost" onClick={onCancelarEdicao}>Cancelar</button>
+                </Button>
+                <Button variant="danger" onClick={() => onExcluirGrupo(grupoEmEdicao.id)}>Excluir</Button>
+                <Button variant="ghost" onClick={onCancelarEdicao}>Cancelar</Button>
               </>
             ) : (
               <>
-                <button
-                  className="primary"
+                <Button
                   disabled={vaosSelecionados.length === 0}
                   onClick={() => onAplicarVaosSelecionados(cfg())}
                 >
                   Aplicar em vãos selecionados
-                </button>
-                <button className="danger" onClick={onExcluirPorVaos}>Excluir Portas</button>
+                </Button>
+                <Button variant="danger" onClick={onExcluirPorVaos}>Excluir Portas</Button>
               </>
             )}
-          </div>
-
-          <div className="acoes" style={{ display: "flex", gap: 8, marginTop: 12 }}>
-            <button className="primary" onClick={onSalvar}>Salvar</button>
+            <Button variant="outline" onClick={onSalvar}>
+              Avançar
+              <ChevronRight size={14} />
+            </Button>
           </div>
         </>
       )}

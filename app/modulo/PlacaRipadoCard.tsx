@@ -1,5 +1,10 @@
 "use client";
 
+import { ChevronRight } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { Ripado } from "@/lib/engine/placa/types";
 import { SecaoHeader } from "./SecaoHeader";
 
@@ -32,22 +37,28 @@ export function PlacaRipadoCard({
       <SecaoHeader titulo="Ripado" aberta={aberta} onAbrir={onAbrir} />
       {aberta && (
         <>
-          <div className="campos">
+          <div className="grid grid-cols-2 gap-md sm:grid-cols-3">
             <div>
-              <label>Ativar ripado</label>
-              <select
+              <Label htmlFor="ripado-ativar">Ativar ripado</Label>
+              <Select
                 value={ripado ? "s" : "n"}
-                onChange={(e) => onChange(e.target.value === "s" ? (ripado ?? RIPADO_PADRAO) : undefined)}
+                onValueChange={(v) => onChange(v === "s" ? (ripado ?? RIPADO_PADRAO) : undefined)}
               >
-                <option value="n">Não</option>
-                <option value="s">Sim</option>
-              </select>
+                <SelectTrigger id="ripado-ativar">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="n">Não</SelectItem>
+                  <SelectItem value="s">Sim</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             {ripado && (
               <>
                 <div>
-                  <label>Largura da ripa (mm)</label>
-                  <input
+                  <Label htmlFor="ripado-largura">Largura da ripa (mm)</Label>
+                  <Input
+                    id="ripado-largura"
                     type="number"
                     min={1}
                     value={ripado.larguraRipa}
@@ -55,8 +66,9 @@ export function PlacaRipadoCard({
                   />
                 </div>
                 <div>
-                  <label>Quantidade</label>
-                  <input
+                  <Label htmlFor="ripado-quantidade">Quantidade</Label>
+                  <Input
+                    id="ripado-quantidade"
                     type="number"
                     min={1}
                     value={ripado.quantidade}
@@ -67,15 +79,16 @@ export function PlacaRipadoCard({
             )}
           </div>
           {ripado && (
-            <p className="muted" style={{ fontSize: 12, marginTop: 8 }}>
+            <p className="mt-sm text-corpo-pequeno text-cinza-500">
               Espaçamento entre ripas é calculado automaticamente (veja o painel de peças à
               direita).
             </p>
           )}
-          <div className="acoes" style={{ display: "flex", gap: 8, marginTop: 12 }}>
-            <button className="primary" onClick={onSalvar}>
-              Salvar
-            </button>
+          <div className="mt-md flex items-center gap-xs">
+            <Button variant="outline" onClick={onSalvar}>
+              Avançar
+              <ChevronRight size={14} />
+            </Button>
           </div>
         </>
       )}

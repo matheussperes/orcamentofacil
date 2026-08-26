@@ -1,5 +1,9 @@
 "use client";
 
+import { ChevronRight } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { BordaPorLado, LadoPlaca } from "@/lib/engine/placa/types";
 import { SecaoHeader } from "./SecaoHeader";
 
@@ -44,24 +48,30 @@ export function PlacaBordaCard({
       <SecaoHeader titulo="Borda (fita)" aberta={aberta} onAbrir={onAbrir} />
       {aberta && (
         <>
-          <div className="campos">
+          <div className="grid grid-cols-2 gap-md sm:grid-cols-3">
             {LADOS.map((l) => (
               <div key={l.value}>
-                <label>{l.label}</label>
-                <select
+                <Label htmlFor={`borda-${l.value}`}>{l.label}</Label>
+                <Select
                   value={bordaPorLado?.[l.value]?.presente ? "s" : "n"}
-                  onChange={() => toggle(l.value)}
+                  onValueChange={() => toggle(l.value)}
                 >
-                  <option value="n">Sem fita</option>
-                  <option value="s">Com fita</option>
-                </select>
+                  <SelectTrigger id={`borda-${l.value}`}>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="n">Sem fita</SelectItem>
+                    <SelectItem value="s">Com fita</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             ))}
           </div>
-          <div className="acoes" style={{ display: "flex", gap: 8, marginTop: 12 }}>
-            <button className="primary" onClick={onSalvar}>
-              Salvar
-            </button>
+          <div className="mt-md flex items-center gap-xs">
+            <Button variant="outline" onClick={onSalvar}>
+              Avançar
+              <ChevronRight size={14} />
+            </Button>
           </div>
         </>
       )}

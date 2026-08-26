@@ -1,5 +1,9 @@
 "use client";
 
+import { ChevronRight } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { TipoPuxador } from "@/lib/engine/box/types";
 import { SecaoHeader } from "./SecaoHeader";
 
@@ -31,18 +35,26 @@ export function PuxadorCard({
       <SecaoHeader titulo="Puxador" aberta={aberta} onAbrir={onAbrir} />
       {aberta && (
         <>
-          <div className="campos">
+          <div className="grid grid-cols-2 gap-md sm:grid-cols-3">
             <div>
-              <label>Tipo</label>
-              <select value={tipo} onChange={(e) => onChange(e.target.value as TipoPuxador)}>
-                <option value="haste">Haste</option>
-                <option value="perfil">Perfil</option>
-                <option value="sem_puxador">Sem Puxador</option>
-              </select>
+              <Label htmlFor="puxador-tipo">Tipo</Label>
+              <Select value={tipo} onValueChange={(v) => onChange(v as TipoPuxador)}>
+                <SelectTrigger id="puxador-tipo">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="haste">Haste</SelectItem>
+                  <SelectItem value="perfil">Perfil</SelectItem>
+                  <SelectItem value="sem_puxador">Sem Puxador</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
-          <div className="acoes" style={{ display: "flex", gap: 8, marginTop: 12 }}>
-            <button className="primary" onClick={onSalvar}>Salvar</button>
+          <div className="mt-md flex items-center gap-xs">
+            <Button variant="outline" onClick={onSalvar}>
+              Avançar
+              <ChevronRight size={14} />
+            </Button>
           </div>
         </>
       )}
