@@ -26,7 +26,7 @@ import { AmbientesLabStandalone } from "@/components/ambientes/AmbientesLabStand
 // `AmbientesLab`.
 export default function AmbientesPage() {
   return (
-    <div className="wrap">
+    <div className="mx-auto max-w-[1080px] px-5 pb-20 pt-6">
       <header className="mb-6">
         <h1 className="text-display font-bold text-cinza-900">Ambientes — Elevação de parede</h1>
         <p className="mt-1 text-corpo text-cinza-500">

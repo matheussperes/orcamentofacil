@@ -114,7 +114,7 @@ export function PlanoCorteCanvas({
         height={h}
         style={{ background: "#fff", border: "1px solid var(--border)", borderRadius: 4 }}
       />
-      <div className="muted" style={{ fontSize: 11, marginTop: 4 }}>
+      <div className="text-cinza-500" style={{ fontSize: 11, marginTop: 4 }}>
         Chapa {chapa.index} · {(chapa.aproveitamento * 100).toFixed(1)}% aproveitado
       </div>
     </div>
