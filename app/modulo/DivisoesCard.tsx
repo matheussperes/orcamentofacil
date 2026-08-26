@@ -1,8 +1,12 @@
 "use client";
 
 import { useState } from "react";
+import { ChevronRight } from "lucide-react";
 import type { PosicaoDivisao } from "@/lib/engine/box/types";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SecaoHeader } from "./SecaoHeader";
 
 export interface ConfigDivisao {
@@ -62,36 +66,59 @@ export function DivisoesCard({
             </Button>
           </div>
 
-          <div className="campos">
+          <div className="grid grid-cols-2 gap-md sm:grid-cols-3">
             <div>
-              <label>Tipo</label>
-              <select value={split} onChange={(e) => setSplit(e.target.value as "vertical" | "horizontal")}>
-                <option value="vertical">Vertical</option>
-                <option value="horizontal">Horizontal</option>
-              </select>
+              <Label htmlFor="divisoes-tipo">Tipo</Label>
+              <Select value={split} onValueChange={(v) => setSplit(v as "vertical" | "horizontal")}>
+                <SelectTrigger id="divisoes-tipo">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="vertical">Vertical</SelectItem>
+                  <SelectItem value="horizontal">Horizontal</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <div>
-              <label>Quantidade</label>
-              <input type="number" min={1} value={qtd} onChange={(e) => setQtd(Number(e.target.value))} />
+              <Label htmlFor="divisoes-qtd">Quantidade</Label>
+              <Input
+                id="divisoes-qtd"
+                type="number"
+                min={1}
+                value={qtd}
+                onChange={(e) => setQtd(Number(e.target.value))}
+              />
             </div>
             <div>
-              <label>Recuo frontal</label>
-              <input type="number" min={0} value={recuoFrontal} onChange={(e) => setRecuoFrontal(Number(e.target.value))} />
+              <Label htmlFor="divisoes-recuo-frontal">Recuo frontal</Label>
+              <Input
+                id="divisoes-recuo-frontal"
+                type="number"
+                min={0}
+                value={recuoFrontal}
+                onChange={(e) => setRecuoFrontal(Number(e.target.value))}
+              />
             </div>
           </div>
 
-          <div className="campos" style={{ marginTop: 10 }}>
+          <div className="mt-md grid grid-cols-2 gap-md sm:grid-cols-3">
             <div>
-              <label>Posição</label>
-              <select value={posicao} onChange={(e) => setPosicao(e.target.value as PosicaoDivisao)}>
-                <option value="centralizado">Centralizado</option>
-                <option value="direita">Direita</option>
-                <option value="esquerda">Esquerda</option>
-              </select>
+              <Label htmlFor="divisoes-posicao">Posição</Label>
+              <Select value={posicao} onValueChange={(v) => setPosicao(v as PosicaoDivisao)}>
+                <SelectTrigger id="divisoes-posicao">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="centralizado">Centralizado</SelectItem>
+                  <SelectItem value="direita">Direita</SelectItem>
+                  <SelectItem value="esquerda">Esquerda</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <div>
-              <label>Recuo Lateral</label>
-              <input
+              <Label htmlFor="divisoes-recuo-lateral">Recuo Lateral</Label>
+              <Input
+                id="divisoes-recuo-lateral"
                 type="number"
                 min={0}
                 value={recuoLateral}
@@ -101,18 +128,20 @@ export function DivisoesCard({
             </div>
           </div>
 
-          <div className="acoes" style={{ display: "flex", gap: 8, marginTop: 12 }}>
-            <button
-              className="primary"
+          <div className="mt-md flex flex-wrap items-center gap-xs">
+            <Button
               disabled={vaosSelecionados.length === 0}
               onClick={() => onAplicar({ split, qtd, recuoFrontal, posicao, recuoLateral })}
             >
               Aplicar
-            </button>
-            <button className="danger" disabled={!divisaoSelecionada} onClick={onExcluir}>
+            </Button>
+            <Button variant="danger" disabled={!divisaoSelecionada} onClick={onExcluir}>
               Excluir
-            </button>
-            <button className="primary" onClick={onSalvar}>Salvar</button>
+            </Button>
+            <Button variant="outline" onClick={onSalvar}>
+              Avançar
+              <ChevronRight size={14} />
+            </Button>
           </div>
         </>
       )}
