@@ -76,8 +76,8 @@ export function EditorItemNucleo({
   return (
     // Screen-Composition.md "Editor de Item" — grade 1fr/1fr, gap-xl, colapsa
     // em `lg` (não `md`, coluna direita precisa de espaço mínimo pro canvas
-    // 2D não distorcer). Substitui `.legado-grid` (CSS legado, 1.3fr/1fr,
-    // gutter 20px fora da escala) — Design-System §16.4.
+    // 2D não distorcer). Substitui a grade CSS legada (1.3fr/1fr, gutter
+    // 20px fora da escala) — Design-System §16.4.
     <div className="grid grid-cols-1 gap-xl lg:grid-cols-2">
       {/* Esquerda: configuração da caixa + divisões + conteúdo, OU as
           seções de Placa — nunca as duas ao mesmo tempo (origem é fixa). */}
