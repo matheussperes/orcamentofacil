@@ -97,7 +97,7 @@ export function PortasCard({
       className={
         aberta
           ? "rounded-lg border border-cinza-200 bg-cinza-0 p-4 shadow-xs"
-          : "cursor-pointer rounded-lg border border-cinza-200 bg-cinza-50 p-3 hover:bg-cinza-100"
+          : "cursor-pointer rounded-lg border border-cinza-200 bg-cinza-50 p-3 hover:bg-cinza-100 transition-colors duration-150"
       }
     >
       <SecaoHeader titulo="Portas" aberta={aberta} onAbrir={onAbrir} />
