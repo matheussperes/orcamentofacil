@@ -227,7 +227,7 @@ Adicionar `transition-colors duration-150` (Design-System §12) ao hover `bg-cin
 
 #### Task R.4b — Erradicar CSS legado em Materiais/Proposta e remover definições mortas
 
-- **Status**: ⏱️ Planejado
+- **Status**: ✅ Completo
 - **Executor**: frontend-engineer
 - **Modelo Recomendado**: Sonnet (padrão do agente)
 - **Depende de**: R.4a
@@ -237,9 +237,21 @@ Adicionar `transition-colors duration-150` (Design-System §12) ao hover `bg-cin
 Erradicar o CSS legado de `app/configuracoes/materiais/page.tsx` (7 ocorrências) — `app/proposta/page.tsx` já removido pela Task R.3d, mesmas correções especificadas em §16.4. Ao final, remover as 59 definições legadas de `app/globals.css` — última linha da task, só depois de confirmado que nenhum consumidor resta.
 
 **Critérios de aceitação**
-- [ ] `scan-legacy` retorna 0 no projeto inteiro
-- [ ] Botões, cards, inputs e selects de `app/configuracoes/materiais/page.tsx` seguem os mesmos critérios de R.4a (Button/Card/Input/Select do shadcn, foco visível)
-- [ ] As 59 definições legadas removidas de `app/globals.css`
+- [x] `scan-legacy` retorna 0 no projeto inteiro
+- [x] Botões, cards, inputs e selects de `app/configuracoes/materiais/page.tsx` seguem os mesmos critérios de R.4a (Button/Card/Input/Select do shadcn, foco visível)
+- [x] As 59 definições legadas removidas de `app/globals.css`
+
+**Resultado**
+Task R.4b concluída com escopo maior que o originalmente previsto no Backlog (investigação prévia do Maestro encontrou 2 consumidores adicionais de CSS legado além de `/configuracoes/materiais`, e o próprio executor encontrou um terceiro durante a execução):
+
+1. `app/configuracoes/materiais/page.tsx` migrado para shadcn completo (Card/CardHeader/CardTitle/CardContent, Button variantes primary/ghost/danger, Input, Label, Select, Table) — 7 ocorrências do escopo original.
+2. `app/components/PlanoCorteCanvas.tsx` (`.muted` → `text-cinza-500`) — consumido por Editor de Item (`EditorItemNucleoPlanoCorte.tsx`) e aba Corte & Material (`CorteMaterialLab.tsx`), achado do Maestro antes do contrato.
+3. `app/ambientes/page.tsx` (`.wrap` → `mx-auto max-w-[1080px] px-5 pb-20 pt-6`), rota standalone de debug mantida deliberadamente, achado do Maestro antes do contrato.
+4. `app/components/LayoutVisualizer.tsx` **deletado** (código morto real — zero import ativo em todo o projeto, só um comentário histórico citava o nome; achado do próprio executor durante a 2ª retomada, depois de investigação do Maestro refutar a justificativa inicial de "consumidor real" que o executor tinha dado na 1ª tentativa).
+5. `app/globals.css` reduzido de ~370 para 63 linhas: todas as 59+ definições legadas removidas (`.wrap`, `header.top`, `.legado-grid`, `.card`, `.toolbar`, seletores de elemento sem classe `button`/`input`/`select`/`label`/`table`/`th`/`td`/`a`, `.modulo`, `.campos`, `.acoes`, `.kpis`/`.kpi`, `.slider-row`, `.aviso`, `.muted`, `.tempo`, `.footer`, todas as variáveis `--legacy-*`). Restam só as variáveis semânticas do shadcn (Design-System §2.4) e o reset base.
+
+**Aprovações de Gate**
+`scan-legacy` retorna zero no projeto inteiro. `code-auditor` APROVADO (1ª tentativa), `qa-engineer` APROVADO (1ª tentativa, 641/641 testes), `ux-auditor` APROVADO (1ª tentativa, 6 telas de confirmação visual). Nenhum Circuit Breaker — 1 executor, 2 retomadas via SendMessage (1ª por estouro de turnos com progresso preservado, 2ª por correção de investigação incompleta sobre LayoutVisualizer.tsx). Impacto Visual: Completo — **erradicação de CSS legado do projeto inteiro fechada**, nenhuma tela usa padrões antigos.
 
 ---
 
