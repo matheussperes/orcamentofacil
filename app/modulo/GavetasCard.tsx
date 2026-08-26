@@ -1,9 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { ChevronRight } from "lucide-react";
 import type { Catalogo } from "@/lib/catalog";
 import { espessurasDaCor } from "@/lib/catalog";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SecaoHeader } from "./SecaoHeader";
 
 export interface ConfigGaveta {
@@ -93,70 +97,96 @@ export function GavetasCard({
           </div>
 
           {gavetaEmEdicao && (
-            <p className="muted" style={{ fontSize: 12, marginTop: -4 }}>
+            <p className="mb-sm text-corpo-pequeno text-cinza-500">
               Editando o conjunto de gavetas selecionado no desenho.
             </p>
           )}
 
-          <div className="campos">
+          <div className="grid grid-cols-2 gap-md sm:grid-cols-3">
             <div>
-              <label>Tipo</label>
-              <select value={interna ? "int" : "ext"} onChange={(e) => setInterna(e.target.value === "int")}>
-                <option value="ext">Externa</option>
-                <option value="int">Interna (guarda-roupa)</option>
-              </select>
+              <Label htmlFor="gavetas-tipo">Tipo</Label>
+              <Select value={interna ? "int" : "ext"} onValueChange={(v) => setInterna(v === "int")}>
+                <SelectTrigger id="gavetas-tipo">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ext">Externa</SelectItem>
+                  <SelectItem value="int">Interna (guarda-roupa)</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <div>
-              <label>Quantidade</label>
-              <input type="number" min={1} value={qtd} onChange={(e) => setQtd(Number(e.target.value))} />
+              <Label htmlFor="gavetas-qtd">Quantidade</Label>
+              <Input
+                id="gavetas-qtd"
+                type="number"
+                min={1}
+                value={qtd}
+                onChange={(e) => setQtd(Number(e.target.value))}
+              />
             </div>
             <div>
-              <label>Profundidade</label>
-              <input type="number" value={profundidade} onChange={(e) => setProfundidade(Number(e.target.value))} />
+              <Label htmlFor="gavetas-profundidade">Profundidade</Label>
+              <Input
+                id="gavetas-profundidade"
+                type="number"
+                value={profundidade}
+                onChange={(e) => setProfundidade(Number(e.target.value))}
+              />
             </div>
             {!interna && (
               <>
                 <div>
-                  <label>Cor</label>
-                  <select value={cor} onChange={(e) => setCor(e.target.value)}>
-                    {cores.map((c) => <option key={c} value={c}>{c}</option>)}
-                  </select>
+                  <Label htmlFor="gavetas-cor">Cor</Label>
+                  <Select value={cor} onValueChange={setCor}>
+                    <SelectTrigger id="gavetas-cor">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {cores.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div>
-                  <label>Espessura</label>
-                  <select value={espessura} onChange={(e) => setEspessura(Number(e.target.value))}>
-                    {(catalogo ? espessurasDaCor(catalogo, cor) : [15, 18]).map((esp) => (
-                      <option key={esp} value={esp}>{esp} mm</option>
-                    ))}
-                  </select>
+                  <Label htmlFor="gavetas-espessura">Espessura</Label>
+                  <Select value={String(espessura)} onValueChange={(v) => setEspessura(Number(v))}>
+                    <SelectTrigger id="gavetas-espessura">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {(catalogo ? espessurasDaCor(catalogo, cor) : [15, 18]).map((esp) => (
+                        <SelectItem key={esp} value={String(esp)}>{esp} mm</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </>
             )}
           </div>
 
-          <div className="acoes" style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap" }}>
+          <div className="mt-md flex flex-wrap items-center gap-xs">
             {gavetaEmEdicao ? (
               <>
-                <button className="primary" onClick={() => onSalvarEdicao(gavetaEmEdicao.vaoId, cfg())}>
+                <Button onClick={() => onSalvarEdicao(gavetaEmEdicao.vaoId, cfg())}>
                   Salvar alterações
-                </button>
-                <button className="danger" onClick={() => onExcluirEdicao(gavetaEmEdicao.vaoId)}>Excluir</button>
-                <button className="ghost" onClick={onCancelarEdicao}>Cancelar</button>
+                </Button>
+                <Button variant="danger" onClick={() => onExcluirEdicao(gavetaEmEdicao.vaoId)}>Excluir</Button>
+                <Button variant="ghost" onClick={onCancelarEdicao}>Cancelar</Button>
               </>
             ) : (
               <>
-                <button className="primary" disabled={vaosSelecionados.length === 0} onClick={() => onAplicar(cfg())}>
+                <Button disabled={vaosSelecionados.length === 0} onClick={() => onAplicar(cfg())}>
                   Aplicar no vão
-                </button>
-                <button className="danger" disabled={vaosSelecionados.length === 0} onClick={onExcluir}>
+                </Button>
+                <Button variant="danger" disabled={vaosSelecionados.length === 0} onClick={onExcluir}>
                   Excluir Gavetas
-                </button>
+                </Button>
               </>
             )}
-          </div>
-
-          <div className="acoes" style={{ display: "flex", gap: 8, marginTop: 12 }}>
-            <button className="primary" onClick={onSalvar}>Salvar</button>
+            <Button variant="outline" onClick={onSalvar}>
+              Avançar
+              <ChevronRight size={14} />
+            </Button>
           </div>
         </>
       )}
