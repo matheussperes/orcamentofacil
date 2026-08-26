@@ -157,7 +157,7 @@ Decompor `app/modulo/EditorItemNucleo.tsx` (1.003 linhas) até nenhum arquivo da
 
 #### Task R.3d — Remover código morto `app/proposta/page.tsx`
 
-- **Status**: ⏱️ Planejado
+- **Status**: ✅ Completo
 - **Executor**: frontend-engineer
 - **Modelo Recomendado**: Sonnet (padrão do agente)
 - **Depende de**: nenhuma (branch própria)
@@ -167,10 +167,13 @@ Decompor `app/modulo/EditorItemNucleo.tsx` (1.003 linhas) até nenhum arquivo da
 Remover `app/proposta/page.tsx` e o CSS legado associado a essa rota em `app/globals.css`. Confirmar via grep/graphify que nada mais referencia ou importa este arquivo antes de deletar — não confundir com `/proposta/[id]/pdf`, rota distinta e ativa, que não é tocada por esta task. Como efeito colateral, remove do escopo da Task R.4b a menção a `app/proposta/page.tsx` (1 ocorrência de CSS legado) — o arquivo deixa de existir antes de R.4b rodar.
 
 **Critérios de aceitação**
-- [ ] `app/proposta/page.tsx` removido
-- [ ] Nenhuma rota/link no projeto aponta mais para `/proposta` (app)
-- [ ] `/proposta/[id]/pdf` intocada e funcional
-- [ ] `npm run test`/`build`/`lint`/`typecheck` sem regressão
+- [x] `app/proposta/page.tsx` removido
+- [x] Nenhuma rota/link no projeto aponta mais para `/proposta` (app)
+- [x] `/proposta/[id]/pdf` intocada e funcional
+- [x] `npm run test`/`build`/`lint`/`typecheck` sem regressão
+
+**Resultado**
+Página morta `app/proposta/page.tsx` removida (lê `sessionStorage.getItem("proposta")` nada grava desde descontinuação, marca antiga "Budget Planner AI"). Arquivo CSS exclusivo `app/proposta/proposta.css` também removido (não compartilhado com `proposta-pdf.css`). Investigação prévia via `graphify explain` + grep confirmou zero import/link remanescente antes de deletar; único vestígio é comentário histórico em `app/(app)/page.tsx`, preservado como está. Rota `/proposta/[id]/pdf` confirmada intacta no build. Aprovações: `code-auditor` APROVADO (1ª tentativa), `qa-engineer` APROVADO (1ª tentativa, 641/641 testes, mesma contagem do baseline). Sem `security-auditor`/`ux-auditor` (remoção de código morto, nenhuma tela ativa tocada, contrato dispensa). Nenhum Circuit Breaker. `frontend-engineer`. Impacto Visual: Nenhum.
 
 ---
 
