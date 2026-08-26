@@ -83,6 +83,12 @@ Mesmo modo de composição da Task R.2a, para as telas restantes: Dashboard (`/`
 
 Todos os 4 achados não bloqueiam esta task. Recomendação: registrar como observações formais no Maestro para decisão explícita sobre virarem task formal, não arquivar em silêncio.
 
+**Decisões do operador (2026-08-26):**
+1. `/configuracoes/materiais` — **recusa datada**: "aceito lançar com isto — cadastro de fitas de borda (análogo ao de placas MDF) exige discovery próprio antes de qualquer mudança de schema/UI; mantido órfão por ora — 2026-08-26 — autorizado por Matheus".
+2. `/proposta` (app) código morto — **vira task**: Task R.3d (nova, abaixo).
+3. Dashboard/Novo orçamento duplicam título — **vira task**: Task R.9 (nova, abaixo).
+4. Login/Signup ícone divergente — **vira task**: Task R.10 (nova, abaixo).
+
 ---
 
 #### Task R.3a — Decompor `components/ambientes/AmbientesLab.tsx`
@@ -146,6 +152,25 @@ Decompor `app/modulo/EditorItemNucleo.tsx` (1.003 linhas) até nenhum arquivo da
 
 ---
 
+#### Task R.3d — Remover código morto `app/proposta/page.tsx`
+
+- **Status**: ⏱️ Planejado
+- **Executor**: frontend-engineer
+- **Modelo Recomendado**: Sonnet (padrão do agente)
+- **Depende de**: nenhuma (branch própria)
+- **Referências**: achado #2 da Task R.2b — código morto (lê `sessionStorage` que nada grava mais, marca antiga "Budget Planner AI"), distinto de `/proposta/[id]/pdf`
+
+**Descrição**
+Remover `app/proposta/page.tsx` e o CSS legado associado a essa rota em `app/globals.css`. Confirmar via grep/graphify que nada mais referencia ou importa este arquivo antes de deletar — não confundir com `/proposta/[id]/pdf`, rota distinta e ativa, que não é tocada por esta task. Como efeito colateral, remove do escopo da Task R.4b a menção a `app/proposta/page.tsx` (1 ocorrência de CSS legado) — o arquivo deixa de existir antes de R.4b rodar.
+
+**Critérios de aceitação**
+- [ ] `app/proposta/page.tsx` removido
+- [ ] Nenhuma rota/link no projeto aponta mais para `/proposta` (app)
+- [ ] `/proposta/[id]/pdf` intocada e funcional
+- [ ] `npm run test`/`build`/`lint`/`typecheck` sem regressão
+
+---
+
 #### Task R.4a — Erradicar CSS legado em `app/modulo/`
 
 - **Status**: ⏱️ Planejado
@@ -176,11 +201,11 @@ Erradicar o CSS legado da árvore `app/modulo/` (11 arquivos, 59 ocorrências), 
 - **Referências**: `docs/Plano-Reparacao-orcamentofacil.md` R.4; `docs/Design-System.md` §16.4
 
 **Descrição**
-Erradicar o CSS legado de `app/configuracoes/materiais/page.tsx` (7 ocorrências) e `app/proposta/page.tsx` (1 ocorrência), mesmas correções especificadas em §16.4. Ao final, remover as 59 definições legadas de `app/globals.css` — última linha da task, só depois de confirmado que nenhum consumidor resta.
+Erradicar o CSS legado de `app/configuracoes/materiais/page.tsx` (7 ocorrências) — `app/proposta/page.tsx` já removido pela Task R.3d, mesmas correções especificadas em §16.4. Ao final, remover as 59 definições legadas de `app/globals.css` — última linha da task, só depois de confirmado que nenhum consumidor resta.
 
 **Critérios de aceitação**
 - [ ] `scan-legacy` retorna 0 no projeto inteiro
-- [ ] Botões, cards, inputs e selects de `app/configuracoes/materiais/page.tsx` e `app/proposta/page.tsx` seguem os mesmos critérios de R.4a (Button/Card/Input/Select do shadcn, foco visível)
+- [ ] Botões, cards, inputs e selects de `app/configuracoes/materiais/page.tsx` seguem os mesmos critérios de R.4a (Button/Card/Input/Select do shadcn, foco visível)
 - [ ] As 59 definições legadas removidas de `app/globals.css`
 
 ---
@@ -377,19 +402,56 @@ Percorrer as três seções "Gaps … registrados, sem task própria ainda" do B
 
 ---
 
+#### Task R.9 — Remover duplicação de título em Dashboard e Novo orçamento
+
+- **Status**: ⏱️ Planejado
+- **Executor**: frontend-engineer
+- **Modelo Recomendado**: Sonnet (padrão do agente)
+- **Depende de**: nenhuma
+- **Referências**: achado #3 da Task R.2b
+
+**Descrição**
+Dashboard (`/`) e Novo orçamento (`/orcamento/novo`) renderizam um `h2` de título interno que duplica o título já renderizado pela Topbar do shell (`TITULOS_POR_ROTA`). Remover o `h2` interno nas duas telas — a Topbar já é a fonte única do título de página.
+
+**Critérios de aceitação**
+- [ ] `h2` interno removido em Dashboard
+- [ ] `h2` interno removido em Novo orçamento
+- [ ] Nenhuma outra mudança de layout/comportamento
+- Impacto Visual: Leve
+
+---
+
+#### Task R.10 — Padronizar ícone embutido em campos de Login/Signup
+
+- **Status**: ⏱️ Planejado
+- **Executor**: frontend-engineer
+- **Modelo Recomendado**: Sonnet (padrão do agente)
+- **Depende de**: nenhuma
+- **Referências**: achado #4 da Task R.2b; `docs/Screen-Composition.md` (Login/Signup, nível `vitrine`)
+
+**Descrição**
+Login e Signup são um par vitrine e hoje divergem: Login renderiza ícone embutido nos campos de formulário, Signup não. Padronizar os dois para o mesmo padrão — replicar o ícone embutido de Login nos campos correspondentes de Signup.
+
+**Critérios de aceitação**
+- [ ] Login e Signup usam o mesmo padrão de ícone embutido nos campos correspondentes
+- [ ] `ux-auditor` confere (nível vitrine)
+- Impacto Visual: Leve
+
+---
+
 #### Task R.8 — Fechar o stage
 
 - **Status**: ⏱️ Planejado
 - **Executor**: nenhum (Maestro, via comando)
 - **Modelo Recomendado**: — (comando, não geração de código)
-- **Depende de**: R.1, R.2a, R.2b, R.3a, R.3b, R.3c, R.4a, R.4b, R.5a, R.5b, R.5c, R.5d, R.5e, R.6a, R.6b, R.6c, R.7
+- **Depende de**: R.1, R.2a, R.2b, R.3a, R.3b, R.3c, R.3d, R.4a, R.4b, R.5a, R.5b, R.5c, R.5d, R.5e, R.6a, R.6b, R.6c, R.7, R.9, R.10
 - **Referências**: `docs/Plano-Reparacao-orcamentofacil.md` R.8
 
 **Descrição**
-Executar `/maestro-stage-close`. O stage não fecha sem os seis critérios: (1) tasks R.1 a R.7 mescladas; (2) suíte completa verde (`npm run test`); (3) `art-director` APROVADO em cada uma das telas tocadas; (4) `scan-legacy` = 0 nas telas do stage; (5) zero dívida arquivada em silêncio (R.7 resolvida); (6) teto de arquivo respeitado — nenhum `.tsx` de UI acima de 400 linhas.
+Executar `/maestro-stage-close`. O stage não fecha sem os seis critérios: (1) tasks R.1 a R.10 mescladas; (2) suíte completa verde (`npm run test`); (3) `art-director` APROVADO em cada uma das telas tocadas; (4) `scan-legacy` = 0 nas telas do stage; (5) zero dívida arquivada em silêncio (R.7 resolvida); (6) teto de arquivo respeitado — nenhum `.tsx` de UI acima de 400 linhas.
 
 **Critérios de aceitação**
-- [ ] Tasks mescladas: R.1 a R.7
+- [ ] Tasks mescladas: R.1 a R.10
 - [ ] Suíte completa verde: `npm run test`
 - [ ] `art-director` APROVADO em cada uma das telas tocadas
 - [ ] `scan-legacy` = 0 nas telas do stage
