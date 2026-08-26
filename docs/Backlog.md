@@ -135,7 +135,7 @@ Decompor `app/components/BoxCanvas.tsx` (1.086 linhas) até nenhum arquivo da á
 
 #### Task R.3c — Decompor `app/modulo/EditorItemNucleo.tsx`
 
-- **Status**: ⏱️ Planejado
+- **Status**: ✅ Completo
 - **Executor**: frontend-engineer
 - **Modelo Recomendado**: Sonnet (padrão do agente)
 - **Depende de**: nenhuma (branch própria — nunca na mesma rodada que R.3a/R.3b)
@@ -145,10 +145,13 @@ Decompor `app/components/BoxCanvas.tsx` (1.086 linhas) até nenhum arquivo da á
 Decompor `app/modulo/EditorItemNucleo.tsx` (1.003 linhas) até nenhum arquivo da árvore passar de 400 linhas. Decomposição pura: separar apresentação de lógica, extrair sub-componentes. Nenhuma mudança de comportamento, nenhuma mudança visual nesta task. O núcleo é compartilhado por `/modulo` e `/orcamento/[id]/item/[itemId]` — confirmar com `graphify explain` antes de mover qualquer coisa.
 
 **Critérios de aceitação**
-- [ ] Nenhum arquivo resultante da árvore acima de 400 linhas
-- [ ] Nenhuma mudança de comportamento ou de aparência (é refatoração pura)
-- [ ] `graphify explain` confirmado antes de mover código compartilhado entre `/modulo` e `/orcamento/[id]/item/[itemId]`
-- [ ] qa-engineer roda os testes existentes: refatoração sem regressão é o critério
+- [x] Nenhum arquivo resultante da árvore acima de 400 linhas
+- [x] Nenhuma mudança de comportamento ou de aparência (é refatoração pura)
+- [x] `graphify explain` confirmado antes de mover código compartilhado entre `/modulo` e `/orcamento/[id]/item/[itemId]`
+- [x] qa-engineer roda os testes existentes: refatoração sem regressão é o critério
+
+**Resultado**
+`EditorItemNucleo.tsx` reduzido de 1.003 para 11 arquivos (maior: `EditorItemNucleoAcoes.ts` 317 linhas); decomposição pura sem mudança de comportamento/aparência. Estado em `EditorItemNucleoEstado.ts`, ações em `EditorItemNucleoAcoes.ts`, sub-componentes de apresentação: BoxAccordion, BoxCanvasPanel, PlacaAccordion, PlacaPanel, PlanoCorte, ResultadoPaineis; helpers e tipos em arquivos próprios. `BoxCanvas.tsx` (já decomposto na R.3b) não foi reaberto. Consumidores confirmados intactos via `graphify explain`: `app/(app)/modulo/page.tsx`, `components/orcamento/ItemEditorTabConectada.tsx`, `components/orcamento/ItemEditorTabMock.tsx` — todos os símbolos importados (`EditorItemNucleo`, `caixaInicial`, `placaInicial`, `ResultadoSalvarItem`) preservados. Aprovações: `code-auditor` APROVADO (1ª tentativa), `qa-engineer` APROVADO (1ª tentativa, 641/641 testes, mesma contagem do baseline). Sem `security-auditor`/`ux-auditor` (refatoração pura, contrato dispensa). Nenhum Circuit Breaker. Impacto Visual: Nenhum.
 
 ---
 
