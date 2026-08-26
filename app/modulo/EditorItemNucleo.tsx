@@ -74,10 +74,14 @@ export function EditorItemNucleo({
   const acoes = useEditorItemNucleoAcoes(estado, onSalvar);
 
   return (
-    <div className="legado-grid">
+    // Screen-Composition.md "Editor de Item" — grade 1fr/1fr, gap-xl, colapsa
+    // em `lg` (não `md`, coluna direita precisa de espaço mínimo pro canvas
+    // 2D não distorcer). Substitui `.legado-grid` (CSS legado, 1.3fr/1fr,
+    // gutter 20px fora da escala) — Design-System §16.4.
+    <div className="grid grid-cols-1 gap-xl lg:grid-cols-2">
       {/* Esquerda: configuração da caixa + divisões + conteúdo, OU as
           seções de Placa — nunca as duas ao mesmo tempo (origem é fixa). */}
-      <div>
+      <div className="flex flex-col gap-lg">
         {estado.origem === "custom_box" ? (
           <EditorItemNucleoBoxAccordion
             box={estado.box}
@@ -123,13 +127,14 @@ export function EditorItemNucleo({
             onChangePlaca={acoes.setPlacaCampo}
           />
         )}
-
-        <EditorItemNucleoPlanoCorte grupos={estado.grupos} calculando={estado.calculandoPlanoDeCorte} />
       </div>
 
       {/* Direita: canvas de seleção (box) ou referência visual (placa) +
-          custo + peças. Tokens de KPI/tabela — Design-System Seção 6.8/6.9. */}
-      <div>
+          custo + peças + plano de corte (leitura técnica, não decisão —
+          Screen-Composition.md "Editor de Item", Poda: sai da coluna de
+          decisão e vai para a de revisão). Tokens de KPI/tabela —
+          Design-System Seção 6.8/6.9. */}
+      <div className="flex flex-col gap-lg">
         {estado.origem === "custom_box" ? (
           <EditorItemNucleoBoxCanvasPanel
             box={estado.box}
@@ -179,6 +184,8 @@ export function EditorItemNucleo({
         />
 
         <EditorItemNucleoPecasPanel pecas={estado.pecas} />
+
+        <EditorItemNucleoPlanoCorte grupos={estado.grupos} calculando={estado.calculandoPlanoDeCorte} />
       </div>
     </div>
   );
