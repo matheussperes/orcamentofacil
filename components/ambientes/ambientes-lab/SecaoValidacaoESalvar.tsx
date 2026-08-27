@@ -2,6 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { TituloSecao } from "@/components/ui/titulo-secao";
 import type { EngineWarning } from "@/lib/engine/types";
 import type { ResultadoSalvarAmbiente } from "@/lib/ambiente/estado";
 
@@ -22,7 +23,7 @@ export function SecaoValidacaoESalvar({
   return (
     <>
       <section className="rounded-lg border border-cinza-200 bg-cinza-0 p-4 shadow-xs">
-        <h2 className="mb-3 text-titulo-secao text-cinza-900">Validação</h2>
+        <TituloSecao>Validação</TituloSecao>
         {warnings.length === 0 ? (
           <Alert variant="sucesso">
             <AlertDescription>Nenhum problema encontrado.</AlertDescription>

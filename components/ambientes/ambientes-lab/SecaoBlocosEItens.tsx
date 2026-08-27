@@ -1,6 +1,7 @@
 "use client";
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { TituloSecao } from "@/components/ui/titulo-secao";
 import { ROTULO_FAIXA } from "../AmbientesLab.constants";
 import type { useConjuntos } from "./useConjuntos";
 import type { useElementosContinuos } from "./useElementosContinuos";
@@ -20,7 +21,7 @@ export function SecaoBlocosEItens({
 
   return (
     <section className="min-w-0 rounded-lg border border-cinza-200 bg-cinza-0 p-4 shadow-xs">
-      <h2 className="mb-3 text-titulo-secao text-cinza-900">Blocos e itens</h2>
+      <TituloSecao>Blocos e itens</TituloSecao>
       <p className="mb-3 text-corpo-pequeno text-cinza-500">
         Selecione um Conjunto ou um item avulso para adicionar tampo, rodapé, tamponamento ou
         fechamento (Elemento Contínuo).

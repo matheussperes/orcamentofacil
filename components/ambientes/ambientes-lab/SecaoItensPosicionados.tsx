@@ -1,6 +1,7 @@
 "use client";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { TituloSecao } from "@/components/ui/titulo-secao";
 import type { ParedeComMeta } from "@/lib/ambiente/estado";
 import type { BoxPreset } from "@/lib/boxPresets";
 import type { Catalogo } from "@/lib/catalog";
@@ -29,7 +30,7 @@ export function SecaoItensPosicionados({
 }) {
   return (
     <section className="rounded-lg border border-cinza-200 bg-cinza-0 p-4 shadow-xs">
-      <h2 className="mb-3 text-titulo-secao text-cinza-900">Itens posicionados</h2>
+      <TituloSecao>Itens posicionados</TituloSecao>
       {presets.length === 0 ? (
         <p className="text-corpo-pequeno text-cinza-500">
           Nenhum módulo disponível. Crie um módulo em{" "}

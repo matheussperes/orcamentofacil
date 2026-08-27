@@ -1,9 +1,12 @@
 "use client";
 
+import { LayoutGrid } from "lucide-react";
 import { BoxCanvas } from "@/app/components/BoxCanvas";
+import { TituloSecao } from "@/components/ui/titulo-secao";
 import type { AlturasFaixas } from "@/lib/engine/parede";
 import type { ParedeComMeta } from "@/lib/ambiente/estado";
 import { ElevacaoParede } from "../ElevacaoParede";
+import { EstadoVazioAba } from "@/components/ui/estado-vazio-aba";
 import type { useConjuntos } from "./useConjuntos";
 import type { useElementosParede } from "./useElementosParede";
 
@@ -23,7 +26,7 @@ export function SecaoElevacaoConjunto({
   return (
     <div className="grid grid-cols-1 gap-lg lg:grid-cols-2">
       <section className="rounded-lg border border-cinza-200 bg-cinza-0 p-4 shadow-xs">
-        <h2 className="mb-3 text-titulo-secao text-cinza-900">Elevação da parede</h2>
+        <TituloSecao>Elevação da parede</TituloSecao>
         <div className="max-w-full overflow-x-auto rounded-md border border-cinza-200 bg-cinza-50 p-2">
           <ElevacaoParede
             parede={parede}
@@ -35,7 +38,7 @@ export function SecaoElevacaoConjunto({
         </div>
       </section>
       <section className="rounded-lg border border-cinza-200 bg-cinza-0 p-4 shadow-xs">
-        <h2 className="mb-3 text-titulo-secao text-cinza-900">Itens posicionados (conjunto)</h2>
+        <TituloSecao>Itens posicionados (conjunto)</TituloSecao>
         {conjuntosHook.itensDoConjunto.length > 0 ? (
           <BoxCanvas
             itens={conjuntosHook.itensDoConjunto}
@@ -46,7 +49,12 @@ export function SecaoElevacaoConjunto({
             tagsComerciais={conjuntosHook.tagsComerciais}
           />
         ) : (
-          <p className="text-corpo-pequeno text-cinza-500">Adicione um item para visualizar.</p>
+          <EstadoVazioAba
+            icone={LayoutGrid}
+            titulo="Nenhum item posicionado ainda"
+            descricao="Adicione um item na seção 'Itens posicionados' ao lado para visualizar o conjunto aqui."
+            className="border-0 bg-transparent p-0 py-lg shadow-none"
+          />
         )}
       </section>
     </div>

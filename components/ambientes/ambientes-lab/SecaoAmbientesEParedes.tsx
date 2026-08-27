@@ -1,6 +1,7 @@
 "use client";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { TituloSecao } from "@/components/ui/titulo-secao";
 import { SeletorLista } from "../SeletorLista";
 import type { useSelecaoAmbiente } from "./useSelecaoAmbiente";
 
@@ -10,7 +11,7 @@ import type { useSelecaoAmbiente } from "./useSelecaoAmbiente";
 export function SecaoAmbientesEParedes({ selecao }: { selecao: ReturnType<typeof useSelecaoAmbiente> }) {
   return (
     <section className="rounded-lg border border-cinza-200 bg-cinza-0 p-4 shadow-xs">
-      <h2 className="mb-3 text-titulo-secao text-cinza-900">Ambientes e paredes</h2>
+      <TituloSecao>Ambientes e paredes</TituloSecao>
       {selecao.erroComando && (
         <Alert variant="erro" className="mb-3">
           <AlertDescription>{selecao.erroComando}</AlertDescription>

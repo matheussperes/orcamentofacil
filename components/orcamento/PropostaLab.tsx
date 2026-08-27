@@ -1,39 +1,22 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
 import { AlertTriangle, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { EstadoVazioAba } from "@/components/ui/estado-vazio-aba";
 import { formatarDataHora } from "@/lib/format";
-import { calcularEngineOrcamento } from "@/lib/ambiente/calcularEngineOrcamento";
-import { carregarCatalogo, catalogoParaPrecos, type Catalogo } from "@/lib/catalog";
-import { PRECOS_REFERENCIA } from "@/lib/engine/prices";
-import { ratearPrecificacao, rebalancearLinhas, type GrupoItens } from "@/lib/engine/precificacao";
 import type { EstadoAmbiente } from "@/lib/ambiente/estado";
-import type { ItemPosicionado } from "@/lib/engine/parede";
 import type { ConfiguracaoPrecificacaoCarregada } from "@/lib/precificacao/carregarConfiguracao";
-import { idDoItem, nomeDoItem, type ModuloOrcamento } from "@/lib/orcamento";
-import type { ItemDoConjunto } from "@/app/components/BoxCanvas";
-import { gerarDescricaoLinha } from "@/lib/linha-proposta/descricao";
-import { ambientesDaLinha } from "@/lib/linha-proposta/ambientes";
-import { valorAtualDaLinha as calcularValorAtualDaLinha } from "@/lib/linha-proposta/valorAtual";
-import { gerarProposta } from "@/lib/linha-proposta/gerarProposta";
 import type {
   LinhaProposta,
   PatchLinhaProposta,
   ResultadoLinhaProposta,
   ResultadoOperacaoLinhaProposta,
 } from "@/lib/linha-proposta/tipos";
-import { LinhaPropostaCard, type ItemDisponivel } from "./LinhaPropostaCard";
+import { LinhaPropostaCard } from "./LinhaPropostaCard";
 import { useIrParaAba } from "./AbaAtivaContext";
+import { ReabrirOrcamentoDialog } from "./proposta/ReabrirOrcamentoDialog";
+import { usePropostaLab } from "./proposta/usePropostaLab";
 
 // Task 13.6a (contrato .maestro/tmp/13.6a-contract.md) — componente
 // PRESENTACIONAL da aba "Proposta" (mesmo espírito de `CorteMaterialLab.tsx`/
@@ -50,6 +33,10 @@ import { useIrParaAba } from "./AbaAtivaContext";
 // URL de exibição) é injetada via props — este componente não sabe de
 // Supabase (`PropostaTabConectada`/`PropostaTabMock` decidem a implementação
 // real, mesmo padrão das outras 3 abas).
+//
+// Task R.5a — todo o estado e os handlers foram extraídos para
+// `proposta/usePropostaLab.ts` (decomposição pura, teto de 400 linhas/
+// arquivo, apresentação separada de lógica): este componente só compõe JSX.
 export interface PropostaLabProps {
   orcamentoId: string;
   estadoInicial: EstadoAmbiente;
@@ -74,301 +61,12 @@ export interface PropostaLabProps {
   onReabrirOrcamento: (orcamentoId: string) => Promise<ResultadoOperacaoLinhaProposta>;
 }
 
-export function PropostaLab({
-  orcamentoId,
-  estadoInicial,
-  configuracaoInicial,
-  linhasIniciais,
-  congeladoEm: congeladoEmInicial,
-  papel,
-  onCriarLinha,
-  onAtualizarLinha,
-  onExcluirLinha,
-  onRegenerarImagem,
-  onResolverUrlImagem,
-  onCongelarOrcamento,
-  onReabrirOrcamento,
-}: PropostaLabProps) {
+export function PropostaLab(props: PropostaLabProps) {
+  const { estadoInicial, papel, onResolverUrlImagem } = props;
   const irParaAba = useIrParaAba();
-  const router = useRouter();
+  const lab = usePropostaLab(props);
 
-  // Task 1.9-front — estado local pra que `congeladoEm` volte a `null` na
-  // tela sem F5 depois de reabrir (mesmo padrão de estado local espelhando
-  // prop inicial já usado em `linhas`/`linhasIniciais` acima).
-  const [congeladoEm, setCongeladoEm] = useState<string | null>(congeladoEmInicial);
-  const [dialogReabrirAberto, setDialogReabrirAberto] = useState(false);
-  const [reabrindo, setReabrindo] = useState(false);
-  const [erroReabrir, setErroReabrir] = useState<string | null>(null);
-
-  async function handleConfirmarReabrir() {
-    setReabrindo(true);
-    setErroReabrir(null);
-    const resultado = await onReabrirOrcamento(orcamentoId);
-    setReabrindo(false);
-    if (!resultado.ok) {
-      setErroReabrir(resultado.erro ?? "Não foi possível reabrir o orçamento.");
-      return;
-    }
-    setDialogReabrirAberto(false);
-    setCongeladoEm(null);
-    router.refresh();
-  }
-
-  const [catalogo, setCatalogo] = useState<Catalogo | null>(null);
-  useEffect(() => {
-    setCatalogo(carregarCatalogo());
-  }, []);
-  const precos = catalogo ? catalogoParaPrecos(catalogo) : PRECOS_REFERENCIA;
-
-  const resultadoEngine = useMemo(() => calcularEngineOrcamento(estadoInicial), [estadoInicial]);
-
-  const [linhas, setLinhas] = useState<LinhaProposta[]>(linhasIniciais);
-  // Overrides manuais ainda não refletidos no `valorRateado` persistido em
-  // cada linha — `null` = "nenhum override ativo, mostra o rateio ao vivo".
-  // Resetado explicitamente (não via useEffect amplo) toda vez que o
-  // CONJUNTO de itens de alguma linha muda (split/mesclar/criação) — ver
-  // `handleDividirLinha`/`handleMesclarSelecionadas` — porque o peso de
-  // custo alocado de cada linha mudou, tornando os overrides anteriores sem
-  // sentido matemático.
-  const [valoresOverride, setValoresOverride] = useState<Record<string, number> | null>(null);
-  const [selecionadasParaMesclar, setSelecionadasParaMesclar] = useState<Set<string>>(new Set());
-  // Rastro efêmero (só nesta sessão do componente, não persistido — ver
-  // contrato Task 2.31: schema não tem `linha_mae_id`) de qual linha nova
-  // nasceu de qual linha mãe via "Dividir linha", pra habilitar "Cancelar
-  // divisão" sem exigir seleção manual + "Mesclar".
-  const [origemSplit, setOrigemSplit] = useState<Record<string, string>>({});
-  const [erroGeral, setErroGeral] = useState<string | null>(null);
-  const [criandoLinhaInicial, setCriandoLinhaInicial] = useState(false);
-
-  const modulosPorItemId = useMemo(() => {
-    const m = new Map<string, ModuloOrcamento>();
-    for (const modulo of estadoInicial.modulos) m.set(idDoItem(modulo), modulo);
-    return m;
-  }, [estadoInicial.modulos]);
-
-  // Task 2.3-2.6 — [V2.1] fim do singleton: `itemId` é achatado por TODAS as
-  // paredes de TODOS os ambientes (globalmente único, ver `lib/ambiente/
-  // estado.ts`), mesmo padrão de `lib/ambiente/calcularEngineOrcamento.ts`.
-  const posicoesPorItemId = useMemo(() => {
-    const m = new Map<string, ItemPosicionado>();
-    for (const ambiente of estadoInicial.ambientes) {
-      for (const parede of ambiente.paredes) {
-        for (const posicao of parede.itens) m.set(posicao.itemId, posicao);
-      }
-    }
-    return m;
-  }, [estadoInicial.ambientes]);
-
-  function itensDoConjuntoDaLinha(linha: LinhaProposta): ItemDoConjunto[] {
-    return linha.itens
-      .map((itemId) => {
-        const item = modulosPorItemId.get(itemId);
-        const posicao = posicoesPorItemId.get(itemId);
-        return item && posicao ? { item, posicao } : null;
-      })
-      .filter((v): v is ItemDoConjunto => v !== null);
-  }
-
-  function itensDisponiveisDaLinha(linha: LinhaProposta): ItemDisponivel[] {
-    return linha.itens
-      .map((itemId) => {
-        const item = modulosPorItemId.get(itemId);
-        return item ? { itemId, nome: nomeDoItem(item) } : null;
-      })
-      .filter((v): v is ItemDisponivel => v !== null);
-  }
-
-  // Task 2.32 — caption "Ambiente: X" (vínculo visual da linha com o(s)
-  // ambiente(s) de origem, derivado sempre dos itens ATUAIS da linha, nunca
-  // rastreado — ver `lib/linha-proposta/ambientes.ts`).
-  function nomesAmbientesDaLinha(linha: LinhaProposta): string[] {
-    return ambientesDaLinha(linha.itens, estadoInicial.ambientes);
-  }
-
-  // Wiring real do rateio (contrato: "fecha a Dívida B2 de vez") — um
-  // `GrupoItens` por Linha de Proposta, nunca mais o grupo único trivial.
-  const grupos: GrupoItens[] = useMemo(() => linhas.map((l) => ({ id: l.id, itemIds: l.itens })), [linhas]);
-
-  const resultadoRateio = useMemo(() => {
-    if (!resultadoEngine.ok) return { ok: false as const };
-    try {
-      const snapshot = ratearPrecificacao(resultadoEngine.engine, grupos, configuracaoInicial.config, precos);
-      return { ok: true as const, snapshot };
-    } catch (erro) {
-      console.error("[proposta] falha ao ratear precificação por linha:", erro);
-      return { ok: false as const };
-    }
-  }, [resultadoEngine, grupos, configuracaoInicial.config, precos]);
-
-  function valorAtualDaLinha(linha: LinhaProposta): number {
-    const valorAoVivo = resultadoRateio.ok
-      ? resultadoRateio.snapshot.grupos.find((g) => g.id === linha.id)?.valorRateado ?? 0
-      : 0;
-    return calcularValorAtualDaLinha({ linha, congeladoEm, valoresOverride, valorAoVivo });
-  }
-
-  async function handleSalvarTextos(linhaId: string, patch: { titulo?: string; descricao?: string }) {
-    const resultado = await onAtualizarLinha(linhaId, patch);
-    if (resultado.ok) {
-      setLinhas((atuais) => atuais.map((l) => (l.id === linhaId ? { ...l, ...patch } : l)));
-    }
-    return resultado;
-  }
-
-  function handleOverrideValor(linhaId: string, novoValor: number) {
-    if (!resultadoRateio.ok) return;
-    const precoFinal = resultadoRateio.snapshot.resumo.precoFinal;
-    const atuais = linhas.map((l) => ({ id: l.id, valorRateado: valorAtualDaLinha(l) }));
-    const rebalanceadas = rebalancearLinhas(atuais, linhaId, novoValor, precoFinal);
-    setValoresOverride(Object.fromEntries(rebalanceadas.map((l) => [l.id, l.valorRateado])));
-    // Persistência incremental (contrato: "já são persistidos incrementalmente
-    // conforme o rateio roda") — decisão documentada em `rebalancear.ts` e
-    // aqui: persiste no exato momento em que um rebalanceamento REALMENTE
-    // roda (esta ação do usuário), não a cada leitura do valor computado
-    // automaticamente (que nunca muda o dado em si, só é a leitura ao vivo
-    // do rateio) — evita escritas redundantes a cada render.
-    for (const l of rebalanceadas) {
-      onAtualizarLinha(l.id, { valorRateado: l.valorRateado }).then((r) => {
-        if (!r.ok) setErroGeral(r.erro ?? "Não foi possível salvar o valor rebalanceado de uma das linhas.");
-      });
-    }
-  }
-
-  async function handleDividirLinha(linha: LinhaProposta, itemIdsSelecionados: string[]) {
-    const restantes = linha.itens.filter((id) => !itemIdsSelecionados.includes(id));
-    if (itemIdsSelecionados.length === 0 || restantes.length === 0) {
-      return { ok: false, erro: "Selecione ao menos um item, sem esvaziar a linha original." };
-    }
-    const modulosSelecionados = itemIdsSelecionados
-      .map((id) => modulosPorItemId.get(id))
-      .filter((m): m is ModuloOrcamento => m !== undefined);
-    const descricaoNova = gerarDescricaoLinha(modulosSelecionados);
-    const resultadoCriar = await onCriarLinha("Nova linha", itemIdsSelecionados, descricaoNova);
-    if (!resultadoCriar.ok) return resultadoCriar;
-    const resultadoAtualizar = await onAtualizarLinha(linha.id, { itens: restantes });
-    if (!resultadoAtualizar.ok) return resultadoAtualizar;
-    setLinhas((atuais) => [
-      ...atuais.map((l) => (l.id === linha.id ? { ...l, itens: restantes } : l)),
-      resultadoCriar.linha,
-    ]);
-    setOrigemSplit((atuais) => ({ ...atuais, [resultadoCriar.linha.id]: linha.id }));
-    setValoresOverride(null);
-    return { ok: true as const };
-  }
-
-  async function handleReverterDivisao(novaLinhaId: string) {
-    const linhaMaeId = origemSplit[novaLinhaId];
-    if (!linhaMaeId) return;
-    const nova = linhas.find((l) => l.id === novaLinhaId);
-    const mae = linhas.find((l) => l.id === linhaMaeId);
-    if (!nova || !mae) {
-      setErroGeral("A linha mãe desta divisão não existe mais. Use \"Mesclar\" se quiser unir linhas manualmente.");
-      return;
-    }
-    const itensUnidos = Array.from(new Set([...mae.itens, ...nova.itens]));
-    const resultadoAtualizar = await onAtualizarLinha(linhaMaeId, { itens: itensUnidos });
-    if (!resultadoAtualizar.ok) {
-      setErroGeral(resultadoAtualizar.erro ?? "Não foi possível reverter a divisão desta linha.");
-      return;
-    }
-    const resultadoExcluir = await onExcluirLinha(novaLinhaId);
-    if (!resultadoExcluir.ok) {
-      setErroGeral(resultadoExcluir.erro ?? "Não foi possível remover a linha nova ao reverter a divisão.");
-      return;
-    }
-    setLinhas((atuais) =>
-      atuais
-        .filter((l) => l.id !== novaLinhaId)
-        .map((l) => (l.id === linhaMaeId ? { ...l, itens: itensUnidos } : l))
-    );
-    setOrigemSplit((atuais) => {
-      const { [novaLinhaId]: _removida, ...resto } = atuais;
-      return resto;
-    });
-    setValoresOverride(null);
-  }
-
-  async function handleMesclarSelecionadas() {
-    const selecionadas = linhas.filter((l) => selecionadasParaMesclar.has(l.id));
-    if (selecionadas.length < 2) return;
-    const [alvo, ...restantes] = selecionadas;
-    const itensUnidos = Array.from(new Set(selecionadas.flatMap((l) => l.itens)));
-    const tituloUnido = selecionadas.map((l) => l.titulo).join(" + ");
-    const resultadoAtualizar = await onAtualizarLinha(alvo.id, { itens: itensUnidos, titulo: tituloUnido });
-    if (!resultadoAtualizar.ok) {
-      setErroGeral(resultadoAtualizar.erro ?? "Não foi possível mesclar as linhas selecionadas.");
-      return;
-    }
-    for (const l of restantes) {
-      const resultadoExcluir = await onExcluirLinha(l.id);
-      if (!resultadoExcluir.ok) {
-        setErroGeral(resultadoExcluir.erro ?? "Não foi possível remover uma das linhas mescladas.");
-      }
-    }
-    const idsRemovidos = new Set(restantes.map((l) => l.id));
-    setLinhas((atuais) =>
-      atuais
-        .filter((l) => !idsRemovidos.has(l.id))
-        .map((l) => (l.id === alvo.id ? { ...l, itens: itensUnidos, titulo: tituloUnido } : l))
-    );
-    setSelecionadasParaMesclar(new Set());
-    setValoresOverride(null);
-  }
-
-  function toggleSelecaoMesclar(linhaId: string) {
-    setSelecionadasParaMesclar((atuais) => {
-      const novo = new Set(atuais);
-      if (novo.has(linhaId)) novo.delete(linhaId);
-      else novo.add(linhaId);
-      return novo;
-    });
-  }
-
-  async function handleRegenerarImagem(linhaId: string, blob: Blob) {
-    const resultado = await onRegenerarImagem(linhaId, blob);
-    if (resultado.ok) {
-      setLinhas((atuais) => atuais.map((l) => (l.id === linhaId ? { ...l, imagemUrl: resultado.imagemUrl } : l)));
-    }
-    return resultado;
-  }
-
-  async function handleCriarLinhaInicial() {
-    if (!resultadoEngine.ok) return;
-    setCriandoLinhaInicial(true);
-    const itemIds = resultadoEngine.engine.porModulo.map((m) => m.moduloId);
-    const modulos = itemIds.map((id) => modulosPorItemId.get(id)).filter((m): m is ModuloOrcamento => m !== undefined);
-    const resultado = await onCriarLinha("Linha 1", itemIds, gerarDescricaoLinha(modulos));
-    setCriandoLinhaInicial(false);
-    if (resultado.ok) setLinhas((atuais) => [...atuais, resultado.linha]);
-    else setErroGeral(resultado.erro);
-  }
-
-  const [gerandoProposta, setGerandoProposta] = useState(false);
-  async function handleGerarProposta() {
-    setGerandoProposta(true);
-    setErroGeral(null);
-    // Persiste o `valorRateado` atual de cada linha e SÓ DEPOIS congela o
-    // orçamento (`congeladoEm`) — ordem atômica exigida pelo Modelo 5.4.1
-    // (invariante I1/I2): falha em qualquer uma das duas etapas não deixa o
-    // orçamento congelado nem navega. Orquestração pura em
-    // `lib/linha-proposta/gerarProposta.ts` (testável sem infra de render).
-    const resultado = await gerarProposta({
-      orcamentoId,
-      linhas: linhas.map((l) => ({ id: l.id, valorRateado: valorAtualDaLinha(l) })),
-      onAtualizarLinha,
-      onCongelarOrcamento,
-    });
-    setGerandoProposta(false);
-    if (!resultado.ok) {
-      setErroGeral(resultado.erro ?? "Não foi possível congelar a proposta. Tente novamente.");
-      return;
-    }
-    // Task 13.6b (fora de escopo desta task) constrói `/proposta/[id]/pdf` de
-    // verdade — aqui só o botão + navegação, como pedido pelo contrato.
-    router.push(`/proposta/${orcamentoId}/pdf`);
-  }
-
-  if (!resultadoEngine.ok) {
+  if (!lab.resultadoEngine.ok) {
     return (
       <Alert variant="erro">
         <AlertDescription>
@@ -379,34 +77,33 @@ export function PropostaLab({
     );
   }
 
-  if (resultadoEngine.engine.porModulo.length === 0) {
+  if (lab.resultadoEngine.engine.porModulo.length === 0) {
     return (
-      <div className="flex flex-col items-center gap-sm rounded-lg border border-cinza-200 bg-cinza-0 p-xl py-3xl text-center shadow-xs">
-        <FileText className="h-8 w-8 text-cinza-300" aria-hidden="true" />
-        <h2 className="text-titulo-card text-cinza-700">Nenhum item para propor ainda</h2>
-        <p className="max-w-sm text-corpo-pequeno text-cinza-500">
-          As linhas de proposta são criadas a partir dos itens posicionados na aba Ambientes. Adicione
-          ao menos um item para gerar a proposta aqui.
-        </p>
-        <Button variant="primary" onClick={() => irParaAba("ambientes")}>
-          Ir para Ambientes
-        </Button>
-      </div>
+      <EstadoVazioAba
+        icone={FileText}
+        titulo="Nenhum item para propor ainda"
+        descricao="As linhas de proposta são criadas a partir dos itens posicionados na aba Ambientes. Adicione ao menos um item para gerar a proposta aqui."
+        acao={
+          <Button variant="primary" onClick={() => irParaAba("ambientes")}>
+            Ir para Ambientes
+          </Button>
+        }
+      />
     );
   }
 
   return (
     <div className="flex flex-col gap-lg">
-      {congeladoEm !== null && (
+      {lab.congeladoEm !== null && (
         <Alert variant="aviso">
           <AlertTriangle className="h-4 w-4 text-aviso" aria-hidden="true" />
           <AlertDescription className="flex flex-wrap items-center justify-between gap-sm">
             <span>
-              Esta proposta está congelada desde {formatarDataHora(congeladoEm)}. Suas alterações não
+              Esta proposta está congelada desde {formatarDataHora(lab.congeladoEm)}. Suas alterações não
               mudam os valores até você reabrir o orçamento.
             </span>
             {papel === "admin" && (
-              <Button variant="ghost" size="sm" onClick={() => setDialogReabrirAberto(true)}>
+              <Button variant="ghost" size="sm" onClick={() => lab.setDialogReabrirAberto(true)}>
                 Reabrir orçamento
               </Button>
             )}
@@ -421,59 +118,58 @@ export function PropostaLab({
         </AlertDescription>
       </Alert>
 
-      {linhas.length === 0 ? (
-        <div className="flex flex-col items-center gap-sm rounded-lg border border-cinza-200 bg-cinza-0 p-xl py-3xl text-center shadow-xs">
-          <FileText className="h-8 w-8 text-cinza-300" aria-hidden="true" />
-          <h2 className="text-titulo-card text-cinza-700">Nenhuma linha de proposta ainda</h2>
-          <p className="max-w-sm text-corpo-pequeno text-cinza-500">
-            Crie a primeira linha cobrindo todos os itens deste orçamento — depois é possível dividir ou
-            mesclar linhas.
-          </p>
-          <Button variant="primary" onClick={handleCriarLinhaInicial} disabled={criandoLinhaInicial}>
-            {criandoLinhaInicial ? "Criando…" : "Criar linha de proposta"}
-          </Button>
-        </div>
+      {lab.linhas.length === 0 ? (
+        <EstadoVazioAba
+          icone={FileText}
+          titulo="Nenhuma linha de proposta ainda"
+          descricao="Crie a primeira linha cobrindo todos os itens deste orçamento — depois é possível dividir ou mesclar linhas."
+          acao={
+            <Button variant="primary" onClick={lab.handleCriarLinhaInicial} disabled={lab.criandoLinhaInicial}>
+              {lab.criandoLinhaInicial ? "Criando…" : "Criar linha de proposta"}
+            </Button>
+          }
+        />
       ) : (
         <>
           <div className="flex flex-col gap-lg">
-            {linhas.map((linha) => (
+            {lab.linhas.map((linha) => (
               <LinhaPropostaCard
                 key={linha.id}
                 linha={linha}
                 alturas={estadoInicial.alturas}
-                itensDoConjunto={itensDoConjuntoDaLinha(linha)}
-                itensDisponiveis={itensDisponiveisDaLinha(linha)}
-                valorAtual={valorAtualDaLinha(linha)}
-                nomesAmbientes={nomesAmbientesDaLinha(linha)}
-                mostrarSelecaoMesclar={linhas.length > 1}
-                selecionadaParaMesclar={selecionadasParaMesclar.has(linha.id)}
-                onToggleSelecaoMesclar={() => toggleSelecaoMesclar(linha.id)}
-                onSalvarTextos={(patch) => handleSalvarTextos(linha.id, patch)}
-                onOverrideValor={(novoValor) => handleOverrideValor(linha.id, novoValor)}
-                onDividir={(itemIds) => handleDividirLinha(linha, itemIds)}
-                onRegenerarImagem={(blob) => handleRegenerarImagem(linha.id, blob)}
+                itensDoConjunto={lab.itensDoConjuntoDaLinha(linha)}
+                itensDisponiveis={lab.itensDisponiveisDaLinha(linha)}
+                valorAtual={lab.valorAtualDaLinha(linha)}
+                nomesAmbientes={lab.nomesAmbientesDaLinha(linha)}
+                mostrarSelecaoMesclar={lab.linhas.length > 1}
+                selecionadaParaMesclar={lab.selecionadasParaMesclar.has(linha.id)}
+                onToggleSelecaoMesclar={() => lab.toggleSelecaoMesclar(linha.id)}
+                onSalvarTextos={(patch) => lab.handleSalvarTextos(linha.id, patch)}
+                onOverrideValor={(novoValor) => lab.handleOverrideValor(linha.id, novoValor)}
+                onDividir={(itemIds) => lab.handleDividirLinha(linha, itemIds)}
+                onRegenerarImagem={(blob) => lab.handleRegenerarImagem(linha.id, blob)}
                 onResolverUrlImagem={onResolverUrlImagem}
                 onReverterDivisao={
-                  origemSplit[linha.id] && linhas.some((l) => l.id === origemSplit[linha.id])
-                    ? () => handleReverterDivisao(linha.id)
+                  lab.origemSplit[linha.id] && lab.linhas.some((l) => l.id === lab.origemSplit[linha.id])
+                    ? () => lab.handleReverterDivisao(linha.id)
                     : undefined
                 }
               />
             ))}
           </div>
 
-          {selecionadasParaMesclar.size >= 2 && (
+          {lab.selecionadasParaMesclar.size >= 2 && (
             <div className="flex justify-start">
-              <Button variant="primary" onClick={handleMesclarSelecionadas}>
-                Mesclar {selecionadasParaMesclar.size} linhas selecionadas
+              <Button variant="primary" onClick={lab.handleMesclarSelecionadas}>
+                Mesclar {lab.selecionadasParaMesclar.size} linhas selecionadas
               </Button>
             </div>
           )}
 
-          {resultadoRateio.ok && resultadoRateio.snapshot.warnings.length > 0 && (
+          {lab.resultadoRateio.ok && lab.resultadoRateio.snapshot.warnings.length > 0 && (
             <Alert variant="aviso">
               <AlertDescription>
-                {resultadoRateio.snapshot.warnings.length} aviso(s) no rateio por linha: itens fora de
+                {lab.resultadoRateio.snapshot.warnings.length} aviso(s) no rateio por linha: itens fora de
                 qualquer Linha de Proposta não entram no valor rateado. Divida ou edite as linhas para
                 incluí-los.
               </AlertDescription>
@@ -481,48 +177,28 @@ export function PropostaLab({
           )}
 
           <section className="flex flex-col items-start gap-sm rounded-lg border border-cinza-200 bg-cinza-0 p-xl shadow-xs">
-            <Button variant="primary" onClick={handleGerarProposta} disabled={gerandoProposta}>
-              {gerandoProposta ? "Gerando…" : "Gerar proposta"}
+            <Button variant="primary" onClick={lab.handleGerarProposta} disabled={lab.gerandoProposta}>
+              {lab.gerandoProposta ? "Gerando…" : "Gerar proposta"}
             </Button>
-            {erroGeral && (
+            {lab.erroGeral && (
               <Alert variant="erro" className="w-full">
-                <AlertDescription>{erroGeral}</AlertDescription>
+                <AlertDescription>{lab.erroGeral}</AlertDescription>
               </Alert>
             )}
           </section>
         </>
       )}
 
-      <Dialog
-        open={dialogReabrirAberto}
+      <ReabrirOrcamentoDialog
+        aberto={lab.dialogReabrirAberto}
         onOpenChange={(aberto) => {
-          setDialogReabrirAberto(aberto);
-          if (aberto) setErroReabrir(null);
+          lab.setDialogReabrirAberto(aberto);
+          if (aberto) lab.setErroReabrir(null);
         }}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Reabrir orçamento?</DialogTitle>
-          </DialogHeader>
-          <p className="text-corpo-pequeno text-cinza-500">
-            Os valores desta proposta voltam a ser recalculados a cada alteração até você congelar de
-            novo. O valor atual congelado deixa de ser exibido.
-          </p>
-          {erroReabrir && (
-            <Alert variant="erro">
-              <AlertDescription>{erroReabrir}</AlertDescription>
-            </Alert>
-          )}
-          <DialogFooter>
-            <Button variant="ghost" onClick={() => setDialogReabrirAberto(false)} disabled={reabrindo}>
-              Cancelar
-            </Button>
-            <Button variant="primary" onClick={handleConfirmarReabrir} disabled={reabrindo}>
-              {reabrindo ? "Reabrindo…" : "Reabrir orçamento"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        erro={lab.erroReabrir}
+        reabrindo={lab.reabrindo}
+        onConfirmar={lab.handleConfirmarReabrir}
+      />
     </div>
   );
 }

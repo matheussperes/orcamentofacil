@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { TituloSecao } from "@/components/ui/titulo-secao";
 import type { ElementoParede } from "@/lib/engine/parede";
 import type { ReferenciaX, ReferenciaY } from "@/lib/engine/parede/referenciaMedida";
 import { ROTULO_REF_X, ROTULO_REF_Y, ROTULO_TIPO_ELEMENTO, TIPOS_ELEMENTO } from "../AmbientesLab.constants";
@@ -26,7 +27,7 @@ export function SecaoElementosParede({
 }) {
   return (
     <section className="rounded-lg border border-cinza-200 bg-cinza-0 p-4 shadow-xs">
-      <h2 className="mb-3 text-titulo-secao text-cinza-900">Elementos de parede</h2>
+      <TituloSecao>Elementos de parede</TituloSecao>
 
       {/* Task 2.12 (front) — presets de elemento de parede (Modelo de
           Domínio 3.2.3): aplicar copia nome/largura/altura pro formulário

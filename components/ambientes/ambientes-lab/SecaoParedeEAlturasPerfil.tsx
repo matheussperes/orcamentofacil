@@ -4,6 +4,7 @@ import { AlertTriangle } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { TituloSecao } from "@/components/ui/titulo-secao";
 import { numero } from "../AmbientesLab.helpers";
 import type { useSelecaoAmbiente } from "./useSelecaoAmbiente";
 import type { useAlturas } from "./useAlturas";
@@ -21,7 +22,7 @@ export function SecaoParedeEAlturasPerfil({
   return (
     <div className="grid grid-cols-1 gap-lg md:grid-cols-2">
       <section className="rounded-lg border border-cinza-200 bg-cinza-0 p-4 shadow-xs">
-        <h2 className="mb-3 text-titulo-secao text-cinza-900">Parede</h2>
+        <TituloSecao>Parede</TituloSecao>
         <div className="grid grid-cols-2 gap-sm">
           <div>
             <Label htmlFor="parede-largura">Largura (mm)</Label>
@@ -45,7 +46,7 @@ export function SecaoParedeEAlturasPerfil({
       </section>
 
       <section className="rounded-lg border border-cinza-200 bg-cinza-0 p-4 shadow-xs">
-        <h2 className="mb-1 text-titulo-secao text-cinza-900">Alturas do perfil</h2>
+        <TituloSecao className="mb-1">Alturas do perfil</TituloSecao>
         <p className="mb-3 text-corpo-pequeno text-cinza-500">
           Perfil de alturas da marcenaria — ao salvar, vale para todos os orçamentos da
           organização, não só este.
