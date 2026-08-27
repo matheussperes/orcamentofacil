@@ -489,12 +489,52 @@ Login e Signup são um par vitrine e hoje divergem: Login renderiza ícone embut
 
 ---
 
+#### Task R.12 — Padding de card responsivo (Card compartilhado, `p-lg` mobile / `p-xl` desktop)
+
+- **Status**: ⏱️ Planejado
+- **Executor**: frontend-engineer
+- **Modelo Recomendado**: Sonnet (padrão do agente)
+- **Depende de**: nenhuma
+- **Referências**: Achado A do `art-director`, tentativa 3 da Task R.5a (`.maestro/tmp/verdicts/tela-orcamento-art.md`); `docs/Screen-Composition.md` l.22-23 (Orçamento); `docs/Design-System.md` §7.2
+
+**Descrição**
+`docs/Screen-Composition.md` (seção Orçamento, reescrita na Task R.5a) declara padding de card `p-xl`/24px no desktop e `p-lg`/16px em mobile (<768px) — mesma regra do Design System §7.2. Na prática, as 22 `section` usadas como card na tela Orçamento (e o mesmo padrão em `NovoOrcamentoForm` e possivelmente outras telas) usam `p-xl` fixo, sem variante responsiva — o card fica com padding de desktop também em mobile. É sistêmico: os cards são `section` cruas espalhadas pelo código, não o componente `Card` do design system, que centralizaria a regra em um único lugar. Corrigir apenas os arquivos do Orçamento dessincronizaria essa tela do resto do produto — a correção correta é de componente compartilhado.
+
+**Critérios de aceitação**
+- [ ] Padding de card responsivo (`p-lg` <768px / `p-xl` ≥768px) aplicado de forma centralizada — via `Card` do design system (§7.2) migrado nas `section` que fazem esse papel, ou via classe utilitária única reaproveitada
+- [ ] Tela Orçamento (22 `section` afetadas) conforme a declaração de `docs/Screen-Composition.md` l.22-23
+- [ ] Levantamento de outras telas com o mesmo padrão fixo (`NovoOrcamentoForm` confirmado, verificar demais) — corrigidas juntas ou registradas como fora do escopo com motivo
+- [ ] `npm run test`/`build`/`lint`/`typecheck` sem regressão
+- Impacto Visual: Completo (toca componente compartilhado)
+
+---
+
+#### Task R.13 — Exclusividade dos painéis inline de `LinhaPropostaCard` (DS §7.11a)
+
+- **Status**: ⏱️ Planejado
+- **Executor**: frontend-engineer
+- **Modelo Recomendado**: Sonnet (padrão do agente)
+- **Depende de**: nenhuma
+- **Referências**: Achado B do `art-director`, tentativa 3 da Task R.5a (`.maestro/tmp/verdicts/tela-orcamento-art.md`); `docs/Design-System.md` §7.11a
+
+**Descrição**
+`docs/Design-System.md` §7.11a libera `variant="primary"` nos painéis inline transitórios de `LinhaPropostaCard` ("Dividir linha", "Editar valor") sob duas condições: (1) exclusividade — no máximo um painel aberto por vez, tipo accordion, abrir um fecha o outro; (2) escopo restrito ao item. A condição 2 já vale; a 1 não está implementada — `dividindo` (linha ~165) e `editandoValor` (linha ~156) são dois `useState` independentes, então os dois painéis podem ficar abertos ao mesmo tempo, cada um com botão `primary`, violando a regra que a própria spec exige para permitir esse `primary`.
+
+**Critérios de aceitação**
+- [ ] `setDividindo`/estado equivalente fecha `editandoValor` ao abrir, e vice-versa (comportamento accordion, um fecha o outro)
+- [ ] Nenhuma mudança de layout, apenas de estado/comportamento
+- [ ] `ux-auditor` confere com captura mostrando "Dividir linha" aberto, então "Editar valor" acionado, confirmando que o primeiro fecha
+- [ ] `npm run test`/`build`/`lint`/`typecheck` sem regressão
+- Impacto Visual: Leve
+
+---
+
 #### Task R.8 — Fechar o stage
 
 - **Status**: ⏱️ Planejado
 - **Executor**: nenhum (Maestro, via comando)
 - **Modelo Recomendado**: — (comando, não geração de código)
-- **Depende de**: R.1, R.2a, R.2b, R.3a, R.3b, R.3c, R.3d, R.4a, R.4b, R.5a, R.5b, R.5c, R.5d, R.5e, R.6a, R.6b, R.6c, R.7, R.9, R.10, R.11
+- **Depende de**: R.1, R.2a, R.2b, R.3a, R.3b, R.3c, R.3d, R.4a, R.4b, R.5a, R.5b, R.5c, R.5d, R.5e, R.6a, R.6b, R.6c, R.7, R.9, R.10, R.11, R.12, R.13
 - **Referências**: `docs/Plano-Reparacao-orcamentofacil.md` R.8
 
 **Descrição**
