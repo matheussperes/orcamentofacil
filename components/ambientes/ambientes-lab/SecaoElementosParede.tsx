@@ -26,7 +26,7 @@ export function SecaoElementosParede({
   form: ReturnType<typeof useElementosParede>;
 }) {
   return (
-    <section className="rounded-lg border border-cinza-200 bg-cinza-0 p-4 shadow-xs">
+    <section className="rounded-lg border border-cinza-200 bg-cinza-0 p-xl shadow-xs">
       <TituloSecao>Elementos de parede</TituloSecao>
 
       {/* Task 2.12 (front) — presets de elemento de parede (Modelo de
@@ -168,7 +168,7 @@ export function SecaoElementosParede({
             onChange={(e) => form.setNovaAltura(numero(e.target.value))}
           />
         </div>
-        <Button variant="primary" onClick={form.salvarElemento}>
+        <Button variant="outline" onClick={form.salvarElemento}>
           {form.elementoEditandoIndice !== null ? "Salvar" : "Adicionar"}
         </Button>
         {form.elementoEditandoIndice !== null && (

@@ -24,8 +24,8 @@ export function SecaoElevacaoConjunto({
   elementosParedeHook: ReturnType<typeof useElementosParede>;
 }) {
   return (
-    <div className="grid grid-cols-1 gap-lg lg:grid-cols-2">
-      <section className="rounded-lg border border-cinza-200 bg-cinza-0 p-4 shadow-xs">
+    <div className="grid grid-cols-1 items-start gap-lg lg:grid-cols-2">
+      <section className="rounded-lg border border-cinza-200 bg-cinza-0 p-xl shadow-xs">
         <TituloSecao>Elevação da parede</TituloSecao>
         <div className="max-w-full overflow-x-auto rounded-md border border-cinza-200 bg-cinza-50 p-2">
           <ElevacaoParede
@@ -37,7 +37,7 @@ export function SecaoElevacaoConjunto({
           />
         </div>
       </section>
-      <section className="rounded-lg border border-cinza-200 bg-cinza-0 p-4 shadow-xs">
+      <section className="rounded-lg border border-cinza-200 bg-cinza-0 p-xl shadow-xs">
         <TituloSecao>Itens posicionados (conjunto)</TituloSecao>
         {conjuntosHook.itensDoConjunto.length > 0 ? (
           <BoxCanvas

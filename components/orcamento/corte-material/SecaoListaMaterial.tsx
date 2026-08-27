@@ -263,7 +263,7 @@ export function SecaoListaMaterial({
             onChange={(e) => setFormValorUnitario(Number(e.target.value) || 0)}
           />
         </div>
-        <Button variant="primary" onClick={adicionarItemManual}>
+        <Button variant="outline" onClick={adicionarItemManual}>
           Adicionar item
         </Button>
       </div>

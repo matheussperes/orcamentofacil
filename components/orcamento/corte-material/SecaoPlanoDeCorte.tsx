@@ -65,28 +65,29 @@ export function SecaoPlanoDeCorte({
           );
           return (
             <div key={`${grupo.cor}-${grupo.espessura_mm}`}>
-              <div className="mb-sm flex flex-wrap items-baseline justify-between gap-sm">
-                <h3 className="text-titulo-card text-cinza-900">
-                  MDF {grupo.cor} {grupo.espessura_mm}mm
-                </h3>
-                <span className="text-corpo-pequeno text-cinza-500 tabular-nums">
-                  {grupo.chapas.length} chapa(s) · {areaConsumidaM2.toFixed(2)} m² consumidos
-                </span>
-              </div>
-              <div className="flex flex-wrap gap-md">
-                {grupo.chapas.map((chapa) => (
-                  <div key={chapa.index}>
+              <h3 className="mb-sm text-titulo-card text-cinza-900">
+                MDF {grupo.cor} {grupo.espessura_mm}mm
+              </h3>
+              <div className="flex flex-col gap-md">
+                {grupo.chapas.map((chapa, i) => (
+                  <div key={chapa.index} className="grid grid-cols-[auto_1fr] gap-lg">
                     <PlanoCorteCanvas
                       chapa={chapa}
                       larguraChapa={grupo.larguraChapa}
                       alturaChapa={grupo.alturaChapa}
                       mostrarVeios={mostrarVeios}
                     />
-                    <Progress
-                      value={chapa.aproveitamento * 100}
-                      corPreenchimento={corAproveitamento(chapa.aproveitamento)}
-                      className="mt-xs"
-                    />
+                    <div className="flex flex-col gap-sm self-start">
+                      {i === 0 && (
+                        <span className="text-corpo-pequeno text-cinza-500 tabular-nums">
+                          {grupo.chapas.length} chapa(s) · {areaConsumidaM2.toFixed(2)} m² consumidos
+                        </span>
+                      )}
+                      <Progress
+                        value={chapa.aproveitamento * 100}
+                        corPreenchimento={corAproveitamento(chapa.aproveitamento)}
+                      />
+                    </div>
                   </div>
                 ))}
               </div>

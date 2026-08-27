@@ -10,7 +10,7 @@ import type { useSelecaoAmbiente } from "./useSelecaoAmbiente";
  * Design-System §7.8) de qual ambiente e qual parede estão em edição. */
 export function SecaoAmbientesEParedes({ selecao }: { selecao: ReturnType<typeof useSelecaoAmbiente> }) {
   return (
-    <section className="rounded-lg border border-cinza-200 bg-cinza-0 p-4 shadow-xs">
+    <section className="rounded-lg border border-cinza-200 bg-cinza-0 p-xl shadow-xs">
       <TituloSecao>Ambientes e paredes</TituloSecao>
       {selecao.erroComando && (
         <Alert variant="erro" className="mb-3">

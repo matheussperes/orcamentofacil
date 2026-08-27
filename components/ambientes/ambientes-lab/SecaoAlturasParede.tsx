@@ -14,7 +14,7 @@ import type { useAlturas } from "./useAlturas";
  * aqui. */
 export function SecaoAlturasParede({ alturasHook }: { alturasHook: ReturnType<typeof useAlturas> }) {
   return (
-    <section className="rounded-lg border border-cinza-200 bg-cinza-0 p-4 shadow-xs">
+    <section className="rounded-lg border border-cinza-200 bg-cinza-0 p-xl shadow-xs">
       <TituloSecao className="mb-1">Alturas desta parede</TituloSecao>
       <p className="mb-3 text-corpo-pequeno text-cinza-500">
         Cada altura herda o valor do perfil da organização até ser customizada aqui — a

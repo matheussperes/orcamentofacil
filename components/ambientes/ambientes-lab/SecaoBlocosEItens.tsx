@@ -20,7 +20,7 @@ export function SecaoBlocosEItens({
   const { selecao, setSelecao } = elementosContinuosHook;
 
   return (
-    <section className="min-w-0 rounded-lg border border-cinza-200 bg-cinza-0 p-4 shadow-xs">
+    <section className="min-w-0 rounded-lg border border-cinza-200 bg-cinza-0 p-xl shadow-xs">
       <TituloSecao>Blocos e itens</TituloSecao>
       <p className="mb-3 text-corpo-pequeno text-cinza-500">
         Selecione um Conjunto ou um item avulso para adicionar tampo, rodapé, tamponamento ou

@@ -20,8 +20,8 @@ export function SecaoParedeEAlturasPerfil({
   alturasHook: ReturnType<typeof useAlturas>;
 }) {
   return (
-    <div className="grid grid-cols-1 gap-lg md:grid-cols-2">
-      <section className="rounded-lg border border-cinza-200 bg-cinza-0 p-4 shadow-xs">
+    <div className="grid grid-cols-1 items-start gap-lg md:grid-cols-2">
+      <section className="rounded-lg border border-cinza-200 bg-cinza-0 p-xl shadow-xs">
         <TituloSecao>Parede</TituloSecao>
         <div className="grid grid-cols-2 gap-sm">
           <div>
@@ -45,7 +45,7 @@ export function SecaoParedeEAlturasPerfil({
         </div>
       </section>
 
-      <section className="rounded-lg border border-cinza-200 bg-cinza-0 p-4 shadow-xs">
+      <section className="rounded-lg border border-cinza-200 bg-cinza-0 p-xl shadow-xs">
         <TituloSecao className="mb-1">Alturas do perfil</TituloSecao>
         <p className="mb-3 text-corpo-pequeno text-cinza-500">
           Perfil de alturas da marcenaria — ao salvar, vale para todos os orçamentos da

@@ -29,7 +29,7 @@ export function SecaoItensPosicionados({
   orcamentoId?: string;
 }) {
   return (
-    <section className="rounded-lg border border-cinza-200 bg-cinza-0 p-4 shadow-xs">
+    <section className="rounded-lg border border-cinza-200 bg-cinza-0 p-xl shadow-xs">
       <TituloSecao>Itens posicionados</TituloSecao>
       {presets.length === 0 ? (
         <p className="text-corpo-pequeno text-cinza-500">

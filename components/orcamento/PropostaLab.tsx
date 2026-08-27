@@ -160,7 +160,7 @@ export function PropostaLab(props: PropostaLabProps) {
 
           {lab.selecionadasParaMesclar.size >= 2 && (
             <div className="flex justify-start">
-              <Button variant="primary" onClick={lab.handleMesclarSelecionadas}>
+              <Button variant="outline" onClick={lab.handleMesclarSelecionadas}>
                 Mesclar {lab.selecionadasParaMesclar.size} linhas selecionadas
               </Button>
             </div>

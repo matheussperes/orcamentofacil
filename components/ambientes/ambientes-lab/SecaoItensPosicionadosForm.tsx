@@ -90,7 +90,7 @@ export function SecaoItensPosicionadosForm({
             onChange={(e) => itensHook.setVaoItem(numero(e.target.value))}
           />
         </div>
-        <Button variant="primary" onClick={itensHook.adicionarItem}>
+        <Button variant="outline" onClick={itensHook.adicionarItem}>
           Adicionar
         </Button>
       </div>
