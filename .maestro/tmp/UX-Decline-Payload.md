@@ -1,41 +1,56 @@
 # UX Decline Payload
 
 **Task**: R.5a
-**Branch**: feature/R.5a
+**Branch**: feature/R.5a (commit f111c78)
 **Data**: 2026-08-26
 **Veredicto**: REPROVADO
 
-## 1. Valor do card "Resumo financeiro" transborda e é ocultado pelo card vizinho no breakpoint mobile
+## 1. Regressão mobile: legenda e barra de aproveitamento invisíveis no "Plano de corte"
 
-- **Componente**: `components/orcamento/FinanceiroLab.tsx` — função `CampoResumo` (linhas ~64–83), grade em `grid grid-cols-2 gap-md sm:grid-cols-3` (linha ~187)
-- **Regra violada**: Checklist de Responsividade do gate ("Nenhuma sobreposição, corte ou transbordamento horizontal em nenhum breakpoint") — Design-System.md §3 `text-valor-destaque` (24px/bold/tabular-nums) aplicado num card `p-lg` sem margem para o valor completo em duas colunas a 390px
-- **Breakpoint**: mobile (390px) — `grid-cols-2` faz cada card medir 140px, com 108px de área útil de conteúdo (padding 16px de cada lado). O valor formatado por `formatarMoeda` (`lib/format.ts`) usa NBSP entre "R$" e o número (`toLocaleString("pt-BR", {style: "currency"})`), então a string inteira é um token não quebrável — ela não tem onde dar wrap e transborda 144px de largura de conteúdo num espaço de 108px
-- **Esperado**: valor "R$ 2.761,70" inteiramente legível dentro do card, sem sobreposição
-- **Encontrado**: o texto transborda o card `PREÇO FINAL` (fundo `accent-subtle`) e o final do valor ("...70") fica coberto pelo card vizinho `CUSTO MATERIAL` (fundo `cinza-0`, opaco, pintado por cima por ordem de DOM) — o dígito final desaparece visualmente. Mesmo padrão em "Lucro final" (R$ 1.219,85 → "...85" oculto)
-- **Confirmado via DOM**: `scrollWidth` do `<p>` = 144px, `clientWidth` = 106px, `overflow: visible` no card (não há truncamento por CSS — é sobreposição real por ordem de pintura)
-- **Não ocorre** em tablet (834px, `sm:grid-cols-3` já ativo) nem desktop — apenas no breakpoint mobile puro
+- **Componente**: `components/orcamento/corte-material/SecaoPlanoDeCorte.tsx:73`
+- **Regra violada**: `docs/Screen-Composition.md` — Responsividade: "Nenhuma
+  sobreposição, corte ou transbordamento horizontal em nenhum breakpoint" /
+  "Conteúdo permanece legível sem zoom". Também
+  `components/shell/Shell.tsx:39` (`overflow-x-hidden` no `<main>`) — a
+  combinação das duas torna o conteúdo **irrecuperável**, não apenas rolável.
+- **Breakpoint**: mobile (390px), reproduz em qualquer largura abaixo de
+  ~426px de conteúdo útil
+- **Esperado**: a coluna com a legenda "N chapa(s) · X m² consumidos" e o
+  `Progress` de aproveitamento permanece inteiramente visível (ou some para
+  uma segunda linha) em todos os breakpoints — nenhum pixel de conteúdo
+  cortado sem forma de acesso.
+- **Encontrado**: a correção do achado 1 do art-director trocou
+  `flex flex-wrap` por `grid grid-cols-[auto_1fr]`, sem variante responsiva.
+  Em 390px, medido via DOM: a segunda coluna (`auto`, canvas fixo + `1fr`)
+  se estende até `x=426.6px`, **36.6px além do viewport** (390px). Como o
+  `<main>` do Shell usa `overflow-x-hidden` (não `overflow-x-auto`), esse
+  conteúdo não vira scroll — ele é **cortado e permanentemente inacessível**.
+  Visualmente: o texto "1 chapa(s) · 1.35 m² consumidos" é truncado em
+  "…consu" e a barra de progresso (vermelha/verde) é cortada antes do fim.
+  Reproduz nas 3 chapas da aba (MDF Branco TX 6mm, 15mm, Louro Freijó 18mm).
+  Em tablet (834px) e desktop (1440px) o layout está correto — a regressão é
+  exclusiva de mobile.
 - **Evidência**:
-  - `.maestro/tmp/screenshots/orcamento-financeiro-mobile-preenchido.png` (tela inteira)
-  - `.maestro/tmp/screenshots/zoom-financeiro-viewport.png` (crop mostrando "R$ 2.761,70" cortado por baixo de "CUSTO MATERIAL R$ 1.219,86")
-  - `.maestro/tmp/screenshots/zoom-financeiro-precisebox.png` (crop do card isolado)
+  `.maestro/tmp/screenshots/orcamento-corte-material-mobile-preenchido-v3.png`
+- **Correção mínima**: dar ao grid uma variante que colapse para 1 coluna
+  abaixo do breakpoint em que a coluna `1fr` cabe com conteúdo legível —
+  `grid grid-cols-1 gap-md sm:grid-cols-[auto_1fr] sm:gap-lg` (mesmo padrão
+  responsivo já usado em `SecaoParedeEAlturasPerfil.tsx`,
+  `grid-cols-1 md:grid-cols-2`). Não reverter a correção do achado 1 nos
+  breakpoints tablet/desktop, onde ela está correta.
+
+---
 
 ## Capturas realizadas
-- `.maestro/tmp/screenshots/orcamento-ambientes-desktop-preenchido.png`
-- `.maestro/tmp/screenshots/orcamento-ambientes-tablet-preenchido.png`
-- `.maestro/tmp/screenshots/orcamento-ambientes-mobile-preenchido.png`
-- `.maestro/tmp/screenshots/orcamento-corte-material-desktop-preenchido.png`
-- `.maestro/tmp/screenshots/orcamento-corte-material-tablet-preenchido.png`
-- `.maestro/tmp/screenshots/orcamento-corte-material-mobile-preenchido.png`
-- `.maestro/tmp/screenshots/orcamento-corte-material-desktop-vazio.png`
-- `.maestro/tmp/screenshots/orcamento-financeiro-desktop-preenchido.png`
-- `.maestro/tmp/screenshots/orcamento-financeiro-tablet-preenchido.png`
-- `.maestro/tmp/screenshots/orcamento-financeiro-mobile-preenchido.png`
-- `.maestro/tmp/screenshots/orcamento-proposta-desktop-vazio.png`
-- `.maestro/tmp/screenshots/orcamento-proposta-tablet-vazio.png`
-- `.maestro/tmp/screenshots/orcamento-proposta-mobile-vazio.png`
-- `.maestro/tmp/screenshots/zoom-titulo-secao-tracocota2.png` (traço de cota, tick marks confirmados)
-- `.maestro/tmp/screenshots/zoom-financeiro-viewport.png`
-- `.maestro/tmp/screenshots/zoom-financeiro-precisebox.png`
 
-## Nota
-Tentativa 1 de 2. Verifique também a mesma classe de valor em outros cards de 2 colunas do projeto que usem `formatarMoeda` + `grid-cols-2` em telas estreitas — o `CampoResumo` local não é reusado em outra tela, então o achado fica restrito a esta.
+**Novas (Playwright, `/dev/preview/orcamento`, 14 arquivos + evidência):**
+`orcamento-{ambientes,corte-material,financeiro,proposta}-{mobile,tablet,desktop}-preenchido-v3.png`,
+`orcamento-{ambientes,corte-material}-desktop-preenchido-v3-dark.png` (idêntico
+ao claro — confirmado que não há dark mode alternável nesta fase,
+`docs/Design-System.md` §2.9).
+
+## Tentativa
+
+**Tentativa 3 de 2** — Circuit Breaker acionado: esta é a terceira
+submissão desta tela ainda com reprovação (tentativa 1 do art-director +
+esta). Recomendo ao Maestro tratar como escalonamento.

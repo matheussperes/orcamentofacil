@@ -70,7 +70,7 @@ export function SecaoPlanoDeCorte({
               </h3>
               <div className="flex flex-col gap-md">
                 {grupo.chapas.map((chapa, i) => (
-                  <div key={chapa.index} className="grid grid-cols-[auto_1fr] gap-lg">
+                  <div key={chapa.index} className="grid grid-cols-1 gap-md sm:grid-cols-[auto_1fr] sm:gap-lg">
                     <PlanoCorteCanvas
                       chapa={chapa}
                       larguraChapa={grupo.larguraChapa}
