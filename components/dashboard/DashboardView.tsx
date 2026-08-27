@@ -41,13 +41,7 @@ export function DashboardView({ orcamentos, contagemPorStatus }: DadosDashboard)
 
   return (
     <div className="flex flex-col gap-xl">
-      <div className="flex flex-wrap items-center justify-between gap-md">
-        <div>
-          <h2 className="text-titulo-secao text-cinza-900">Visão geral</h2>
-          <p className="text-corpo text-cinza-500">
-            Acompanhe seus orçamentos e o status de cada um.
-          </p>
-        </div>
+      <div className="flex justify-end">
         <Button asChild>
           <Link href="/orcamento/novo">Novo orçamento</Link>
         </Button>

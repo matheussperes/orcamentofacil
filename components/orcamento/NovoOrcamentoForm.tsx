@@ -74,8 +74,7 @@ export function NovoOrcamentoForm({ modoPreview = false }: NovoOrcamentoFormProp
 
   return (
     <div className="max-w-xl rounded-lg border border-cinza-200 bg-cinza-0 p-xl shadow-xs">
-      <h2 className="text-titulo-secao text-cinza-900">Novo orçamento</h2>
-      <p className="mt-1 text-corpo text-cinza-500">
+      <p className="text-corpo text-cinza-500">
         Cadastre o cliente para iniciar um novo orçamento. A seleção de um cliente já
         existente não está disponível nesta versão — cada orçamento novo cria um
         cliente novo.
