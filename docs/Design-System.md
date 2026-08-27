@@ -91,6 +91,25 @@ lê na fita métrica e no desenho de corte todo santo dia.
   corte (Seção 9.4): a cor identifica material/categoria, o peso
   tipográfico identifica importância.
 
+**Decisão — "elemento que domina" é sempre escopado à região, nunca à
+página inteira (2026-08-27, resolve observação do art-director em
+`docs/Screen-Composition.md`, tela Orçamento).** Uma tela de painel de
+trabalho (Seção 6, scroll longo) tem duas hierarquias que **não competem
+entre si** porque respondem perguntas diferentes: a **ação primária** da
+tela (sempre `accent`, sempre uma só, sempre a massa visual mais forte da
+dobra em que vive — é a própria definição de ação primária) e o **elemento
+que domina** dentro de uma região de conteúdo (o que o olho lê primeiro
+*como informação*, antes de decidir agir). Um valor em `text-valor-destaque`
+(24px, Seção 3) ou um canvas técnico (Seção 9) nunca vai vencer um botão
+`accent` num teste de contraste pós-desfoque na página inteira — e não
+deve: se vencesse, a ação primária teria deixado de ser a ação primária.
+Ao declarar "Domina" para uma tela ou aba de scroll longo (`docs/
+Screen-Composition.md`), o Product Designer declara o domina **por região**,
+nunca pela página/aba inteira contra o rodapé de ação. Isso não abre
+exceção nova a "cor não é hierarquia" (Seção 0.7): o mecanismo de destaque
+dentro da região continua sendo peso/tamanho tipográfico (`text-valor-
+destaque`/`text-valor-destaque-lg`), nunca tint de fundo no card inteiro.
+
 ### 0.4 Par tipográfico
 
 A família de UI é só **Inter** (Seção 3) — decisão herdada, não reaberta
@@ -514,6 +533,27 @@ Pesos permitidos: 400 / 500 / 600 / 700 (mesmo limite da v2 — a logo em
 "bold geométrico" é asset de marca isolado, não abre novo peso de corpo).
 Números monetários/medidas usam `tabular-nums` sempre.
 
+**Decisão — escala fechada para título de sub-seção dentro de um card
+(2026-08-27, resolve observação do art-director: 3 tratamentos conviviam
+sem regra escrita — `text-titulo-card`, `text-corpo-pequeno font-medium` e
+`text-legenda` para ranks diferentes).** Dentro de qualquer card, o título
+de nível 1 já é o `CardTitle` (`text-titulo-secao`, Seção 7.2 — "Resumo
+financeiro", "Plano de corte"). Abaixo dele só existem **dois** ranks, sem
+um terceiro:
+
+1. **Subtítulo/subseção** (agrupa um bloco de campos dentro do card, ex.:
+   "Blocos e itens", "Elementos contínuos", nome de um item/módulo) →
+   `text-titulo-card` (Seção 3, `font-semibold`).
+2. **Rótulo/meta-informação** (identifica um campo ou dado, não um bloco)
+   → `text-legenda` (Seção 3, `font-medium`, `uppercase` quando for
+   cabeçalho de tabela).
+
+`text-corpo-pequeno font-medium` **não é um token de título** — é o corpo
+denso da Seção 3 (célula de tabela, descrição de KPI) com peso alterado ad
+hoc. Qualquer uso atual como título de sub-seção migra para
+`text-titulo-card` (se nomeia um bloco) ou `text-legenda` (se é um rótulo)
+na próxima task que tocar aquele componente — não é retrabalho isolado.
+
 ## 4. Escala de espaçamento
 
 Mantida integralmente da v2 (nenhum mockup contradiz a escala base-4px já
@@ -536,6 +576,18 @@ Aplicação padrão (confirmada pelos mockups):
 - Padding interno da sidebar: `p-lg` (16px) nas laterais, `gap-xs` (4px)
   entre itens de navegação consecutivos.
 - Padding de célula de tabela: `px-md py-sm` (12px/8px).
+
+**Decisão — não existe um segundo padding de card para "densidade"
+(2026-08-27, resolve observação do art-director em `docs/
+Screen-Composition.md`, tela Orçamento).** O padding de card (`p-xl`
+desktop / `p-lg` mobile, Seção 7.2) é único e vale para toda superfície de
+conteúdo, incluindo telas de consulta/comparação como Corte & Material ou
+Catálogo. Uma tela "densa" não ganha um card mais apertado — ganha
+conteúdo mais compacto dentro do mesmo respiro: célula de tabela em
+`px-md py-sm`, tabelas com mais linhas visíveis, canvas técnico de
+proporção fixa. Reduzir o padding do card para simular densidade é o que
+produziu a inversão corrigida em 68e9cf0 (Ambientes em `p-4`/16px contra
+`p-xl`/24px nas demais); a correção não volta.
 
 ## 5. Raios e elevação
 
@@ -754,6 +806,32 @@ reforço — nenhuma outra confirmação destrutiva do produto (remover item,
 excluir ambiente, remover produto) precisa dele; o padrão simples de nomear
 + irreversível já basta para essas, que afetam uma linha, não um tenant
 inteiro.
+
+### 7.11a Painel inline transitório (edição sob demanda dentro de card)
+
+**Decisão (2026-08-27, resolve observação do art-director sobre
+`LinhaPropostaCard.tsx:298`/`:343`).** Um painel que **não** existe no
+estado de repouso do card e só abre sob demanda (ex.: "Dividir linha",
+"Editar valor" dentro de `LinhaPropostaCard`) é regime de **Dialog sem
+overlay**, não regime de corpo de aba, quando as duas condições abaixo se
+cumprem:
+
+1. **Exclusividade** — no máximo um painel deste tipo aberto por vez
+   naquele card/região (comportamento tipo accordion: abrir um fecha o
+   outro).
+2. **Escopo restrito ao item** — a ação do painel afeta só aquele item
+   (aquela linha, aquele campo), nunca a aba inteira.
+
+Quando as duas valem, o botão de confirmar do painel usa `variant="primary"`
+— mesma lógica do `Dialog` (Seção 7.11: confirmar em destaque, cancelar em
+`outline`), porque enquanto o painel está aberto ele **é** a única decisão
+pendente na tela, exatamente como um modal. Isso **não** é a mesma regra do
+corpo do card: o bloco de ações que fica **sempre visível** no estado de
+repouso do card (ex.: o rodapé padrão de toda `LinhaPropostaCard` antes de
+qualquer painel abrir) segue a regra de "uma ação primária por aba,
+sempre no rodapé da aba" (`docs/Screen-Composition.md`) e usa `outline`,
+nunca `primary` — um botão sempre visível repetido N vezes (uma por linha)
+é o padrão de vulto vetado, não o painel transitório.
 
 ### 7.12 Toast → shadcn `Toast`/`Sonner`
 

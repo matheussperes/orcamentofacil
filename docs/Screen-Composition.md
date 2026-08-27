@@ -19,9 +19,16 @@ Financeiro e os valores da aba Proposta seguem a mesma regra (peso/tamanho
 tipográfico resolve importância, nunca caixa colorida); Linear — o padrão
 de foco/estado ativo permanente do seletor de ambiente/parede (não é hover,
 é seleção persistente, `SeletorLista`).
-**Densidade**: mista, declarada por aba (ver tabela "Por aba" abaixo) —
-Ambientes/Financeiro/Proposta são espaçosas (decisão), Corte & Material é
-densa (consulta/comparação, mesmo padrão de Catálogo/Biblioteca).
+**Densidade**: uniforme no card — as 4 abas usam o mesmo padding de card
+(`p-xl`/24px desktop, `p-lg`/16px mobile) e o mesmo `gap-lg` entre cards
+irmãos (Design System §4/§7.2). **Decisão 2026-08-27** (revisa esta linha,
+que antes declarava Corte & Material com card mais compacto que as outras
+3 — a inversão real que isso produziu foi corrigida em 68e9cf0 e a
+uniformidade é definitiva, não regride): a sensação de "consulta/
+comparação, mesmo padrão de Catálogo/Biblioteca" que Corte & Material
+precisa vem do **conteúdo**, não do padding — tabela de material em
+`px-md py-sm` (célula compacta) e canvas técnico de proporção fixa, dentro
+do mesmo respiro de card que Ambientes, Financeiro e Proposta usam.
 **Padrão de tela**: painel de trabalho (shell com 4 abas, `OrcamentoAbas.tsx`)
 
 **Grade**
@@ -31,7 +38,9 @@ densa (consulta/comparação, mesmo padrão de Catálogo/Biblioteca).
   `flex flex-wrap items-center gap-sm`, `mb-md`.
 - Corpo de cada aba: coluna única de `section`/`Card` empilhados
   (`gap-lg`, 24px), exceto Ambientes, que usa `grid grid-cols-1 lg:grid-cols-2
-  gap-lg` para os pares Elevação+Conjunto e Parede+Faixas.
+  gap-lg` para os pares Elevação+Conjunto, Parede+Faixas e — documentado
+  aqui em 2026-08-27, já implementado e aprovado, não é lacuna nova —
+  Blocos e itens+Elementos contínuos.
 - Breakpoint: abaixo de `md` (768px), grids de 2 colunas da aba Ambientes
   colapsam para 1 coluna (já implementado); sidebar vira drawer (§6).
 
@@ -42,13 +51,26 @@ densa (consulta/comparação, mesmo padrão de Catálogo/Biblioteca).
 | Tabs (Ambientes/Corte & Material/Financeiro/Proposta) | Trocar de contexto de trabalho sem perder estado (`forceMount`) | 4 `TabsTrigger` com ícone 16px + label, estilo underline §7.8 | Ação de escrita (nenhum tab é um botão de salvar) |
 | Conteúdo da aba ativa | Superfície de trabalho daquela etapa | Ver tabela "Por aba" | Conteúdo de outra aba (cada aba só mostra o que é dela) |
 
+> **Escopo da coluna "Domina" (decisão 2026-08-27, resolve observação do
+> art-director).** "Domina" é escopado à **região/dobra** onde o elemento
+> vive, nunca um teste de vulto contra a aba inteira — inclusive contra o
+> rodapé. Cada aba tem sua única **Ação primária** (abaixo), sempre em
+> `accent`, sempre no rodapé, e ela é deliberadamente a massa visual mais
+> forte da aba: é a própria definição de ação primária. "Domina" nomeia o
+> que o olho lê primeiro **como conteúdo**, antes de decidir agir — não
+> compete com o CTA, e não deveria vencê-lo (se vencesse, o CTA teria
+> deixado de ser a ação primária). "Elevação da parede" (Ambientes) e o
+> "valor rateado" (Proposta) continuam corretos como Domina de conteúdo de
+> suas regiões mesmo perdendo em contraste pós-desfoque para o botão do
+> rodapé — essa perda é esperada, não é defeito.
+
 **Por aba** (Regiões/Hierarquia/Poda específicas — o restante do template
 vale para as 4)
 | Aba | Domina | Apoia | Recua | Poda desta aba |
 |---|---|---|---|---|
 | Ambientes | Elevação da parede (`ElevacaoParede`, feedback visual central da tarefa) | Campos de medida da parede/faixas, tabela "Blocos e itens" | Legendas de faixa, meta-info de conjunto | Dados de custo/preço não aparecem aqui — vivem só em Financeiro; detalhe de divisão/porta/gaveta de um item não aparece aqui — vive só no Editor de Item |
 | Corte & Material | Plano de corte (`PlanoCorteCanvas` + `Progress` de aproveitamento) | Lista de material/pré-pedido (tabela) | Nota de heurística, legenda "escala 1:10" | Nenhum campo de posicionamento de item (isso é Ambientes); nenhum dado de precificação/margem (isso é Financeiro) |
-| Financeiro | Card "Preço final" (`destaque`, `bg-accent-subtle`, `text-accent`) | Demais 5 campos do resumo (custo material, montagem, frete, lucro, margem) | Seletor de modo de precificação/montagem (override), frete editável | Nenhum detalhe de peça/chapa (isso é Corte & Material); nenhuma linha de proposta (isso é Proposta) |
+| Financeiro | Card "Preço final" — valor em `text-valor-destaque-lg text-cinza-900` (DS §3, 32px, o único valor desse tamanho na aba); card em `bg-cinza-0` padrão, **sem** tint de fundo (decisão 2026-08-27, substitui `bg-accent-subtle`/`text-accent` — elimina a contradição com a nota acima e com o DS §0.3, que proíbe cor tintando o card inteiro como mecanismo de hierarquia) | Demais 5 campos do resumo (custo material, montagem, frete, lucro, margem), em `text-valor-destaque` (24px) — a diferença de tamanho para o Domina é o único mecanismo de hierarquia | Seletor de modo de precificação/montagem (override), frete editável | Nenhum detalhe de peça/chapa (isso é Corte & Material); nenhuma linha de proposta (isso é Proposta) |
 | Proposta | Valor rateado de cada `LinhaPropostaCard` (`text-valor-destaque` tabular-nums) | Descrição/render do conjunto por linha, ações dividir/mesclar | Tags comerciais, alerta de rebalanceamento | Custo interno de material/montagem/frete nunca aparece aqui (D-25) — só o valor final rateado |
 
 **Ordem de leitura**: 1º cabeçalho de contexto (de qual orçamento se
@@ -57,7 +79,13 @@ trata) → 2º aba ativa (qual etapa) → 3º elemento que domina daquela aba
 **Ação primária**: uma por aba, nunca uma ação de orçamento inteiro
 flutuando sobre as 4 — "Salvar alterações" (Ambientes/Corte&Material/
 Financeiro) ou "Gerar proposta" (Proposta), sempre no rodapé da própria
-aba, nunca na topbar (a topbar desta rota só carrega breadcrumb).
+aba, nunca na topbar (a topbar desta rota só carrega breadcrumb). Exceção
+declarada (decisão 2026-08-27, DS §7.11a): os painéis inline transitórios
+de `LinhaPropostaCard` ("Dividir linha", "Editar valor") não contam contra
+"uma por aba" — abrem sob demanda, no máximo um por vez, escopo restrito a
+uma linha, regime de Dialog sem overlay. O bloco de ações **sempre
+visível** de cada `LinhaPropostaCard` (fora desses painéis) segue a regra
+normal e usa `outline`, nunca `primary`.
 **Poda**: nenhuma aba duplica dado de outra (tabela acima); o mini-plano-de-
 corte "persistente em faixa lateral" cogitado no Mapa-de-Telas §3.6 foi
 podado — cada dado vive só na sua aba, evita um 5º painel competindo com as
