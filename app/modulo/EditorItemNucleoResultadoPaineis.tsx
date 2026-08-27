@@ -23,7 +23,7 @@ export function EditorItemNucleoCustoPanel({ precoComDesconto, custoDireto, insu
         <CardTitle>Custo ao vivo</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-2 gap-sm">
+        <div className="grid grid-cols-1 gap-sm sm:grid-cols-2">
           <div className="rounded-lg border border-cinza-200 bg-cinza-0 p-3">
             <div className="text-legenda text-cinza-500">Preço final</div>
             <div className="text-valor-destaque-lg text-cinza-900 tabular-nums">{brl(precoComDesconto)}</div>
