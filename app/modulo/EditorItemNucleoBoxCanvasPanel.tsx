@@ -7,12 +7,11 @@ import dynamic from "next/dynamic";
 import { Box, RectangleHorizontal, PanelTop, PanelLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { ModuleViewerAngulo } from "@/components/modulo/ModuleViewer";
 import { BoxCanvas, type ModoSelecao } from "../components/BoxCanvas";
 import type { BoxModule } from "@/lib/engine/box";
-import type { DivisaoSel, ResultadoSalvarItem } from "./EditorItemNucleoTipos";
+import type { DivisaoSel } from "./EditorItemNucleoTipos";
 
 // Task 3.13-front — `ModuleViewer` (3D estático, Design-System §9.6) carrega
 // `three`/`@react-three/fiber`/`@react-three/drei` (bundle pesado): SEMPRE
@@ -60,13 +59,6 @@ export interface EditorItemNucleoBoxCanvasPanelProps {
   onChangeAnguloModuleViewer: (angulo: ModuleViewerAngulo) => void;
   corModuleViewer: string;
   texturaUrlModuleViewer: string | undefined;
-  exibirAcaoSalvar: boolean;
-  rotuloBotaoSalvar: string;
-  salvando: boolean;
-  onSalvar: () => void;
-  onLimpar: () => void;
-  onResetar: () => void;
-  resultadoSalvar: ResultadoSalvarItem | null;
 }
 
 export function EditorItemNucleoBoxCanvasPanel({
@@ -88,13 +80,6 @@ export function EditorItemNucleoBoxCanvasPanel({
   onChangeAnguloModuleViewer,
   corModuleViewer,
   texturaUrlModuleViewer,
-  exibirAcaoSalvar,
-  rotuloBotaoSalvar,
-  salvando,
-  onSalvar,
-  onLimpar,
-  onResetar,
-  resultadoSalvar,
 }: EditorItemNucleoBoxCanvasPanelProps) {
   return (
     <Card>
@@ -155,24 +140,6 @@ export function EditorItemNucleoBoxCanvasPanel({
             </div>
           </TabsContent>
         </Tabs>
-        <div className="mt-md flex flex-wrap items-center gap-xs">
-          {exibirAcaoSalvar && (
-            <Button onClick={onSalvar} disabled={salvando}>
-              {salvando ? "Salvando…" : rotuloBotaoSalvar}
-            </Button>
-          )}
-          <Button variant="ghost" onClick={onLimpar}>Limpar</Button>
-          <Button variant="danger" onClick={onResetar}>Resetar</Button>
-        </div>
-        {resultadoSalvar && (
-          <Alert variant={resultadoSalvar.ok ? "sucesso" : "erro"} className="mt-3">
-            <AlertDescription>
-              {resultadoSalvar.ok
-                ? (resultadoSalvar.mensagem ?? "Salvo com sucesso.")
-                : (resultadoSalvar.erro ?? "Não foi possível salvar.")}
-            </AlertDescription>
-          </Alert>
-        )}
       </CardContent>
     </Card>
   );

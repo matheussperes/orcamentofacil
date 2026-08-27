@@ -4,8 +4,10 @@
 
 import type { Peca } from "@/lib/engine/types";
 import type { montarLinhasInsumos } from "@/lib/insumos";
+import { Ruler } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
+import { EstadoVazioAba } from "@/components/ui/estado-vazio-aba";
 import { brl } from "./EditorItemNucleoHelpers";
 
 export interface EditorItemNucleoCustoPanelProps {
@@ -22,9 +24,9 @@ export function EditorItemNucleoCustoPanel({ precoComDesconto, custoDireto, insu
       </CardHeader>
       <CardContent>
         <div className="grid grid-cols-2 gap-sm">
-          <div className="rounded-lg border border-accent-border bg-accent-subtle p-3">
+          <div className="rounded-lg border border-cinza-200 bg-cinza-0 p-3">
             <div className="text-legenda text-cinza-500">Preço final</div>
-            <div className="text-valor-destaque text-accent tabular-nums">{brl(precoComDesconto)}</div>
+            <div className="text-valor-destaque-lg text-cinza-900 tabular-nums">{brl(precoComDesconto)}</div>
           </div>
           <div className="rounded-lg border border-cinza-200 bg-cinza-0 p-3">
             <div className="text-legenda text-cinza-500">Custo direto</div>
@@ -69,30 +71,39 @@ export function EditorItemNucleoPecasPanel({ pecas }: EditorItemNucleoPecasPanel
         <CardTitle>Peças (lista técnica)</CardTitle>
       </CardHeader>
       <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Peça</TableHead>
-              <TableHead>Material</TableHead>
-              <TableHead className="text-right">Qtd</TableHead>
-              <TableHead className="text-right">Dimensões (mm)</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {pecas.map((p, i) => (
-              <TableRow key={i}>
-                <TableCell>{p.nome}</TableCell>
-                <TableCell className="text-cinza-500">
-                  {p.cor} {p.espessura_mm}mm
-                </TableCell>
-                <TableCell className="text-right tabular-nums">{p.quantidade}</TableCell>
-                <TableCell className="text-right tabular-nums">
-                  {p.largura_mm}×{p.altura_mm}
-                </TableCell>
+        {pecas.length === 0 ? (
+          <EstadoVazioAba
+            icone={Ruler}
+            titulo="Nenhuma peça gerada ainda"
+            descricao="A lista de peças aparece aqui assim que a configuração do item gerar peças."
+            className="border-none p-0 py-lg shadow-none"
+          />
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Peça</TableHead>
+                <TableHead>Material</TableHead>
+                <TableHead className="text-right">Qtd</TableHead>
+                <TableHead className="text-right">Dimensões (mm)</TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {pecas.map((p, i) => (
+                <TableRow key={i}>
+                  <TableCell>{p.nome}</TableCell>
+                  <TableCell className="text-cinza-500">
+                    {p.cor} {p.espessura_mm}mm
+                  </TableCell>
+                  <TableCell className="text-right tabular-nums">{p.quantidade}</TableCell>
+                  <TableCell className="text-right tabular-nums">
+                    {p.largura_mm}×{p.altura_mm}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
       </CardContent>
     </Card>
   );

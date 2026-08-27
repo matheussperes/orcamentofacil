@@ -1,6 +1,8 @@
 "use client";
 
 import type { ModuloOrcamento } from "@/lib/orcamento";
+import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useEditorItemNucleoEstado } from "./EditorItemNucleoEstado";
 import { useEditorItemNucleoAcoes } from "./EditorItemNucleoAcoes";
 import { EditorItemNucleoBoxAccordion } from "./EditorItemNucleoBoxAccordion";
@@ -80,8 +82,12 @@ export function EditorItemNucleo({
     // 20px fora da escala) — Design-System §16.4.
     <div className="grid grid-cols-1 gap-xl lg:grid-cols-2">
       {/* Esquerda: configuração da caixa + divisões + conteúdo, OU as
-          seções de Placa — nunca as duas ao mesmo tempo (origem é fixa). */}
-      <div className="flex flex-col gap-lg">
+          seções de Placa — nunca as duas ao mesmo tempo (origem é fixa).
+          `lg:sticky` (art-director, achado 3): a coluna esquerda termina bem
+          antes da direita em desktop — sem isso o DOMINA (etapa aberta do
+          accordion) sai do viewport durante boa parte do scroll da revisão
+          técnica. Só desktop; mobile/tablet são 1 coluna e não têm o problema. */}
+      <div className="flex flex-col gap-lg lg:sticky lg:top-xl lg:self-start">
         {estado.origem === "custom_box" ? (
           <EditorItemNucleoBoxAccordion
             box={estado.box}
@@ -155,25 +161,12 @@ export function EditorItemNucleo({
             onChangeAnguloModuleViewer={estado.setAnguloModuleViewer}
             corModuleViewer={estado.corModuleViewer}
             texturaUrlModuleViewer={estado.texturaUrlModuleViewer}
-            exibirAcaoSalvar={exibirAcaoSalvar}
-            rotuloBotaoSalvar={rotuloBotaoSalvar}
-            salvando={estado.salvando}
-            onSalvar={acoes.handleSalvar}
-            onLimpar={acoes.limpar}
-            onResetar={acoes.resetar}
-            resultadoSalvar={estado.resultadoSalvar}
           />
         ) : (
           <EditorItemNucleoPlacaPanel
             placa={estado.placa}
             onToggleLadoEngrossamento={acoes.toggleLadoEngrossamento}
             onInverterVeio={acoes.inverterSentidoVeio}
-            exibirAcaoSalvar={exibirAcaoSalvar}
-            rotuloBotaoSalvar={rotuloBotaoSalvar}
-            salvando={estado.salvando}
-            onSalvar={acoes.handleSalvar}
-            onResetar={acoes.resetarPlaca}
-            resultadoSalvar={estado.resultadoSalvar}
           />
         )}
 
@@ -186,6 +179,34 @@ export function EditorItemNucleo({
         <EditorItemNucleoPecasPanel pecas={estado.pecas} />
 
         <EditorItemNucleoPlanoCorte grupos={estado.grupos} calculando={estado.calculandoPlanoDeCorte} />
+
+        {/* Ação primária (art-director, achado 4): rodapé da coluna direita
+            inteira, não do primeiro card — Screen-Composition.md l.175. */}
+        <div className="flex flex-wrap items-center gap-xs">
+          {exibirAcaoSalvar && (
+            <Button onClick={acoes.handleSalvar} disabled={estado.salvando}>
+              {estado.salvando ? "Salvando…" : rotuloBotaoSalvar}
+            </Button>
+          )}
+          {estado.origem === "custom_box" && (
+            <Button variant="ghost" onClick={acoes.limpar}>Limpar</Button>
+          )}
+          <Button
+            variant="danger"
+            onClick={estado.origem === "custom_box" ? acoes.resetar : acoes.resetarPlaca}
+          >
+            Resetar
+          </Button>
+        </div>
+        {estado.resultadoSalvar && (
+          <Alert variant={estado.resultadoSalvar.ok ? "sucesso" : "erro"}>
+            <AlertDescription>
+              {estado.resultadoSalvar.ok
+                ? (estado.resultadoSalvar.mensagem ?? "Salvo com sucesso.")
+                : (estado.resultadoSalvar.erro ?? "Não foi possível salvar.")}
+            </AlertDescription>
+          </Alert>
+        )}
       </div>
     </div>
   );
