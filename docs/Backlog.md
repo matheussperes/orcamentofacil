@@ -449,7 +449,7 @@ Percorrer as três seções "Gaps … registrados, sem task própria ainda" do B
 
 #### Task R.9 — Remover duplicação de título em Dashboard e Novo orçamento
 
-- **Status**: ⏱️ Planejado
+- **Status**: ✅ Completo
 - **Executor**: frontend-engineer
 - **Modelo Recomendado**: Sonnet (padrão do agente)
 - **Depende de**: nenhuma
