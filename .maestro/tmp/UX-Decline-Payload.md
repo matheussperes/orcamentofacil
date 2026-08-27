@@ -1,42 +1,41 @@
 # UX Decline Payload
 
-**Task**: 4.15
-**Branch**: feature/4.15
-**Data**: 2026-08-13
+**Task**: R.5a
+**Branch**: feature/R.5a
+**Data**: 2026-08-26
 **Veredicto**: REPROVADO
 
-## 1. Diálogo de exclusão de organização sem o campo de confirmação por digitação
+## 1. Valor do card "Resumo financeiro" transborda e é ocultado pelo card vizinho no breakpoint mobile
 
-- **Componente**: `components/perfil/PerfilLab.tsx` (`SecaoExcluirConta`, linhas 231-265)
-- **Regra violada**: `docs/Design-System.md` Seção 7.11, bloco "Exclusão de organização (Q-13) — o caso de maior severidade, um passo a mais": *"Campo de confirmação por digitação: `Input` (7.9) abaixo do corpo, rótulo 'Digite `<nome da organização>` para confirmar', placeholder vazio (...). O botão primário/destrutivo do rodapé (...) permanece `disabled` até o texto digitado bater exatamente com o nome da organização."* O texto do próprio Design System nomeia explicitamente que o padrão simples de "nomear + irreversível" **não basta sozinho** para este caso específico, por ser a única operação multi-tenant e irreversível do produto.
-- **Breakpoint**: desktop (1440px), único capturado (nível Leve)
-- **Esperado**: `Input` com rótulo "Digite Marcenaria Boa Vista para confirmar" abaixo do texto de aviso, e botão destrutivo desabilitado até o texto bater
-- **Encontrado**: Dialog vai direto do texto de aviso para o rodapé com "Cancelar"/"Excluir tudo" — nenhum campo de digitação, botão nunca fica desabilitado por conferência de nome
-- **Evidência**: `.maestro/tmp/screenshots/4.15-dialog-confirmacao.png`
-
-## 2. Botão de confirmação não usa o estilo sólido reforçado especificado
-
-- **Componente**: `components/perfil/PerfilLab.tsx` linha 260 (`<Button variant="danger" onClick={confirmar}>`)
-- **Regra violada**: `docs/Design-System.md` Seção 7.11, mesmo bloco: *"O botão primário/destrutivo do rodapé (`destructive` sólido: `bg-erro text-cinza-0 hover:bg-erro/90`, diferente do `destructive` outline padrão da 7.1 — a severidade máxima justifica o contraste maior)"*
-- **Breakpoint**: desktop (1440px)
-- **Esperado**: botão sólido vermelho (`bg-erro text-cinza-0`)
-- **Encontrado**: `variant="danger"` do `components/ui/button.tsx` é o outline padrão (`bg-transparent border border-cinza-300 text-cinza-700 hover:border-erro`) — visualmente idêntico ao "Cancelar" ao lado, sem o contraste sólido exigido para este caso de severidade máxima
-- **Evidência**: `.maestro/tmp/screenshots/4.15-dialog-confirmacao.png`
-
-## 3. Rótulo do botão de confirmação diverge do texto especificado
-
-- **Componente**: `components/perfil/PerfilLab.tsx` linha 261 (`{excluindo ? "Excluindo…" : "Excluir tudo"}`)
-- **Regra violada**: `docs/Design-System.md` Seção 7.11: *"Rodapé: botão secundário `outline` 'Cancelar' + botão destrutivo sólido 'Excluir organização' (rótulo explícito, não 'Excluir' sozinho)."*
-- **Breakpoint**: desktop (1440px)
-- **Esperado**: rótulo "Excluir organização"
-- **Encontrado**: rótulo "Excluir tudo"
-- **Evidência**: `.maestro/tmp/screenshots/4.15-dialog-confirmacao.png`
-
-## Observação não bloqueante (registrar, não corrigir nesta rodada)
-
-O botão de rejeição para não-admin usa ocultação total da seção (`{ehAdmin && <SecaoExcluirConta />}`, `PerfilLab.tsx:176`), enquanto `docs/Design-System.md` Seção 7.11 especifica botão `disabled` visível + `Tooltip` explicando a restrição de papel. Não pôde ser fotografado nesta sessão porque o harness `/dev/preview/perfil` (`components/perfil/PerfilMock.tsx`) fixa `ehAdmin` em `true` sem parâmetro de query para alternar — a divergência foi confirmada por leitura de código, não por captura visual, e por isso listada como observação e não como achado numerado do payload. Fica registrada para o frontend-engineer avaliar junto com os achados acima, já que ambos tocam o mesmo componente.
+- **Componente**: `components/orcamento/FinanceiroLab.tsx` — função `CampoResumo` (linhas ~64–83), grade em `grid grid-cols-2 gap-md sm:grid-cols-3` (linha ~187)
+- **Regra violada**: Checklist de Responsividade do gate ("Nenhuma sobreposição, corte ou transbordamento horizontal em nenhum breakpoint") — Design-System.md §3 `text-valor-destaque` (24px/bold/tabular-nums) aplicado num card `p-lg` sem margem para o valor completo em duas colunas a 390px
+- **Breakpoint**: mobile (390px) — `grid-cols-2` faz cada card medir 140px, com 108px de área útil de conteúdo (padding 16px de cada lado). O valor formatado por `formatarMoeda` (`lib/format.ts`) usa NBSP entre "R$" e o número (`toLocaleString("pt-BR", {style: "currency"})`), então a string inteira é um token não quebrável — ela não tem onde dar wrap e transborda 144px de largura de conteúdo num espaço de 108px
+- **Esperado**: valor "R$ 2.761,70" inteiramente legível dentro do card, sem sobreposição
+- **Encontrado**: o texto transborda o card `PREÇO FINAL` (fundo `accent-subtle`) e o final do valor ("...70") fica coberto pelo card vizinho `CUSTO MATERIAL` (fundo `cinza-0`, opaco, pintado por cima por ordem de DOM) — o dígito final desaparece visualmente. Mesmo padrão em "Lucro final" (R$ 1.219,85 → "...85" oculto)
+- **Confirmado via DOM**: `scrollWidth` do `<p>` = 144px, `clientWidth` = 106px, `overflow: visible` no card (não há truncamento por CSS — é sobreposição real por ordem de pintura)
+- **Não ocorre** em tablet (834px, `sm:grid-cols-3` já ativo) nem desktop — apenas no breakpoint mobile puro
+- **Evidência**:
+  - `.maestro/tmp/screenshots/orcamento-financeiro-mobile-preenchido.png` (tela inteira)
+  - `.maestro/tmp/screenshots/zoom-financeiro-viewport.png` (crop mostrando "R$ 2.761,70" cortado por baixo de "CUSTO MATERIAL R$ 1.219,86")
+  - `.maestro/tmp/screenshots/zoom-financeiro-precisebox.png` (crop do card isolado)
 
 ## Capturas realizadas
+- `.maestro/tmp/screenshots/orcamento-ambientes-desktop-preenchido.png`
+- `.maestro/tmp/screenshots/orcamento-ambientes-tablet-preenchido.png`
+- `.maestro/tmp/screenshots/orcamento-ambientes-mobile-preenchido.png`
+- `.maestro/tmp/screenshots/orcamento-corte-material-desktop-preenchido.png`
+- `.maestro/tmp/screenshots/orcamento-corte-material-tablet-preenchido.png`
+- `.maestro/tmp/screenshots/orcamento-corte-material-mobile-preenchido.png`
+- `.maestro/tmp/screenshots/orcamento-corte-material-desktop-vazio.png`
+- `.maestro/tmp/screenshots/orcamento-financeiro-desktop-preenchido.png`
+- `.maestro/tmp/screenshots/orcamento-financeiro-tablet-preenchido.png`
+- `.maestro/tmp/screenshots/orcamento-financeiro-mobile-preenchido.png`
+- `.maestro/tmp/screenshots/orcamento-proposta-desktop-vazio.png`
+- `.maestro/tmp/screenshots/orcamento-proposta-tablet-vazio.png`
+- `.maestro/tmp/screenshots/orcamento-proposta-mobile-vazio.png`
+- `.maestro/tmp/screenshots/zoom-titulo-secao-tracocota2.png` (traço de cota, tick marks confirmados)
+- `.maestro/tmp/screenshots/zoom-financeiro-viewport.png`
+- `.maestro/tmp/screenshots/zoom-financeiro-precisebox.png`
 
-- `.maestro/tmp/screenshots/4.15-secao-excluir-conta.png` — seção "Excluir conta" em `/perfil`, estado fechado
-- `.maestro/tmp/screenshots/4.15-dialog-confirmacao.png` — Dialog de confirmação aberto
+## Nota
+Tentativa 1 de 2. Verifique também a mesma classe de valor em outros cards de 2 colunas do projeto que usem `formatarMoeda` + `grid-cols-2` em telas estreitas — o `CampoResumo` local não é reusado em outra tela, então o achado fica restrito a esta.

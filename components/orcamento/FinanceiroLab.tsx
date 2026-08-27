@@ -184,7 +184,7 @@ export function FinanceiroLab({ orcamentoId: _orcamentoId, estadoInicial, config
       <section className="rounded-lg border border-cinza-200 bg-cinza-0 p-xl shadow-xs">
         <TituloSecao>Resumo financeiro</TituloSecao>
         {resumo ? (
-          <div className="grid grid-cols-2 gap-md sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-md sm:grid-cols-3">
             <CampoResumo rotulo="Preço final" valor={formatarMoeda(resumo.precoFinal)} destaque />
             <CampoResumo rotulo="Custo material" valor={formatarMoeda(resumo.custoMaterial)} />
             <CampoResumo rotulo="Montagem" valor={formatarMoeda(resumo.montagem)} />
