@@ -5,6 +5,7 @@
 import type { Peca } from "@/lib/engine/types";
 import type { montarLinhasInsumos } from "@/lib/insumos";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { brl } from "./EditorItemNucleoHelpers";
 
 export interface EditorItemNucleoCustoPanelProps {
@@ -31,31 +32,25 @@ export function EditorItemNucleoCustoPanel({ precoComDesconto, custoDireto, insu
           </div>
         </div>
         {insumos && (
-          <div className="mt-3 overflow-x-auto">
-            <table className="w-full border-collapse">
-              <thead>
-                <tr className="border-b border-cinza-200 bg-cinza-50">
-                  <th className="px-[10px] py-2 text-left text-legenda font-semibold uppercase tracking-[0.03em] text-cinza-500">
-                    Item
-                  </th>
-                  <th className="px-[10px] py-2 text-left text-legenda font-semibold uppercase tracking-[0.03em] text-cinza-500">
-                    Qtd
-                  </th>
-                  <th className="px-[10px] py-2 text-right text-legenda font-semibold uppercase tracking-[0.03em] text-cinza-500">
-                    Total
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
+          <div className="mt-3">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Item</TableHead>
+                  <TableHead>Qtd</TableHead>
+                  <TableHead className="text-right">Total</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {insumos.linhas.map((l, i) => (
-                  <tr key={i} className="border-b border-cinza-100 hover:bg-cinza-50">
-                    <td className="px-[10px] py-2 text-corpo-pequeno">{l.item}</td>
-                    <td className="px-[10px] py-2 text-corpo-pequeno">{l.qtd}</td>
-                    <td className="px-[10px] py-2 text-right text-corpo-pequeno tabular-nums">{brl(l.total)}</td>
-                  </tr>
+                  <TableRow key={i}>
+                    <TableCell>{l.item}</TableCell>
+                    <TableCell>{l.qtd}</TableCell>
+                    <TableCell className="text-right tabular-nums">{brl(l.total)}</TableCell>
+                  </TableRow>
                 ))}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </div>
         )}
       </CardContent>
@@ -74,40 +69,30 @@ export function EditorItemNucleoPecasPanel({ pecas }: EditorItemNucleoPecasPanel
         <CardTitle>Peças (lista técnica)</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse">
-            <thead>
-              <tr className="border-b border-cinza-200 bg-cinza-50">
-                <th className="px-[10px] py-2 text-left text-legenda font-semibold uppercase tracking-[0.03em] text-cinza-500">
-                  Peça
-                </th>
-                <th className="px-[10px] py-2 text-left text-legenda font-semibold uppercase tracking-[0.03em] text-cinza-500">
-                  Material
-                </th>
-                <th className="px-[10px] py-2 text-right text-legenda font-semibold uppercase tracking-[0.03em] text-cinza-500">
-                  Qtd
-                </th>
-                <th className="px-[10px] py-2 text-right text-legenda font-semibold uppercase tracking-[0.03em] text-cinza-500">
-                  Dimensões (mm)
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {pecas.map((p, i) => (
-                <tr key={i} className="border-b border-cinza-100 hover:bg-cinza-50">
-                  <td className="px-[10px] py-2 text-corpo-pequeno">{p.nome}</td>
-                  <td className="px-[10px] py-2 text-corpo-pequeno text-cinza-500">
-                    {p.cor} {p.espessura_mm}mm
-                  </td>
-                  <td className="px-[10px] py-2 text-right text-corpo-pequeno tabular-nums">{p.quantidade}</td>
-                  <td className="px-[10px] py-2 text-right text-corpo-pequeno tabular-nums">
-                    {p.largura_mm}×{p.altura_mm}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Peça</TableHead>
+              <TableHead>Material</TableHead>
+              <TableHead className="text-right">Qtd</TableHead>
+              <TableHead className="text-right">Dimensões (mm)</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {pecas.map((p, i) => (
+              <TableRow key={i}>
+                <TableCell>{p.nome}</TableCell>
+                <TableCell className="text-cinza-500">
+                  {p.cor} {p.espessura_mm}mm
+                </TableCell>
+                <TableCell className="text-right tabular-nums">{p.quantidade}</TableCell>
+                <TableCell className="text-right tabular-nums">
+                  {p.largura_mm}×{p.altura_mm}
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
       </CardContent>
     </Card>
   );

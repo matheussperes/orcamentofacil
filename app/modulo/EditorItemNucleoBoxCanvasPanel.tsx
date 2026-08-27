@@ -105,7 +105,7 @@ export function EditorItemNucleoBoxCanvasPanel({
             <TabsTrigger value="3d">3D estático</TabsTrigger>
           </TabsList>
           <TabsContent value="2d">
-            <h3 className="mb-sm text-corpo font-medium text-cinza-700">Vãos (clique para selecionar)</h3>
+            <h3 className="mb-sm text-titulo-card font-semibold text-cinza-900">Vãos (clique para selecionar)</h3>
             <div className="flex flex-wrap gap-sm mb-sm">
               <Button
                 variant={modoSelecao === "vaos" ? "iconActive" : "ghost"}
