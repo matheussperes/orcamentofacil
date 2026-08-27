@@ -257,7 +257,7 @@ Task R.4b concluída com escopo maior que o originalmente previsto no Backlog (i
 
 #### Task R.5a — Composição e acabamento terminal — Orçamento
 
-- **Status**: ⏱️ Planejado
+- **Status**: ✅ Completo
 - **Executor**: frontend-engineer
 - **Modelo Recomendado**: Sonnet (padrão do agente)
 - **Depende de**: R.2a, R.3a, R.3b, R.3c, R.4a, R.4b
@@ -269,12 +269,15 @@ Task R.4b concluída com escopo maior que o originalmente previsto no Backlog (i
 Fechar a tela do Orçamento como unidade: composição conforme a seção da tela em `docs/Screen-Composition.md`, lida inteira, um único sistema de título/botão/campo/card, quatro estados no mesmo nível de acabamento, `scan-legacy` zerado nos caminhos da tela. Definição de pronto: veredito APROVADO do `art-director` para esta tela — convocado logo após esta task, reaproveitando as capturas do `ux-auditor` já em `.maestro/tmp/screenshots/`.
 
 **Critérios de aceitação**
-- [ ] `art-director` APROVADO para esta tela
-- [ ] Composição conforme a seção da tela em `docs/Screen-Composition.md`
-- [ ] Um único sistema de título, botão, campo e card na tela
-- [ ] Quatro estados no mesmo nível de acabamento
-- [ ] `scan-legacy` retorna 0 nos caminhos da tela
-- [ ] Nenhum arquivo de UI da tela acima de 400 linhas
+- [x] `art-director` APROVADO para esta tela
+- [x] Composição conforme a seção da tela em `docs/Screen-Composition.md`
+- [x] Um único sistema de título, botão, campo e card na tela
+- [x] Quatro estados no mesmo nível de acabamento
+- [x] `scan-legacy` retorna 0 nos caminhos da tela
+- [x] Nenhum arquivo de UI da tela acima de 400 linhas
+
+**Resultado**
+Tela Orçamento (`/orcamento/[id]`) fechada no nível `release` com composição conforme `docs/Screen-Composition.md`. Processo: 3 tentativas do `art-director` (tentativa 1: REPROVADO — 4 achados: canto morto, items-stretch, densidade invertida, teste do vulto, todos corrigidos; tentativa 2: REPROVADO — 1 achado: 2 massas accent na aba Proposta, corrigido; Circuit Breaker acionado após 2 reprovações consecutivas, autorização explícita do operador para tentativa 3; tentativa 3: APROVADO). Code-auditor, qa-engineer, ux-auditor aprovados sem regressão na rodada final (5ª). Product-designer resolveu 4 observações de design não bloqueantes durante o processo (Domina por região, densidade uniforme entre abas, painel inline transitório, contradição do card "Preço final"). Dois achados não bloqueantes pendentes de decisão do Maestro/operador (A: padding de card sem variante mobile, sistêmico/pré-existente; B: DS §7.11a com condição de exclusividade, 2 linhas de correção em LinhaPropostaCard) — não foram resolvidos, aguardando decisão sobre virarem task ou recusa datada.
 
 ---
 
