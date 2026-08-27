@@ -7,6 +7,8 @@ import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
+import { TituloSecao } from "@/components/ui/titulo-secao";
+import { EstadoVazioAba } from "@/components/ui/estado-vazio-aba";
 import { calcularEngineOrcamento } from "@/lib/ambiente/calcularEngineOrcamento";
 import { catalogoParaPrecos, type Catalogo } from "@/lib/catalog";
 import { buscarCatalogoReal } from "@/lib/produto/buscar";
@@ -15,7 +17,7 @@ import { ratearPrecificacao, type ModoMontagem, type ModoPrecificacao, type Resu
 import type { EstadoAmbiente } from "@/lib/ambiente/estado";
 import type { ConfiguracaoPrecificacaoCarregada } from "@/lib/precificacao/carregarConfiguracao";
 import type { ResultadoSalvarConfiguracao } from "@/lib/orcamento/salvarConfiguracaoPrecificacao";
-import { formatarMoeda } from "@/lib/format";
+import { formatarMoeda, formatarPercentual } from "@/lib/format";
 import { fracaoParaPercent } from "@/components/precificacao/formatoPercentual";
 import { rotuloModoPrecificacao, SeletorModoPrecificacao } from "@/components/precificacao/SeletorModoPrecificacao";
 import { rotuloModoMontagem, SeletorModoMontagem } from "@/components/precificacao/SeletorModoMontagem";
@@ -60,18 +62,14 @@ function CampoResumo({
   tom?: "sucesso" | "erro";
 }) {
   return (
-    <div
-      className={
-        destaque
-          ? "rounded-lg border border-accent-border bg-accent-subtle p-lg"
-          : "rounded-lg border border-cinza-200 bg-cinza-0 p-lg"
-      }
-    >
+    <div className="rounded-lg border border-cinza-200 bg-cinza-0 p-lg">
       <p className="text-legenda font-semibold uppercase tracking-[0.03em] text-cinza-500">{rotulo}</p>
       <p
         className={
-          "mt-2 text-valor-destaque tabular-nums " +
-          (destaque ? "text-accent" : tom === "sucesso" ? "text-sucesso" : tom === "erro" ? "text-erro" : "text-cinza-900")
+          destaque
+            ? "mt-2 text-valor-destaque-lg tabular-nums text-cinza-900"
+            : "mt-2 text-valor-destaque tabular-nums " +
+              (tom === "sucesso" ? "text-sucesso" : tom === "erro" ? "text-erro" : "text-cinza-900")
         }
       >
         {valor}
@@ -162,17 +160,16 @@ export function FinanceiroLab({ orcamentoId: _orcamentoId, estadoInicial, config
 
   if (resultadoEngine.engine.porModulo.length === 0) {
     return (
-      <div className="flex flex-col items-center gap-sm rounded-lg border border-cinza-200 bg-cinza-0 p-xl py-3xl text-center shadow-xs">
-        <Wallet className="h-8 w-8 text-cinza-300" aria-hidden="true" />
-        <h2 className="text-titulo-card text-cinza-700">Nenhum item para calcular ainda</h2>
-        <p className="max-w-sm text-corpo-pequeno text-cinza-500">
-          O resumo financeiro é calculado a partir dos itens posicionados na aba Ambientes.
-          Adicione ao menos um item para ver os números aqui.
-        </p>
-        <Button variant="primary" onClick={() => irParaAba("ambientes")}>
-          Ir para Ambientes
-        </Button>
-      </div>
+      <EstadoVazioAba
+        icone={Wallet}
+        titulo="Nenhum item para calcular ainda"
+        descricao="O resumo financeiro é calculado a partir dos itens posicionados na aba Ambientes. Adicione ao menos um item para ver os números aqui."
+        acao={
+          <Button variant="primary" onClick={() => irParaAba("ambientes")}>
+            Ir para Ambientes
+          </Button>
+        }
+      />
     );
   }
 
@@ -181,9 +178,9 @@ export function FinanceiroLab({ orcamentoId: _orcamentoId, estadoInicial, config
   return (
     <div className="flex flex-col gap-lg">
       <section className="rounded-lg border border-cinza-200 bg-cinza-0 p-xl shadow-xs">
-        <h2 className="mb-md text-titulo-secao text-cinza-900">Resumo financeiro</h2>
+        <TituloSecao>Resumo financeiro</TituloSecao>
         {resumo ? (
-          <div className="grid grid-cols-2 gap-md sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-md sm:grid-cols-3">
             <CampoResumo rotulo="Preço final" valor={formatarMoeda(resumo.precoFinal)} destaque />
             <CampoResumo rotulo="Custo material" valor={formatarMoeda(resumo.custoMaterial)} />
             <CampoResumo rotulo="Montagem" valor={formatarMoeda(resumo.montagem)} />
@@ -195,7 +192,7 @@ export function FinanceiroLab({ orcamentoId: _orcamentoId, estadoInicial, config
             />
             <CampoResumo
               rotulo="Margem de lucro"
-              valor={`${fracaoParaPercent(resumo.margemLucro).toFixed(1)}%`}
+              valor={formatarPercentual(fracaoParaPercent(resumo.margemLucro))}
               tom={resumo.margemLucro >= 0 ? "sucesso" : "erro"}
             />
           </div>
@@ -207,7 +204,7 @@ export function FinanceiroLab({ orcamentoId: _orcamentoId, estadoInicial, config
       </section>
 
       <section className="rounded-lg border border-cinza-200 bg-cinza-0 p-xl shadow-xs">
-        <h2 className="mb-md text-titulo-secao text-cinza-900">Modo de precificação</h2>
+        <TituloSecao>Modo de precificação</TituloSecao>
         <div className="mb-sm flex items-center gap-sm">
           <Checkbox
             id="precificacao-padrao"
@@ -224,7 +221,7 @@ export function FinanceiroLab({ orcamentoId: _orcamentoId, estadoInicial, config
       </section>
 
       <section className="rounded-lg border border-cinza-200 bg-cinza-0 p-xl shadow-xs">
-        <h2 className="mb-md text-titulo-secao text-cinza-900">Modo de montagem</h2>
+        <TituloSecao>Modo de montagem</TituloSecao>
         <div className="mb-sm flex items-center gap-sm">
           <Checkbox
             id="montagem-padrao"
@@ -241,7 +238,7 @@ export function FinanceiroLab({ orcamentoId: _orcamentoId, estadoInicial, config
       </section>
 
       <section className="rounded-lg border border-cinza-200 bg-cinza-0 p-xl shadow-xs">
-        <h2 className="mb-md text-titulo-secao text-cinza-900">Frete</h2>
+        <TituloSecao>Frete</TituloSecao>
         <div className="w-40">
           <Label htmlFor="frete">Frete (R$)</Label>
           <Input

@@ -257,7 +257,7 @@ export function LinhaPropostaCard({
           </div>
 
           <div className="flex flex-wrap items-center gap-sm">
-            <Button variant="primary" size="sm" onClick={handleSalvarTextos} disabled={salvandoTextos}>
+            <Button variant="outline" size="sm" onClick={handleSalvarTextos} disabled={salvandoTextos}>
               {salvandoTextos ? "Salvando…" : "Salvar alterações"}
             </Button>
             <Button variant="ghost" size="sm" onClick={() => setDividindo((v) => !v)}>

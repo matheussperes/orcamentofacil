@@ -14,6 +14,15 @@ export function formatarMoeda(valor: number): string {
   return valor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
+// Recebe o valor já em percentual (ex.: 43.9, não a fração 0.439 — ver
+// `fracaoParaPercent` em `components/precificacao/formatoPercentual.ts`).
+// Mesmo motivo de `formatarMoeda`: `.toFixed(1)` cru usa ponto decimal,
+// inconsistente com `toLocaleString("pt-BR")` usado ao lado (Achado
+// art-director — "43.9%" vs "R$ 2.541,20" na mesma região).
+export function formatarPercentual(valorPercent: number): string {
+  return `${valorPercent.toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%`;
+}
+
 export function formatarDataHora(iso: string): string {
   return new Date(iso).toLocaleString("pt-BR", {
     dateStyle: "short",

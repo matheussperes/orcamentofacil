@@ -11,6 +11,14 @@ export interface ItemSelecionavel {
   nome: string;
 }
 
+// Concordância de gênero do placeholder "Nome ___ novo(a) <rotulo>" — só 2
+// valores possíveis (`rotulo` é a união fechada acima), sem generalizar pra
+// i18n que este produto não tem.
+const ARTIGO_NOVO: Record<SeletorListaProps["rotulo"], string> = {
+  ambiente: "do novo",
+  parede: "da nova",
+};
+
 export interface SeletorListaProps {
   /** Rótulo singular (`ambiente`/`parede`) — usado nas mensagens/aria-labels. */
   rotulo: "ambiente" | "parede";
@@ -150,7 +158,7 @@ export function SeletorLista({
       </div>
       <div className="flex items-end gap-sm">
         <Input
-          placeholder={`Nome do novo ${rotulo}`}
+          placeholder={`Nome ${ARTIGO_NOVO[rotulo]} ${rotulo}`}
           value={novoNome}
           onChange={(e) => setNovoNome(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && criar()}

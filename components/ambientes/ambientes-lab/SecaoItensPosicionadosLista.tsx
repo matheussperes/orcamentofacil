@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { Pencil, X } from "lucide-react";
+import { Layers, Pencil, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { EstadoVazioAba } from "@/components/ui/estado-vazio-aba";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { converterXParaVao } from "@/lib/engine/parede";
 import { larguraDoItem } from "@/lib/orcamento";
@@ -25,7 +26,14 @@ export function SecaoItensPosicionadosLista({
   orcamentoId?: string;
 }) {
   if (parede.itens.length === 0) {
-    return <p className="text-corpo-pequeno text-cinza-500">Nenhum item posicionado ainda.</p>;
+    return (
+      <EstadoVazioAba
+        icone={Layers}
+        titulo="Nenhum item posicionado ainda"
+        descricao="Use o formulário acima para adicionar o primeiro item desta parede."
+        className="border-0 bg-transparent p-0 py-lg shadow-none"
+      />
+    );
   }
 
   return (

@@ -170,7 +170,7 @@ export function SecaoElementosContinuosForm({
       </div>
 
       <Button
-        variant="primary"
+        variant="outline"
         onClick={h.adicionarElementoContinuo}
         disabled={h.novoTipoElemento === "tampo" && h.selecaoTampo.espessuraFinal === undefined}
       >

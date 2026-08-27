@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { TituloSecao } from "@/components/ui/titulo-secao";
 import { CAMPOS_ALTURA } from "../AmbientesLab.constants";
 import { numero } from "../AmbientesLab.helpers";
 import type { useAlturas } from "./useAlturas";
@@ -13,8 +14,8 @@ import type { useAlturas } from "./useAlturas";
  * aqui. */
 export function SecaoAlturasParede({ alturasHook }: { alturasHook: ReturnType<typeof useAlturas> }) {
   return (
-    <section className="rounded-lg border border-cinza-200 bg-cinza-0 p-4 shadow-xs">
-      <h2 className="mb-1 text-titulo-secao text-cinza-900">Alturas desta parede</h2>
+    <section className="rounded-lg border border-cinza-200 bg-cinza-0 p-xl shadow-xs">
+      <TituloSecao className="mb-1">Alturas desta parede</TituloSecao>
       <p className="mb-3 text-corpo-pequeno text-cinza-500">
         Cada altura herda o valor do perfil da organização até ser customizada aqui — a
         customização vale só para esta parede.
