@@ -17,7 +17,7 @@ import { ratearPrecificacao, type ModoMontagem, type ModoPrecificacao, type Resu
 import type { EstadoAmbiente } from "@/lib/ambiente/estado";
 import type { ConfiguracaoPrecificacaoCarregada } from "@/lib/precificacao/carregarConfiguracao";
 import type { ResultadoSalvarConfiguracao } from "@/lib/orcamento/salvarConfiguracaoPrecificacao";
-import { formatarMoeda } from "@/lib/format";
+import { formatarMoeda, formatarPercentual } from "@/lib/format";
 import { fracaoParaPercent } from "@/components/precificacao/formatoPercentual";
 import { rotuloModoPrecificacao, SeletorModoPrecificacao } from "@/components/precificacao/SeletorModoPrecificacao";
 import { rotuloModoMontagem, SeletorModoMontagem } from "@/components/precificacao/SeletorModoMontagem";
@@ -196,7 +196,7 @@ export function FinanceiroLab({ orcamentoId: _orcamentoId, estadoInicial, config
             />
             <CampoResumo
               rotulo="Margem de lucro"
-              valor={`${fracaoParaPercent(resumo.margemLucro).toFixed(1)}%`}
+              valor={formatarPercentual(fracaoParaPercent(resumo.margemLucro))}
               tom={resumo.margemLucro >= 0 ? "sucesso" : "erro"}
             />
           </div>
