@@ -62,18 +62,14 @@ function CampoResumo({
   tom?: "sucesso" | "erro";
 }) {
   return (
-    <div
-      className={
-        destaque
-          ? "rounded-lg border border-accent-border bg-accent-subtle p-lg"
-          : "rounded-lg border border-cinza-200 bg-cinza-0 p-lg"
-      }
-    >
+    <div className="rounded-lg border border-cinza-200 bg-cinza-0 p-lg">
       <p className="text-legenda font-semibold uppercase tracking-[0.03em] text-cinza-500">{rotulo}</p>
       <p
         className={
-          "mt-2 text-valor-destaque tabular-nums " +
-          (destaque ? "text-accent" : tom === "sucesso" ? "text-sucesso" : tom === "erro" ? "text-erro" : "text-cinza-900")
+          destaque
+            ? "mt-2 text-valor-destaque-lg tabular-nums text-cinza-900"
+            : "mt-2 text-valor-destaque tabular-nums " +
+              (tom === "sucesso" ? "text-sucesso" : tom === "erro" ? "text-erro" : "text-cinza-900")
         }
       >
         {valor}
