@@ -53,6 +53,7 @@ export function ExcluirGabaritoDialog({ nomeGabarito, onConfirmar }: ExcluirGaba
         <Button
           variant="danger"
           size="icon"
+          className="h-7 w-7"
           aria-label={`Excluir ${nomeGabarito}`}
           title="Excluir módulo"
         >
