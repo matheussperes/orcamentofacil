@@ -335,7 +335,7 @@ Tela Catálogo (`/catalogo`) fechada no nível `release` com composição confor
 
 #### Task R.5d — Composição e acabamento terminal — Biblioteca
 
-- **Status**: ⏱️ Planejado
+- **Status**: ✅ Completo
 - **Executor**: frontend-engineer
 - **Modelo Recomendado**: Sonnet (padrão do agente)
 - **Depende de**: R.2a, R.3a, R.3b, R.3c, R.4a, R.4b
@@ -347,12 +347,20 @@ Tela Catálogo (`/catalogo`) fechada no nível `release` com composição confor
 Fechar a Biblioteca como unidade: composição conforme a seção da tela em `docs/Screen-Composition.md`, lida inteira, um único sistema de título/botão/campo/card, quatro estados no mesmo nível de acabamento, `scan-legacy` zerado nos caminhos da tela. Definição de pronto: veredito APROVADO do `art-director` para esta tela — convocado logo após esta task, reaproveitando as capturas do `ux-auditor` já em `.maestro/tmp/screenshots/`.
 
 **Critérios de aceitação**
-- [ ] `art-director` APROVADO para esta tela
-- [ ] Composição conforme a seção da tela em `docs/Screen-Composition.md`
-- [ ] Um único sistema de título, botão, campo e card na tela
-- [ ] Quatro estados no mesmo nível de acabamento
-- [ ] `scan-legacy` retorna 0 nos caminhos da tela
-- [ ] Nenhum arquivo de UI da tela acima de 400 linhas
+- [x] `art-director` APROVADO para esta tela
+- [x] Composição conforme a seção da tela em `docs/Screen-Composition.md`
+- [x] Um único sistema de título, botão, campo e card na tela
+- [x] Quatro estados no mesmo nível de acabamento
+- [x] `scan-legacy` retorna 0 nos caminhos da tela
+- [x] Nenhum arquivo de UI da tela acima de 400 linhas
+
+**Resultado**
+Tela Biblioteca (`/biblioteca`) fechada no nível `release` com composição conforme `docs/Screen-Composition.md`. Processo: investigação inicial não encontrou mudança de código necessária (commit vazio 00af7fc). Processo com 2 tentativas do `art-director` (tentativa 1: REPROVADO — 1 achado: altura inconsistente entre botão "Abrir no editor" e gatilho de exclusão no rodapé do GabaritoCard, corrigido com h-7 w-7 no trigger; tentativa 2: APROVADO). Code-auditor/qa-engineer/ux-auditor APROVADO na rodada final sem regressão (641 testes). `frontend-engineer`. Impacto Visual: Leve.
+
+**Achados não bloqueantes pendentes de decisão (product-designer)**
+1. Thumbnail vazio em 100% dos cards, sendo a região DOMINA declarada da tela (permanente, não transitório)
+2. Canto morto de ~780px no estado de erro, segunda ocorrência do mesmo gap já registrado na tela Catálogo
+3. Flex-wrap da barra de controle anula justify-between em mobile (390px)
 
 ---
 
