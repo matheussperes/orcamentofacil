@@ -1,33 +1,71 @@
 # UX Decline Payload
 
-**Task**: R.5b
-**Branch**: feature/R.5b
-**Data**: 2026-08-27
-**Veredicto**: REPROVADO (tentativa 2 de 2 — próxima falha aciona o Circuit Breaker)
+**Task**: R.5e
+**Branch**: feature/R.5e
+**Data**: 2026-08-28
+**Veredicto**: REPROVADO
 
-## 1. Coluna esquerda `lg:sticky` não gruda de verdade — DOMINA some da tela ao rolar
+## 1. Botão "Imprimir / Salvar em PDF" transborda a própria caixa no mobile
 
-- **Componente**: `app/modulo/EditorItemNucleo.tsx` (linha 90, `lg:sticky lg:top-xl lg:self-start`)
-- **Causa raiz**: `components/shell/Shell.tsx` linha 39 — `<main className="flex-1 overflow-x-hidden p-xl">`. A classe `overflow-x-hidden` sem um `overflow-y` explícito faz o navegador computar `overflow-y: auto` automaticamente (regra CSS de par overflow-x/overflow-y), transformando o `<main>` num scroll container. Como o conteúdo do `<main>` nunca excede sua própria altura (ele cresce para caber o filho), esse `<main>` nunca rola de verdade — mas por ser a âncora de "nearest scrolling ancestor", ele vira o contexto de referência do `position: sticky` da coluna esquerda. Quem realmente rola é o `<html>`. Resultado: o `sticky` não tem contra o que grudar e a coluna esquerda simplesmente sobe junto com a página, saindo inteira do viewport.
-- **Breakpoint**: desktop (1440px) — verificado com scroll real (`mouse.wheel`), não só `window.scrollTo`
-- **Esperado**: Screen-Composition.md / contrato R.5b — "o DOMINA (etapa aberta do accordion) acompanha o scroll da coluna direita, sem canto morto"
-- **Encontrado**: ao rolar até o fim da coluna direita (Plano de corte / rodapé), a coluna esquerda inteira desaparece do viewport — pior que o canto morto original reportado na tentativa 1 (que ao menos deixava a coluna visível, só com espaço vazio abaixo dela)
-- **Evidência**: `.maestro/tmp/screenshots/editoritem-desktop-preenchido-r5b.png` (topo, coluna esquerda visível) vs `.maestro/tmp/screenshots/editoritem-desktop-wheelscroll-r5b.png` (rolado com scroll de mouse real, coluna esquerda ausente)
+- **Componente**: `app/proposta/[id]/pdf/proposta-pdf.css` (`.proposta-pdf__botao-imprimir`)
+- **Regra violada**: Responsividade — "nenhuma sobreposição, corte ou
+  transbordamento... em nenhum breakpoint"; a régua declarada no próprio
+  Screen-Composition.md ("linha imagem+texto lado a lado... fica apertado
+  demais... empilha em vez de deixar... ilegível, nunca overflow") mostra
+  que o cuidado com overflow no mobile foi intencional em outros blocos,
+  mas não neste botão.
+- **Breakpoint**: mobile (375px, abaixo de `tablet` 768px)
+- **Esperado**: texto do botão em uma única linha (`white-space: nowrap`)
+  ou altura do botão (`height: 36px`) capaz de acomodar a quebra real —
+  o próprio Design System usa altura fixa de 36px para botões do sistema,
+  então a saída correta é impedir a quebra, não deixar o texto vazar.
+- **Encontrado**: o texto "Imprimir / Salvar em PDF" quebra em duas
+  linhas dentro de uma caixa com `height: 36px` fixo — o texto vaza
+  verticalmente para fora do pill laranja, cortando o contorno
+  arredondado do botão.
+- **Evidência**: `.maestro/tmp/screenshots/proposta-pdf-mobile-botao-zoom.png`
+  (e visível no contexto completo em `proposta-pdf-mobile-preenchido.png`)
 
-## 2. KPI "Preço final" transborda e é encoberto pelo card "Custo direto" no mobile
+## 2. Rótulo "Total da proposta" quebra e colide com o valor no mobile
 
-- **Componente**: `app/modulo/EditorItemNucleoResultadoPaineis.tsx` linha 27-29 (card `Preço final`, `text-valor-destaque-lg`)
-- **Regra violada**: Responsividade — "Nenhuma sobreposição, corte ou transbordamento horizontal em nenhum breakpoint" (checklist ux-auditor); comportamento correto já existe no mesmo grid em tablet/desktop
-- **Breakpoint**: mobile (390px) — não ocorre em tablet (834px) nem desktop
-- **Esperado**: valor completo "R$ 1.519,10" legível dentro do card, sem sobreposição com o card vizinho
-- **Encontrado**: o texto "R$ 1.519,10" (32px, `text-valor-destaque-lg`) excede a largura do card `grid-cols-2 gap-sm` e é visualmente cortado/encoberto pelo card "Custo direto" ao lado — o dígito final "10" fica ilegível
-- **Evidência**: `.maestro/tmp/screenshots/editoritem-mobile-kpi-crop-r5b.png`
+- **Componente**: `app/proposta/[id]/pdf/proposta-pdf.css` (`.proposta-pdf__total`,
+  `.proposta-pdf__total-rotulo`) — renderizado por
+  `components/proposta-pdf/PropostaPdfResumo.tsx`
+- **Regra violada**: Hierarquia "DOMINA" (Screen-Composition.md, "Proposta
+  impressa" — Hierarquia, item 1: total final é o único elemento que deve
+  ler como decisão fechada) e Responsividade (texto permanece legível sem
+  colisão visual). `display: flex; justify-content: space-between` sem
+  `white-space: nowrap` no rótulo faz o texto do rótulo quebrar dentro do
+  espaço espremido pelo valor, em vez de os dois empilharem como já
+  acontece com os outros campos do Resumo (`.proposta-pdf__resumo-campo`
+  já empilha rótulo/valor em coluna).
+- **Breakpoint**: mobile (375px)
+- **Esperado**: no mobile, `.proposta-pdf__total` empilha rótulo acima do
+  valor (mesmo padrão já aplicado a `.proposta-pdf__resumo-campo` na regra
+  `@media (max-width: 767px)`), ou o rótulo recebe `white-space: nowrap`
+  com o valor permitido a encolher — nunca o rótulo quebrando ao meio da
+  frase ao lado do número.
+- **Encontrado**: "Total da" quebra para a primeira linha, "proposta"
+  cai para a segunda linha ao lado esquerdo de "R$ 14.100,00" — o número
+  que deveria ser a peça de maior peso da tela (`text-valor-destaque-lg`)
+  fica colado visualmente a uma palavra órfã do rótulo, prejudicando a
+  leitura do total no exato breakpoint em que o cliente mais provavelmente
+  abre o link no celular antes de decidir imprimir.
+- **Evidência**: `.maestro/tmp/screenshots/proposta-pdf-mobile-total-zoom.png`
+  (e visível no contexto completo em `proposta-pdf-mobile-preenchido.png`)
 
 ## Capturas realizadas
-- `.maestro/tmp/screenshots/editoritem-desktop-preenchido-r5b.png`
-- `.maestro/tmp/screenshots/editoritem-tablet-preenchido-r5b.png`
-- `.maestro/tmp/screenshots/editoritem-mobile-preenchido-r5b.png`
-- `.maestro/tmp/screenshots/editoritem-desktop-scrolled-bottom-r5b.png`
-- `.maestro/tmp/screenshots/editoritem-desktop-wheelscroll-r5b.png`
-- `.maestro/tmp/screenshots/editoritem-mobile-zoom-kpi-r5b.png`
-- `.maestro/tmp/screenshots/editoritem-mobile-kpi-crop-r5b.png`
+- `.maestro/tmp/screenshots/proposta-pdf-desktop-preenchido.png`
+- `.maestro/tmp/screenshots/proposta-pdf-desktop-preenchido-dark.png` (produto sem dark mode implementado — captura idêntica à claro, registrado como observação, não achado)
+- `.maestro/tmp/screenshots/proposta-pdf-tablet-preenchido.png`
+- `.maestro/tmp/screenshots/proposta-pdf-mobile-preenchido.png`
+- `.maestro/tmp/screenshots/proposta-pdf-desktop-vazio.png`
+- `.maestro/tmp/screenshots/proposta-pdf-print-preview.png`
+- `.maestro/tmp/screenshots/proposta-pdf-print-a4.pdf`
+- `.maestro/tmp/screenshots/proposta-pdf-desktop-citacao.png`
+- `.maestro/tmp/screenshots/proposta-pdf-desktop-total.png`
+- `.maestro/tmp/screenshots/proposta-pdf-desktop-traco-cliente.png`
+- `.maestro/tmp/screenshots/proposta-pdf-desktop-traco-zoom4x.png`
+- `.maestro/tmp/screenshots/proposta-pdf-desktop-traco-zoom-full.png`
+- `.maestro/tmp/screenshots/proposta-pdf-mobile-botao-zoom.png`
+- `.maestro/tmp/screenshots/proposta-pdf-mobile-total-zoom.png`

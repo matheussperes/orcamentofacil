@@ -366,7 +366,7 @@ Tela Biblioteca (`/biblioteca`) fechada no nível `release` com composição con
 
 #### Task R.5e — Composição e acabamento terminal — Proposta impressa (vitrine)
 
-- **Status**: ⏱️ Planejado
+- **Status**: ✅ Completo
 - **Executor**: frontend-engineer
 - **Modelo Recomendado**: Sonnet (padrão do agente)
 - **Depende de**: R.2a, R.3a, R.3b, R.3c, R.4a, R.4b
@@ -378,12 +378,15 @@ Tela Biblioteca (`/biblioteca`) fechada no nível `release` com composição con
 Fechar a Proposta impressa como unidade, no nível `vitrine`: composição conforme a seção da tela em `docs/Screen-Composition.md`, lida inteira, um único sistema de título/botão/campo/card, quatro estados no mesmo nível de acabamento, `scan-legacy` zerado nos caminhos da tela. É o documento que o marceneiro envia ao cliente dele. Definição de pronto: veredito APROVADO do `art-director` para esta tela — convocado logo após esta task, reaproveitando as capturas do `ux-auditor` já em `.maestro/tmp/screenshots/`. Se esta task fechar a tela por completo, a Task R.6c fica sem objeto (registrar como concluída por esta task, não repetir trabalho).
 
 **Critérios de aceitação**
-- [ ] `art-director` APROVADO para esta tela, nível `vitrine`
-- [ ] Composição conforme a seção da tela em `docs/Screen-Composition.md`
-- [ ] Um único sistema de título, botão, campo e card na tela
-- [ ] Quatro estados no mesmo nível de acabamento
-- [ ] `scan-legacy` retorna 0 nos caminhos da tela
-- [ ] Nenhum arquivo de UI da tela acima de 400 linhas
+- [x] `art-director` APROVADO para esta tela, nível `vitrine`
+- [x] Composição conforme a seção da tela em `docs/Screen-Composition.md`
+- [x] Um único sistema de título, botão, campo e card na tela
+- [x] Quatro estados no mesmo nível de acabamento
+- [x] `scan-legacy` retorna 0 nos caminhos da tela
+- [x] Nenhum arquivo de UI da tela acima de 400 linhas
+
+**Resultado**
+Tela Proposta impressa (`/proposta/[id]/pdf`) fechada no nível `vitrine` com composição conforme `docs/Screen-Composition.md`. Processo: 2 tentativas do `art-director` (tentativa 1: REPROVADO — 2 achados: valor de linha em eixo errado, forma de pagamento imprimindo como formulário editável; tentativa 2: APROVADO, com ressalva de teto de arquivo 400 linhas — proposta-pdf.css estava 416 linhas). Regressões mobile pegas pelo `ux-auditor` antes da tentativa 1 (overflow do botão de imprimir e total) — ambas corrigidas antes da tentativa 1 do `art-director`. Decomposição feita: proposta-pdf.css reduzido de 416 para 369 linhas + novo proposta-pdf-responsive.css com 54 linhas, confirmada sem regressão pelo `art-director` em checagem extra (não contou como nova tentativa). Code-auditor, qa-engineer, ux-auditor APROVADO na rodada final (4ª rodada total, 641 testes, sem regressão). **Fecha o Pipeline Stage Reparação quanto às 5 telas do lote R.5** (R.5a Orçamento, R.5b Editor de Item, R.5c Catálogo, R.5d Biblioteca, R.5e Proposta impressa) — todas mescladas e aprovadas pelo `art-director`. **Task R.6c fica sem objeto** — art-director confirmou explicitamente que a bateria vitrine (resistência à impressão real A4) foi satisfeita por completo. 4 observações não bloqueantes do `art-director` ainda aguardam decisão (destino: product-designer, não resolvidas nesta task): (1) largura máxima de leitura não declarada para descrição da linha; (2) estado "linha sem render" não declarado (imprime placeholder de imagem quebrada); (3) copy da citação de destaque é genérica, não específica do produto; (4) fixture do harness usa vocabulário técnico que a Composição proíbe (não é bug de produção). `frontend-engineer`. Impacto Visual: Completo.
 
 ---
 
@@ -431,19 +434,22 @@ Fechar a tela de Signup no nível `vitrine`: momento visual próprio, entrada or
 
 #### Task R.6c — Tela vitrine — Proposta impressa (se não fechada em R.5e)
 
-- **Status**: ⏱️ Planejado
-- **Executor**: frontend-engineer
-- **Modelo Recomendado**: Sonnet (padrão do agente)
+- **Status**: 🛑 Encerrada sem execução
+- **Executor**: nenhum
+- **Modelo Recomendado**: — (sem execução)
 - **Depende de**: R.2b, R.5e
 - **Tela-alvo**: Proposta impressa — `/proposta/[id]/pdf`
 - **Nível de acabamento**: vitrine
-- **Referências**: `docs/Plano-Reparacao-orcamentofacil.md` R.6; `docs/Screen-Composition.md` seção Proposta impressa (inteira)
+- **Referências**: `docs/Plano-Reparacao-orcamentofacil.md` R.6; `docs/Screen-Composition.md` seção Proposta impressa (inteira); Task R.5e (objeto absorvido)
 
 **Descrição**
 Bateria adicional do `art-director` sobre a Proposta impressa — momento visual próprio, entrada orquestrada, copy de venda, resistência ao zoom — **somente se R.5e não tiver fechado a tela por completo no nível vitrine**. É o material de venda do cliente do marceneiro; um PDF bonito associa a qualidade ao produto toda vez que é enviado. Se R.5e já cobriu estes critérios, esta task é encerrada sem execução, com nota cruzando para R.5e.
 
 **Critérios de aceitação**
-- [ ] `art-director` APROVADO para esta tela, nível `vitrine` (momento visual próprio, entrada orquestrada, copy de venda, resistência ao zoom) — ou nota registrada de que R.5e já supriu o critério
+- [x] `art-director` APROVADO para esta tela, nível `vitrine` (momento visual próprio, entrada orquestrada, copy de venda, resistência ao zoom) — ou nota registrada de que R.5e já supriu o critério
+
+**Resultado**
+Encerrada sem execução — objeto absorvido pela Task R.5e (confirmado pelo `art-director` em 2026-08-28). A bateria vitrine completa (resistência à impressão real A4, momento visual, entrada orquestrada, copy, zoom) foi satisfeita por completo na Task R.5e. Nenhuma execução necessária. Task marcada apenas para registro de que o critério foi atingido de forma consolidada.
 
 ---
 
