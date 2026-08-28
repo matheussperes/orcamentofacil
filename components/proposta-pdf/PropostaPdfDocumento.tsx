@@ -1,3 +1,4 @@
+import { TracoDeCota } from "@/components/ui/traco-de-cota";
 import type { DadosPropostaPdf } from "@/lib/proposta-pdf/carregar";
 import { PropostaPdfAcoes } from "./PropostaPdfAcoes";
 import { PropostaPdfCabecalho } from "./PropostaPdfCabecalho";
@@ -29,6 +30,7 @@ export function PropostaPdfDocumento({ dados }: { dados: DadosPropostaPdf }) {
 
           <section>
             <h2 className="proposta-pdf__secao-titulo">Ambientes orçados</h2>
+            <TracoDeCota className="mb-md" />
             <div className="proposta-pdf__linhas">
               {dados.linhas.map((linha) => (
                 <PropostaPdfLinha key={linha.id} linha={linha} />

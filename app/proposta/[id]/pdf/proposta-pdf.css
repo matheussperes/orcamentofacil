@@ -124,7 +124,7 @@
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: #64748b; /* cinza-500 */
-  margin: 0 0 12px; /* spacing.md */
+  margin: 0 0 4px; /* spacing.xs — gap até o traço de cota, não até o conteúdo */
 }
 
 .proposta-pdf__cliente {
@@ -292,10 +292,14 @@
   align-items: flex-start;
 }
 .proposta-pdf__citacao-aspas {
-  font-size: 32px; /* fontSize.valor-destaque-lg, reaproveitado como tamanho de glifo decorativo */
+  /* Tamanho/peso deliberadamente distintos de 32px/700 (fontSize.valor-
+     destaque-lg): esse par é a assinatura exclusiva do total da proposta
+     (Screen-Composition.md — hierarquia "DOMINA"), nunca reaproveitado aqui
+     mesmo em glifo puramente decorativo — Design-System.md Seção 0.7. */
+  font-size: 40px;
   line-height: 1;
   color: #d97706; /* accent.vivid — aspas decorativas */
-  font-weight: 700;
+  font-weight: 300;
   flex-shrink: 0;
 }
 .proposta-pdf__citacao-texto {
