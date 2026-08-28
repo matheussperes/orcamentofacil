@@ -57,6 +57,7 @@
   height: 36px;
   font-size: 14px; /* fontSize.corpo */
   font-weight: 500;
+  white-space: nowrap; /* altura fixa 36px — impede quebra, não vazamento (achado ux-auditor R.5e) */
   cursor: pointer;
   transition: background-color 150ms ease-out; /* microinteração, Seção 12 */
 }
@@ -337,6 +338,13 @@
    horizontal, mas ficaria ilegível). Documento impresso em si não passa por
    este breakpoint (impressão sempre em A4), só a visualização em tela. */
 @media (max-width: 767px) {
+  .proposta-pdf__acoes {
+    /* botão em `white-space: nowrap` (achado ux-auditor R.5e) não cabe ao
+       lado do link "Voltar" na largura de 375px — empilha em vez de deixar
+       a linha rígida vazar horizontalmente, mesmo raciocínio já usado nos
+       outros blocos deste breakpoint. */
+    flex-wrap: wrap;
+  }
   .proposta-pdf__cabecalho,
   .proposta-pdf__rodape {
     padding-left: 24px; /* spacing.xl */
@@ -360,6 +368,13 @@
   }
   .proposta-pdf__total {
     grid-column: 1;
+    /* empilha rótulo acima do valor, mesmo padrão de
+       `.proposta-pdf__resumo-campo` — o rótulo em `space-between` quebrava
+       ao meio e colava numa palavra órfã ao lado do total, o elemento
+       DOMINA da tela (achado ux-auditor R.5e). */
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px; /* spacing.xs */
   }
 }
 
