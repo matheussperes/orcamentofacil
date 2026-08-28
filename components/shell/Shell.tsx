@@ -36,7 +36,7 @@ export function Shell({ user, children }: ShellProps) {
         />
         <div className="flex min-w-0 flex-1 flex-col">
           <Topbar onAbrirMenu={() => setDrawerAberto(true)} />
-          <main className="flex-1 overflow-x-hidden p-xl">{children}</main>
+          <main className="flex-1 overflow-x-clip p-xl">{children}</main>
         </div>
       </div>
     </PageHeaderProvider>

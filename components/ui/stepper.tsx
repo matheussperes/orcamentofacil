@@ -1,6 +1,7 @@
 import { Check } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import { TracoDeCota } from "./traco-de-cota";
 
 // Task 6.2 — Design-System.md Seção 6.5: componente customizado sobre
 // primitivos Tailwind (sem equivalente shadcn direto). Reutilizável entre o
@@ -53,10 +54,10 @@ export function Stepper({ steps, currentStep, className }: StepperProps) {
                 </span>
               </div>
               {!isLast && (
-                <div
+                <TracoDeCota
                   className={cn(
-                    "mx-2 mt-3 h-px flex-1",
-                    isCompleted ? "bg-accent" : "bg-cinza-300"
+                    "mx-2 mt-3 h-2 flex-1",
+                    isCompleted ? "text-accent" : "text-cinza-300"
                   )}
                 />
               )}

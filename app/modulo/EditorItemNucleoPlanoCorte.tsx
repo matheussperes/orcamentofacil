@@ -1,8 +1,10 @@
 // Task R.3c — decomposição pura de `EditorItemNucleo.tsx`: card "Plano de
 // corte", extraído sem nenhuma mudança de comportamento ou de aparência.
 
+import { Scissors } from "lucide-react";
 import type { usePlanoDeCorte } from "@/lib/engine/box/usarPlanoDeCorte";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { EstadoVazioAba } from "@/components/ui/estado-vazio-aba";
 import { PlanoCorteCanvas } from "../components/PlanoCorteCanvas";
 
 export interface EditorItemNucleoPlanoCorteProps {
@@ -30,7 +32,14 @@ export function EditorItemNucleoPlanoCorte({ grupos, calculando }: EditorItemNuc
           escala 1:10. Empacotamento heurístico (prateleiras) — apenas para validação
           visual, não substitui um otimizador de corte industrial.
         </p>
-        {grupos.length === 0 && <p className="text-corpo-pequeno text-cinza-500">Nenhuma peça gerada ainda.</p>}
+        {grupos.length === 0 && (
+          <EstadoVazioAba
+            icone={Scissors}
+            titulo="Nenhuma peça gerada ainda"
+            descricao="O plano de corte aparece aqui assim que a configuração do item gerar peças."
+            className="border-none p-0 py-lg shadow-none"
+          />
+        )}
         {grupos.map((g) => (
           <div key={`${g.cor}-${g.espessura_mm}`} className="mb-lg">
             <div className="mb-xs font-semibold text-corpo text-cinza-900">
