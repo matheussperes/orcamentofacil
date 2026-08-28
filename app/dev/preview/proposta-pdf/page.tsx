@@ -3,6 +3,7 @@ import type { DadosPropostaPdf } from "@/lib/proposta-pdf/carregar";
 import { PropostaPdfDocumento } from "@/components/proposta-pdf/PropostaPdfDocumento";
 import { PropostaPdfVazio } from "@/components/proposta-pdf/PropostaPdfVazio";
 import "@/app/proposta/[id]/pdf/proposta-pdf.css";
+import "@/app/proposta/[id]/pdf/proposta-pdf-responsive.css";
 
 // Task 13.6b (contrato .maestro/tmp/13.6b-contract.md) — harness DEV-ONLY:
 // renderiza `/proposta/[id]/pdf` com dados MOCK (sem Supabase), mesmo

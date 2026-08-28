@@ -3,6 +3,7 @@ import { carregarDadosPropostaPdf } from "@/lib/proposta-pdf/carregar";
 import { PropostaPdfDocumento } from "@/components/proposta-pdf/PropostaPdfDocumento";
 import { PropostaPdfVazio } from "@/components/proposta-pdf/PropostaPdfVazio";
 import "./proposta-pdf.css";
+import "./proposta-pdf-responsive.css";
 
 // Task 13.6b (contrato .maestro/tmp/13.6b-contract.md) — fecha a Task 13.6
 // inteira (13.6a Linhas de Proposta + 13.6b esta): documento imprimível A4

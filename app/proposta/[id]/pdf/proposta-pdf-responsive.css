@@ -1,0 +1,54 @@
+/* Breakpoint `mobile` (`.maestro/config.json::conventions.breakpoints.mobile`
+   = 375px): abaixo do breakpoint `tablet` (768px) o layout de 2 colunas
+   fixas (linha imagem+texto lado a lado, resumo em grid 2 colunas) fica
+   apertado demais dentro do padding generoso do "papel" — empilha em vez de
+   deixar a coluna de texto com poucos px de largura (nunca overflow
+   horizontal, mas ficaria ilegível). Documento impresso em si não passa por
+   este breakpoint (impressão sempre em A4), só a visualização em tela.
+
+   Task R.5e (achado art-director, 416 linhas > `maxUiFileLines` 400) —
+   extraído de `proposta-pdf.css` sem mudança de comportamento, importado
+   junto no mesmo lugar (`app/proposta/[id]/pdf/page.tsx`). */
+@media (max-width: 767px) {
+  .proposta-pdf__acoes {
+    /* botão em `white-space: nowrap` (achado ux-auditor R.5e) não cabe ao
+       lado do link "Voltar" na largura de 375px — empilha em vez de deixar
+       a linha rígida vazar horizontalmente, mesmo raciocínio já usado nos
+       outros blocos deste breakpoint. */
+    flex-wrap: wrap;
+  }
+  .proposta-pdf__cabecalho,
+  .proposta-pdf__rodape {
+    padding-left: 24px; /* spacing.xl */
+    padding-right: 24px;
+    flex-wrap: wrap;
+  }
+  .proposta-pdf__emitente {
+    text-align: left;
+  }
+  .proposta-pdf__corpo {
+    padding: 24px; /* spacing.xl */
+  }
+  .proposta-pdf__linha {
+    flex-direction: column;
+  }
+  .proposta-pdf__linha-imagem {
+    width: 100%;
+  }
+  .proposta-pdf__linha-valor {
+    text-align: left; /* preserva o empilhamento mobile já aprovado (achado art-director R.5e) */
+  }
+  .proposta-pdf__resumo {
+    grid-template-columns: 1fr;
+  }
+  .proposta-pdf__total {
+    grid-column: 1;
+    /* empilha rótulo acima do valor, mesmo padrão de
+       `.proposta-pdf__resumo-campo` — o rótulo em `space-between` quebrava
+       ao meio e colava numa palavra órfã ao lado do total, o elemento
+       DOMINA da tela (achado ux-auditor R.5e). */
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px; /* spacing.xs */
+  }
+}
