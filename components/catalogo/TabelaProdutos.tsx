@@ -94,7 +94,7 @@ export function TabelaProdutos({ produtos, onCriar, onAtualizar, onAlternarAtivo
           </p>
         </div>
       ) : (
-        <Table>
+        <Table className="[&_th:first-child]:pl-0 [&_td:first-child]:pl-0 [&_th:last-child]:pr-0 [&_td:last-child]:pr-0">
           <TableHeader>
             <TableRow>
               <TableHead>Nome</TableHead>
