@@ -309,7 +309,7 @@ Tela Editor de Item (`/orcamento/[id]/item/[itemId]`) fechada no nível `release
 
 #### Task R.5c — Composição e acabamento terminal — Catálogo
 
-- **Status**: ⏱️ Planejado
+- **Status**: ✅ Completo
 - **Executor**: frontend-engineer
 - **Modelo Recomendado**: Sonnet (padrão do agente)
 - **Depende de**: R.2a, R.3a, R.3b, R.3c, R.4a, R.4b
@@ -321,12 +321,15 @@ Tela Editor de Item (`/orcamento/[id]/item/[itemId]`) fechada no nível `release
 Fechar o Catálogo como unidade: composição conforme a seção da tela em `docs/Screen-Composition.md`, lida inteira, um único sistema de título/botão/campo/card, quatro estados no mesmo nível de acabamento, `scan-legacy` zerado nos caminhos da tela. Definição de pronto: veredito APROVADO do `art-director` para esta tela — convocado logo após esta task, reaproveitando as capturas do `ux-auditor` já em `.maestro/tmp/screenshots/`.
 
 **Critérios de aceitação**
-- [ ] `art-director` APROVADO para esta tela
-- [ ] Composição conforme a seção da tela em `docs/Screen-Composition.md`
-- [ ] Um único sistema de título, botão, campo e card na tela
-- [ ] Quatro estados no mesmo nível de acabamento
-- [ ] `scan-legacy` retorna 0 nos caminhos da tela
-- [ ] Nenhum arquivo de UI da tela acima de 400 linhas
+- [x] `art-director` APROVADO para esta tela
+- [x] Composição conforme a seção da tela em `docs/Screen-Composition.md`
+- [x] Um único sistema de título, botão, campo e card na tela
+- [x] Quatro estados no mesmo nível de acabamento
+- [x] `scan-legacy` retorna 0 nos caminhos da tela
+- [x] Nenhum arquivo de UI da tela acima de 400 linhas
+
+**Resultado**
+Tela Catálogo (`/catalogo`) fechada no nível `release` com composição conforme `docs/Screen-Composition.md`. Processo: 2 tentativas do `art-director` (tentativa 1: REPROVADO — 1 achado: desalinhamento de 10px entre traço de cota e conteúdo da tabela, causa raiz identificada em `px-[10px]` cru nas células, corrigido com reset de padding escopado para `first-child` e `last-child` da tabela em `components/catalogo/TabelaProdutos.tsx` apenas; tentativa 2: APROVADO). Correção introduzida com confiança no isolamento (seletor escopado, nenhuma regressão em outras tabelas). Code-auditor/qa-engineer/ux-auditor APROVADO na rodada final sem regressão (641 testes, contagem idêntica ao baseline). 5 observações não bloqueantes do `art-director` registradas como pendentes de decisão (não foram resolvidas nesta task, destino: product-designer): (1) gap-lg declarado como 24px na Composição quando na verdade é 16px, numericamente errado no documento; (2) gap de KPI em conflito entre Composição (gap-md) e Design-System §4 (gap-xl); (3) `px-[10px]` no primitivo global de tabela (`components/ui/table.tsx`) — causa raiz sistêmica que afeta qualquer tela com tabela em card `p-xl`, candidata a task de sistema; (4) canto morto de ~880px no estado de erro, cumprindo a Composição à risca; (5) KPI órfão em mobile/tablet, consequência declarada da grade. `frontend-engineer`. Impacto Visual: Completo.
 
 ---
 
