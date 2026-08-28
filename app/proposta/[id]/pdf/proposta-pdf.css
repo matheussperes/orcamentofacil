@@ -210,6 +210,7 @@
   font-variant-numeric: tabular-nums;
   color: #d97706; /* accent.vivid — valor monetário em destaque */
   margin-top: 12px; /* spacing.md */
+  text-align: right; /* Screen-Composition.md l.432-434 — todo valor monetário à direita (achado art-director R.5e) */
 }
 
 /* Resumo: prazo, forma de pagamento, total. */
@@ -259,6 +260,10 @@
   outline: none;
   border-color: #b45309; /* accent */
   box-shadow: 0 0 0 2px #fff3e0; /* accent.subtle — anel de foco, mesmo espírito do --ring do shadcn */
+}
+
+.proposta-pdf__forma-pagamento-print {
+  display: none; /* só existe no @media print — troca a textarea por texto puro */
 }
 
 .proposta-pdf__total {
@@ -363,6 +368,9 @@
   .proposta-pdf__linha-imagem {
     width: 100%;
   }
+  .proposta-pdf__linha-valor {
+    text-align: left; /* preserva o empilhamento mobile já aprovado (achado art-director R.5e) */
+  }
   .proposta-pdf__resumo {
     grid-template-columns: 1fr;
   }
@@ -393,6 +401,14 @@
   }
   .proposta-pdf__linha {
     break-inside: avoid;
+  }
+  .proposta-pdf__forma-pagamento {
+    display: none; /* nada é editável no papel entregue ao cliente (achado art-director R.5e) */
+  }
+  .proposta-pdf__forma-pagamento-print {
+    display: block;
+    font-size: 14px; /* fontSize.corpo — mesmo tratamento do campo irmão "Prazo de entrega" */
+    color: #0f172a; /* cinza-900 */
   }
   @page {
     margin: 18mm;

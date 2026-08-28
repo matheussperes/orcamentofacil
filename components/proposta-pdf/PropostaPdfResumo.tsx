@@ -39,6 +39,11 @@ export function PropostaPdfResumo({ prazoEntrega, total }: { prazoEntrega: strin
           value={formaPagamento}
           onChange={(evento) => setFormaPagamento(evento.target.value)}
         />
+        {/* Impressão real (@media print): a textarea some e este texto puro
+            assume, mesmo fallback do campo irmão "Prazo de entrega" — nunca
+            formulário editável nem placeholder de instrução no papel entregue
+            ao cliente (achado art-director R.5e). */}
+        <span className="proposta-pdf__forma-pagamento-print">{formaPagamento.trim() || "A combinar"}</span>
       </div>
 
       <div className="proposta-pdf__total">
