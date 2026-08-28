@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { FormularioProdutoDialog, ROTULO_CATEGORIA } from "./FormularioProdutoDialog";
 import { AlternarAtivoDialog } from "./AlternarAtivoDialog";
+import { TracoDeCota } from "@/components/ui/traco-de-cota";
 import { formatarMoeda } from "@/lib/format";
 import { nomeAmigavelFerragem, type EspecificacaoChapa, type EspecificacaoFerragem, type ProdutoRow, type TipoProduto } from "@/lib/produto/tipos";
 import type { DadosProduto, ResultadoProduto } from "@/lib/produto/acoes";
@@ -82,6 +83,7 @@ export function TabelaProdutos({ produtos, onCriar, onAtualizar, onAlternarAtivo
           onSucesso={onSucesso}
         />
       </div>
+      <TracoDeCota className="mb-md" />
 
       {produtosFiltrados.length === 0 ? (
         <div className="flex flex-col items-center gap-sm py-3xl text-center">
