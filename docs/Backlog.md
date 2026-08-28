@@ -283,7 +283,7 @@ Tela Orçamento (`/orcamento/[id]`) fechada no nível `release` com composição
 
 #### Task R.5b — Composição e acabamento terminal — Editor de Item
 
-- **Status**: ⏱️ Planejado
+- **Status**: ✅ Completo
 - **Executor**: frontend-engineer
 - **Modelo Recomendado**: Sonnet (padrão do agente)
 - **Depende de**: R.2a, R.3a, R.3b, R.3c, R.4a, R.4b
@@ -295,12 +295,15 @@ Tela Orçamento (`/orcamento/[id]`) fechada no nível `release` com composição
 Fechar o Editor de Item como unidade: composição conforme a seção da tela em `docs/Screen-Composition.md`, lida inteira, um único sistema de título/botão/campo/card, quatro estados no mesmo nível de acabamento, `scan-legacy` zerado nos caminhos da tela. Definição de pronto: veredito APROVADO do `art-director` para esta tela — convocado logo após esta task, reaproveitando as capturas do `ux-auditor` já em `.maestro/tmp/screenshots/`.
 
 **Critérios de aceitação**
-- [ ] `art-director` APROVADO para esta tela
-- [ ] Composição conforme a seção da tela em `docs/Screen-Composition.md`
-- [ ] Um único sistema de título, botão, campo e card na tela
-- [ ] Quatro estados no mesmo nível de acabamento
-- [ ] `scan-legacy` retorna 0 nos caminhos da tela
-- [ ] Nenhum arquivo de UI da tela acima de 400 linhas
+- [x] `art-director` APROVADO para esta tela
+- [x] Composição conforme a seção da tela em `docs/Screen-Composition.md`
+- [x] Um único sistema de título, botão, campo e card na tela
+- [x] Quatro estados no mesmo nível de acabamento
+- [x] `scan-legacy` retorna 0 nos caminhos da tela
+- [x] Nenhum arquivo de UI da tela acima de 400 linhas
+
+**Resultado**
+Tela Editor de Item (`/orcamento/[id]/item/[itemId]`) fechada no nível `release` com composição conforme `docs/Screen-Composition.md`. Processo: 2 tentativas do `art-director` (tentativa 1: REPROVADO — 4 achados: KPI "Preço final" tintado, vazio da tabela "Peças" ausente, canto morto de 1443px na coluna esquerda, ação primária fora do rodapé real da coluna; todos corrigidos; tentativa 2: APROVADO). Correções introduziram 2 regressões pegas pelo `ux-auditor`: sticky não funcionava de verdade (causa raiz corrigida em `components/shell/Shell.tsx`, arquivo compartilhado — `overflow-x-hidden` → `overflow-x-clip`) e transbordamento mobile do KPI (ambas corrigidas). Code-auditor/qa-engineer/ux-auditor APROVADO na rodada final (641 testes, sem regressão). Art-director confirmou por MD5 idêntico de screenshot que mudança em Shell.tsx não teve efeito colateral visual em outras telas (Dashboard). 7 observações não bloqueantes pendentes de decisão (não foram resolvidas, destino: product-designer). `frontend-engineer`. Impacto Visual: Completo.
 
 ---
 

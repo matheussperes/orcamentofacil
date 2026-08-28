@@ -1,56 +1,33 @@
 # UX Decline Payload
 
-**Task**: R.5a
-**Branch**: feature/R.5a (commit f111c78)
-**Data**: 2026-08-26
-**Veredicto**: REPROVADO
+**Task**: R.5b
+**Branch**: feature/R.5b
+**Data**: 2026-08-27
+**Veredicto**: REPROVADO (tentativa 2 de 2 — próxima falha aciona o Circuit Breaker)
 
-## 1. Regressão mobile: legenda e barra de aproveitamento invisíveis no "Plano de corte"
+## 1. Coluna esquerda `lg:sticky` não gruda de verdade — DOMINA some da tela ao rolar
 
-- **Componente**: `components/orcamento/corte-material/SecaoPlanoDeCorte.tsx:73`
-- **Regra violada**: `docs/Screen-Composition.md` — Responsividade: "Nenhuma
-  sobreposição, corte ou transbordamento horizontal em nenhum breakpoint" /
-  "Conteúdo permanece legível sem zoom". Também
-  `components/shell/Shell.tsx:39` (`overflow-x-hidden` no `<main>`) — a
-  combinação das duas torna o conteúdo **irrecuperável**, não apenas rolável.
-- **Breakpoint**: mobile (390px), reproduz em qualquer largura abaixo de
-  ~426px de conteúdo útil
-- **Esperado**: a coluna com a legenda "N chapa(s) · X m² consumidos" e o
-  `Progress` de aproveitamento permanece inteiramente visível (ou some para
-  uma segunda linha) em todos os breakpoints — nenhum pixel de conteúdo
-  cortado sem forma de acesso.
-- **Encontrado**: a correção do achado 1 do art-director trocou
-  `flex flex-wrap` por `grid grid-cols-[auto_1fr]`, sem variante responsiva.
-  Em 390px, medido via DOM: a segunda coluna (`auto`, canvas fixo + `1fr`)
-  se estende até `x=426.6px`, **36.6px além do viewport** (390px). Como o
-  `<main>` do Shell usa `overflow-x-hidden` (não `overflow-x-auto`), esse
-  conteúdo não vira scroll — ele é **cortado e permanentemente inacessível**.
-  Visualmente: o texto "1 chapa(s) · 1.35 m² consumidos" é truncado em
-  "…consu" e a barra de progresso (vermelha/verde) é cortada antes do fim.
-  Reproduz nas 3 chapas da aba (MDF Branco TX 6mm, 15mm, Louro Freijó 18mm).
-  Em tablet (834px) e desktop (1440px) o layout está correto — a regressão é
-  exclusiva de mobile.
-- **Evidência**:
-  `.maestro/tmp/screenshots/orcamento-corte-material-mobile-preenchido-v3.png`
-- **Correção mínima**: dar ao grid uma variante que colapse para 1 coluna
-  abaixo do breakpoint em que a coluna `1fr` cabe com conteúdo legível —
-  `grid grid-cols-1 gap-md sm:grid-cols-[auto_1fr] sm:gap-lg` (mesmo padrão
-  responsivo já usado em `SecaoParedeEAlturasPerfil.tsx`,
-  `grid-cols-1 md:grid-cols-2`). Não reverter a correção do achado 1 nos
-  breakpoints tablet/desktop, onde ela está correta.
+- **Componente**: `app/modulo/EditorItemNucleo.tsx` (linha 90, `lg:sticky lg:top-xl lg:self-start`)
+- **Causa raiz**: `components/shell/Shell.tsx` linha 39 — `<main className="flex-1 overflow-x-hidden p-xl">`. A classe `overflow-x-hidden` sem um `overflow-y` explícito faz o navegador computar `overflow-y: auto` automaticamente (regra CSS de par overflow-x/overflow-y), transformando o `<main>` num scroll container. Como o conteúdo do `<main>` nunca excede sua própria altura (ele cresce para caber o filho), esse `<main>` nunca rola de verdade — mas por ser a âncora de "nearest scrolling ancestor", ele vira o contexto de referência do `position: sticky` da coluna esquerda. Quem realmente rola é o `<html>`. Resultado: o `sticky` não tem contra o que grudar e a coluna esquerda simplesmente sobe junto com a página, saindo inteira do viewport.
+- **Breakpoint**: desktop (1440px) — verificado com scroll real (`mouse.wheel`), não só `window.scrollTo`
+- **Esperado**: Screen-Composition.md / contrato R.5b — "o DOMINA (etapa aberta do accordion) acompanha o scroll da coluna direita, sem canto morto"
+- **Encontrado**: ao rolar até o fim da coluna direita (Plano de corte / rodapé), a coluna esquerda inteira desaparece do viewport — pior que o canto morto original reportado na tentativa 1 (que ao menos deixava a coluna visível, só com espaço vazio abaixo dela)
+- **Evidência**: `.maestro/tmp/screenshots/editoritem-desktop-preenchido-r5b.png` (topo, coluna esquerda visível) vs `.maestro/tmp/screenshots/editoritem-desktop-wheelscroll-r5b.png` (rolado com scroll de mouse real, coluna esquerda ausente)
 
----
+## 2. KPI "Preço final" transborda e é encoberto pelo card "Custo direto" no mobile
+
+- **Componente**: `app/modulo/EditorItemNucleoResultadoPaineis.tsx` linha 27-29 (card `Preço final`, `text-valor-destaque-lg`)
+- **Regra violada**: Responsividade — "Nenhuma sobreposição, corte ou transbordamento horizontal em nenhum breakpoint" (checklist ux-auditor); comportamento correto já existe no mesmo grid em tablet/desktop
+- **Breakpoint**: mobile (390px) — não ocorre em tablet (834px) nem desktop
+- **Esperado**: valor completo "R$ 1.519,10" legível dentro do card, sem sobreposição com o card vizinho
+- **Encontrado**: o texto "R$ 1.519,10" (32px, `text-valor-destaque-lg`) excede a largura do card `grid-cols-2 gap-sm` e é visualmente cortado/encoberto pelo card "Custo direto" ao lado — o dígito final "10" fica ilegível
+- **Evidência**: `.maestro/tmp/screenshots/editoritem-mobile-kpi-crop-r5b.png`
 
 ## Capturas realizadas
-
-**Novas (Playwright, `/dev/preview/orcamento`, 14 arquivos + evidência):**
-`orcamento-{ambientes,corte-material,financeiro,proposta}-{mobile,tablet,desktop}-preenchido-v3.png`,
-`orcamento-{ambientes,corte-material}-desktop-preenchido-v3-dark.png` (idêntico
-ao claro — confirmado que não há dark mode alternável nesta fase,
-`docs/Design-System.md` §2.9).
-
-## Tentativa
-
-**Tentativa 3 de 2** — Circuit Breaker acionado: esta é a terceira
-submissão desta tela ainda com reprovação (tentativa 1 do art-director +
-esta). Recomendo ao Maestro tratar como escalonamento.
+- `.maestro/tmp/screenshots/editoritem-desktop-preenchido-r5b.png`
+- `.maestro/tmp/screenshots/editoritem-tablet-preenchido-r5b.png`
+- `.maestro/tmp/screenshots/editoritem-mobile-preenchido-r5b.png`
+- `.maestro/tmp/screenshots/editoritem-desktop-scrolled-bottom-r5b.png`
+- `.maestro/tmp/screenshots/editoritem-desktop-wheelscroll-r5b.png`
+- `.maestro/tmp/screenshots/editoritem-mobile-zoom-kpi-r5b.png`
+- `.maestro/tmp/screenshots/editoritem-mobile-kpi-crop-r5b.png`
