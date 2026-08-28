@@ -57,6 +57,7 @@
   height: 36px;
   font-size: 14px; /* fontSize.corpo */
   font-weight: 500;
+  white-space: nowrap; /* altura fixa 36px — impede quebra, não vazamento (achado ux-auditor R.5e) */
   cursor: pointer;
   transition: background-color 150ms ease-out; /* microinteração, Seção 12 */
 }
@@ -124,7 +125,7 @@
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: #64748b; /* cinza-500 */
-  margin: 0 0 12px; /* spacing.md */
+  margin: 0 0 4px; /* spacing.xs — gap até o traço de cota, não até o conteúdo */
 }
 
 .proposta-pdf__cliente {
@@ -209,6 +210,7 @@
   font-variant-numeric: tabular-nums;
   color: #d97706; /* accent.vivid — valor monetário em destaque */
   margin-top: 12px; /* spacing.md */
+  text-align: right; /* Screen-Composition.md l.432-434 — todo valor monetário à direita (achado art-director R.5e) */
 }
 
 /* Resumo: prazo, forma de pagamento, total. */
@@ -260,6 +262,10 @@
   box-shadow: 0 0 0 2px #fff3e0; /* accent.subtle — anel de foco, mesmo espírito do --ring do shadcn */
 }
 
+.proposta-pdf__forma-pagamento-print {
+  display: none; /* só existe no @media print — troca a textarea por texto puro */
+}
+
 .proposta-pdf__total {
   grid-column: 1 / -1;
   display: flex;
@@ -292,10 +298,14 @@
   align-items: flex-start;
 }
 .proposta-pdf__citacao-aspas {
-  font-size: 32px; /* fontSize.valor-destaque-lg, reaproveitado como tamanho de glifo decorativo */
+  /* Tamanho/peso deliberadamente distintos de 32px/700 (fontSize.valor-
+     destaque-lg): esse par é a assinatura exclusiva do total da proposta
+     (Screen-Composition.md — hierarquia "DOMINA"), nunca reaproveitado aqui
+     mesmo em glifo puramente decorativo — Design-System.md Seção 0.7. */
+  font-size: 40px;
   line-height: 1;
   color: #d97706; /* accent.vivid — aspas decorativas */
-  font-weight: 700;
+  font-weight: 300;
   flex-shrink: 0;
 }
 .proposta-pdf__citacao-texto {
@@ -325,39 +335,9 @@
   text-align: right;
 }
 
-/* Breakpoint `mobile` (`.maestro/config.json::conventions.breakpoints.mobile`
-   = 375px): abaixo do breakpoint `tablet` (768px) o layout de 2 colunas
-   fixas (linha imagem+texto lado a lado, resumo em grid 2 colunas) fica
-   apertado demais dentro do padding generoso do "papel" — empilha em vez de
-   deixar a coluna de texto com poucos px de largura (nunca overflow
-   horizontal, mas ficaria ilegível). Documento impresso em si não passa por
-   este breakpoint (impressão sempre em A4), só a visualização em tela. */
-@media (max-width: 767px) {
-  .proposta-pdf__cabecalho,
-  .proposta-pdf__rodape {
-    padding-left: 24px; /* spacing.xl */
-    padding-right: 24px;
-    flex-wrap: wrap;
-  }
-  .proposta-pdf__emitente {
-    text-align: left;
-  }
-  .proposta-pdf__corpo {
-    padding: 24px; /* spacing.xl */
-  }
-  .proposta-pdf__linha {
-    flex-direction: column;
-  }
-  .proposta-pdf__linha-imagem {
-    width: 100%;
-  }
-  .proposta-pdf__resumo {
-    grid-template-columns: 1fr;
-  }
-  .proposta-pdf__total {
-    grid-column: 1;
-  }
-}
+/* Breakpoint `mobile` (< 768px, visualização em tela) — extraído para
+   `proposta-pdf-responsive.css` (Task R.5e, achado art-director: arquivo
+   acima do teto de 400 linhas), importado junto com este arquivo. */
 
 @media print {
   .proposta-pdf {
@@ -374,6 +354,14 @@
   }
   .proposta-pdf__linha {
     break-inside: avoid;
+  }
+  .proposta-pdf__forma-pagamento {
+    display: none; /* nada é editável no papel entregue ao cliente (achado art-director R.5e) */
+  }
+  .proposta-pdf__forma-pagamento-print {
+    display: block;
+    font-size: 14px; /* fontSize.corpo — mesmo tratamento do campo irmão "Prazo de entrega" */
+    color: #0f172a; /* cinza-900 */
   }
   @page {
     margin: 18mm;
