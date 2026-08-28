@@ -532,12 +532,90 @@ Login e Signup são um par vitrine e hoje divergem: Login renderiza ícone embut
 
 ---
 
+#### Task R.14 — Resolver 4 observações de spec do Editor de Item (product-designer)
+
+- **Status**: ⏱️ Planejado
+- **Executor**: product-designer
+- **Modelo Recomendado**: Sonnet (padrão do agente)
+- **Depende de**: nenhuma
+- **Referências**: Observações 1-4 do `art-director` sobre a tela Editor de Item, tentativas 1 e 2 da Task R.5b (`.maestro/tmp/verdicts/tela-editor-item-art.md`, `.maestro/tmp/Art-Decline-Payload.md`); `docs/Screen-Composition.md` seção Editor de Item; `docs/Design-System.md` §3
+
+**Descrição**
+Quatro observações de design não bloqueantes, decisão de spec, não de código:
+1. Rótulo de densidade da Composição ("espaçosa na coluna esquerda... `p-4`" / "densa na coluna direita") está invertido em relação aos tokens reais (`p-4`=16px esquerda × `Card p-lg/p-xl`=16-24px direita) — mesma classe de problema já resolvida para a tela Orçamento na Task R.5a (densidade uniforme abandonada). Decidir se a mesma solução se aplica aqui ou se há razão para manter a distinção nesta tela, e reescrever a linha.
+2. "Único elemento da tela inteira em `text-titulo-card`" ficou falsa depois da escala fechada do Design System §3 (decisão da R.5a) — "Vãos (clique para selecionar)" também usa esse token corretamente. Reescrever a declaração (sugestão do art-director: "o único `text-titulo-card` dentro de um card com borda de destaque e `p-4`").
+3. A Composição afirma que a assinatura (traço de cota, régua+seta §9.2-9.4) já existe no canvas desta tela, mas §9.2-9.4 cobrem Elevação de parede e Plano de corte — não o `BoxCanvas`, que hoje renderiza um retângulo de traço duplo sem cotagem. Decidir: (a) a Composição reconhece o gap e ele vira RF futuro de cotagem no `BoxCanvas`, ou (b) a linha para de afirmar que a assinatura já existe aqui.
+4. Dois sistemas de card na mesma tela: os 5 cards do accordion são `<div>` à mão (sem padding responsivo); a coluna direita usa o `Card` do design system. Decidir se unificar é prioridade (viraria task de execução própria) ou se a distinção é aceitável e a Composição deve declarar isso explicitamente.
+
+**Critérios de aceitação**
+- [ ] As 4 observações resolvidas com decisão escrita em `docs/Screen-Composition.md` e/ou `docs/Design-System.md`, sem ambiguidade para o próximo executor/gate
+- [ ] Nenhuma delas arquivada como "gap sem task"
+
+---
+
+#### Task R.15 — Formatação pt-BR em medidas na tabela de insumos do Editor de Item
+
+- **Status**: ⏱️ Planejado
+- **Executor**: frontend-engineer
+- **Modelo Recomendado**: Sonnet (padrão do agente)
+- **Depende de**: nenhuma
+- **Referências**: Observação 5 do `art-director`, Task R.5b (`.maestro/tmp/Art-Decline-Payload.md`); `lib/format.ts` (`formatarMoeda`, `formatarPercentual` já existem como precedente)
+
+**Descrição**
+A tabela de insumos do Editor de Item mostra medidas com ponto decimal cru ("0.00 m²", "1.90 m²", "3.8 m", provável `.toFixed()` sem locale) na mesma linha em que valores monetários já aparecem formatados em pt-BR ("R$ 0,00", vírgula, via `formatarMoeda`). Mesma classe de problema já corrigida para percentual na Task R.5a. Criar um helper equivalente (`formatarMedida` ou nome similar) em `lib/format.ts`, mesmo padrão de `formatarMoeda`/`formatarPercentual` (`toLocaleString("pt-BR", ...)`), e aplicar nos campos de medida da tabela.
+
+**Critérios de aceitação**
+- [ ] Novo helper de formatação de medida em `lib/format.ts`, seguindo o padrão dos helpers existentes
+- [ ] Aplicado em todos os campos de medida da tabela de insumos do Editor de Item
+- [ ] `npm run test`/`build`/`lint`/`typecheck` sem regressão
+
+---
+
+#### Task R.16 — Distinguir visualmente `ghost`/`outline`/`danger` em repouso (Design System)
+
+- **Status**: ⏱️ Planejado
+- **Executor**: frontend-engineer
+- **Modelo Recomendado**: Sonnet (padrão do agente)
+- **Depende de**: nenhuma
+- **Referências**: Observação 6 do `art-director`, Task R.5b (`.maestro/tmp/Art-Decline-Payload.md`); `components/ui/button.tsx`; `docs/Design-System.md` §7.1
+
+**Descrição**
+As variantes `ghost`, `outline` e `danger` do componente `Button` são visualmente idênticas em repouso (todas `border-cinza-300 text-cinza-700`) — só o hover revela qual é destrutiva. No Editor de Item isso torna "Limpar" (ghost) e "Resetar" (danger) indistinguíveis parados, apesar de só um ser destrutivo. Achado de sistema, não desta tela — afeta qualquer tela que use `danger` ao lado de `ghost`/`outline`. Requer decisão de design (cor de borda/texto em repouso para `danger`, provavelmente `border-erro`/`text-erro` sutil) antes da implementação — se a mudança de token não estiver óbvia, delegar primeiro ao `product-designer` para decidir o valor exato conforme `docs/Design-System.md` §7.1, depois implementar.
+
+**Critérios de aceitação**
+- [ ] Variante `danger` visualmente distinguível de `ghost`/`outline` em repouso, sem depender de hover
+- [ ] Token de cor documentado em `docs/Design-System.md` §7.1
+- [ ] Nenhuma outra variante alterada
+- [ ] `npm run test`/`build`/`lint`/`typecheck` sem regressão
+- Impacto Visual: Completo (componente compartilhado)
+
+---
+
+#### Task R.17 — Título distinto para os vazios de "Peças" e "Plano de corte" no Editor de Item
+
+- **Status**: ⏱️ Planejado
+- **Executor**: frontend-engineer
+- **Modelo Recomendado**: Sonnet (padrão do agente)
+- **Depende de**: nenhuma
+- **Referências**: Observação 7 do `art-director`, tentativa 2 da Task R.5b (`.maestro/tmp/verdicts/tela-editor-item-art.md`)
+
+**Descrição**
+Os dois estados vazios lado a lado no Editor de Item ("Peças" e "Plano de corte") usam o mesmo texto "Nenhuma peça gerada ainda" — efeito colateral do reuso correto do componente `EstadoVazioAba`, mas gera repetição estranha visível na mesma tela. Dar um título próprio a cada um (ex.: "Peças" → "Nenhuma peça gerada ainda"; "Plano de corte" → algo como "Nada para cortar ainda" ou equivalente, sem inventar vocabulário fora do already-established).
+
+**Critérios de aceitação**
+- [ ] Os dois vazios têm título distinto, sem repetição literal
+- [ ] Nenhuma mudança estrutural do componente `EstadoVazioAba`
+- [ ] `ux-auditor` confere (nível Leve)
+- Impacto Visual: Leve
+
+---
+
 #### Task R.8 — Fechar o stage
 
 - **Status**: ⏱️ Planejado
 - **Executor**: nenhum (Maestro, via comando)
 - **Modelo Recomendado**: — (comando, não geração de código)
-- **Depende de**: R.1, R.2a, R.2b, R.3a, R.3b, R.3c, R.3d, R.4a, R.4b, R.5a, R.5b, R.5c, R.5d, R.5e, R.6a, R.6b, R.6c, R.7, R.9, R.10, R.11, R.12, R.13
+- **Depende de**: R.1, R.2a, R.2b, R.3a, R.3b, R.3c, R.3d, R.4a, R.4b, R.5a, R.5b, R.5c, R.5d, R.5e, R.6a, R.6b, R.6c, R.7, R.9, R.10, R.11, R.12, R.13, R.14, R.15, R.16, R.17
 - **Referências**: `docs/Plano-Reparacao-orcamentofacil.md` R.8
 
 **Descrição**
